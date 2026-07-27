@@ -12,6 +12,7 @@ import nookRoutes from './routes/nookRoutes';
 import socialRoutes from './routes/socialRoutes';
 import integrationRoutes from './routes/integrationRoutes';
 import adminRoutes from './routes/adminRoutes';
+import setupRoutes from './routes/setupRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -56,6 +57,7 @@ app.use('/branding', (req, res, next) => {
 });
 
 // API Routes
+app.use('/api/setup', setupRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/mfa', mfaRoutes);
 app.use('/api/nook', nookRoutes);
@@ -75,6 +77,43 @@ app.get('/api/branding/public', async (req, res) => {
     });
   } catch (err) {
     return res.json({ app_name: 'WebNook', logo_url: '/branding/logo.png' });
+  }
+});
+
+// Dynamic Whitelabeled Web App Manifest for Mobile PWA Installation
+app.get(['/manifest.json', '/api/manifest.json'], async (req, res) => {
+  try {
+    const appNameRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "app_name"');
+    const logoUrlRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "logo_url"');
+
+    const appName = appNameRow?.value || 'WebNook';
+    const logoUrl = logoUrlRow?.value || '/branding/logo.png';
+
+    res.setHeader('Content-Type', 'application/json');
+    return res.json({
+      short_name: appName,
+      name: `${appName} Social Platform`,
+      icons: [
+        {
+          src: logoUrl,
+          type: "image/png",
+          sizes: "192x192 512x512"
+        }
+      ],
+      start_url: "/",
+      background_color: "#12131C",
+      theme_color: "#6366f1",
+      display: "standalone",
+      orientation: "portrait"
+    });
+  } catch (err) {
+    return res.json({
+      short_name: "WebNook",
+      name: "WebNook Social",
+      icons: [{ src: "/branding/logo.png", type: "image/png", sizes: "192x192" }],
+      start_url: "/",
+      display: "standalone"
+    });
   }
 });
 

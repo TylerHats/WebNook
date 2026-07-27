@@ -16,20 +16,25 @@ export const Navbar: React.FC = () => {
       .then(data => {
         if (data.app_name) setAppName(data.app_name);
         if (data.logo_url) setLogoUrl(data.logo_url);
+        
+        // Dynamically set Document Title & Favicon
         document.title = data.app_name ? `${data.app_name} - Social Platform` : 'WebNook';
+        const favicon = document.getElementById('favicon') as HTMLLinkElement;
+        if (favicon && data.logo_url) {
+          favicon.href = data.logo_url;
+        }
       })
       .catch(err => console.error(err));
   }, []);
 
   return (
     <nav className="webnook-navbar">
-      <Link to="/" className="webnook-brand">
+      <Link to="/" className="webnook-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         <img
           src={logoUrl}
-          alt="Logo"
+          alt={appName}
           style={{ height: '36px', width: 'auto', objectFit: 'contain', borderRadius: '6px' }}
           onError={(e) => {
-            // Fallback icon if image fails
             (e.target as HTMLElement).style.display = 'none';
           }}
         />
