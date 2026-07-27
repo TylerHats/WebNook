@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/TylerHats/WebNook/releases"><img src="https://img.shields.io/github/v/release/TylerHats/WebNook?style=flat-square&color=6366f1" alt="Release" /></a>
   <a href="https://hub.docker.com/repository/docker/tylerhats/webnook"><img src="https://img.shields.io/docker/v/tylerhats/webnook?label=docker&style=flat-square&color=0080ff" alt="Docker Hub" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square" alt="License" /></a>
   <img src="https://img.shields.io/badge/PWA-Ready-ff69b4.svg?style=flat-square" alt="PWA Ready" />
 </p>
 
@@ -131,4 +131,4 @@ To cleanly remove build dependencies or purge local data:
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE).
