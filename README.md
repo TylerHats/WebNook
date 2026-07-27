@@ -10,7 +10,8 @@ WebNook is a cute, friend-group centric, self-hosted social media platform heavi
 
 ## ✨ Feature Overview
 
-### 🎨 Deep Nook Customization
+### 🎨 Deep Nook Customization & Whitelabeling
+- **Whitelabel Branding**: Customize Application Name and upload custom branding logos via Admin Settings.
 - **Theme Switcher**:
   - **Modern Glassmorphism**: Translucent blurred panels, glowing borders, vibrant neon accents.
   - **Retro Windows 98**: Functional classic grey windows chrome, 3D borders, navy blue title bars, retro system buttons.
@@ -20,12 +21,12 @@ WebNook is a cute, friend-group centric, self-hosted social media platform heavi
 - **Background Anthem Audio**: Play your favorite song directly on your Nook for visitors.
 - **Custom CSS Overrides**: Complete style control via custom CSS injection.
 
-### 🔐 Authentication & Privacy
-- **Privacy by Default**: Nooks are private by default, requiring friend requests before viewing mutual profile content. Fine-grained controls allow public visibility options per Nook.
+### 🔐 Authentication, Reverse Proxies & SSL
+- **Reverse Proxy SSL Termination**: WebNook natively supports running behind Nginx, Caddy, Traefik, or Cloudflare with protocol detection (`trust proxy`). Dynamic WebAuthn origin matching ensures Passkeys work behind any domain/proxy.
+- **Bare Host Let's Encrypt SSL**: Built-in `./setup-ssl.sh` script for zero-configuration Let's Encrypt HTTPS certificate generation on bare installations.
 - **Multi-Factor Authentication (MFA)**:
   - **TOTP**: Compatible with Google Authenticator, Authy, etc., complete with QR code setup.
   - **Passkeys (WebAuthn / FIDO2)**: Hardware security keys, TouchID, and FaceID passwordless login.
-- **Password Reset**: Self-hosted SMTP password reset delivery and emergency admin reset flow.
 
 ### 🎵 Integrations & Social Mechanics
 - **Spotify Showcase**: Top artists, top tracks, and currently playing song display.
@@ -43,8 +44,17 @@ WebNook is a cute, friend-group centric, self-hosted social media platform heavi
 
 ---
 
-## 📱 Mobile PWA Support
-WebNook is engineered for mobile-first usage. You can install WebNook as a standalone Progressive Web App (PWA) directly from Safari on iOS ("Add to Home Screen") or Chrome on Android/Desktop for native app feel and offline asset caching.
+## 🔒 SSL & Reverse Proxy Setup
+
+### Option A: Reverse Proxy (Nginx, Caddy, Cloudflare)
+WebNook automatically detects `X-Forwarded-Proto` and `X-Forwarded-Host` headers. No extra configuration is required!
+
+### Option B: Bare Host Let's Encrypt SSL
+If running WebNook directly on a bare server, run:
+
+```bash
+sudo ./setup-ssl.sh
+```
 
 ---
 
@@ -71,8 +81,6 @@ npm start
 npm run dev
 ```
 
-Visit WebNook in your browser at `http://localhost:4000`.
-
 ---
 
 ## 🗑️ Uninstallation Script
@@ -90,8 +98,6 @@ To cleanly remove WebNook build artifacts and optionally purge local database fi
 WebNook image is hosted on Docker Hub at:  
 👉 **[hub.docker.com/repository/docker/tylerhats/webnook](https://hub.docker.com/repository/docker/tylerhats/webnook/general)**
 
-### Running via Docker Compose
-
 ```yaml
 version: '3.8'
 
@@ -106,8 +112,6 @@ services:
       - PORT=4000
       - NODE_ENV=production
       - JWT_SECRET=change_me_to_your_secure_random_key
-      - RP_ID=localhost
-      - ORIGIN=http://localhost:4000
     volumes:
       - webnook-data:/app/backend/data
       - webnook-uploads:/app/backend/uploads
@@ -115,12 +119,6 @@ services:
 volumes:
   webnook-data:
   webnook-uploads:
-```
-
-Start the container:
-
-```bash
-docker compose up -d
 ```
 
 ---

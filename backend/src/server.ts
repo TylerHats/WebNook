@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import https from 'https';
+import http from 'http';
 import { runMigrations } from './db/migrations';
 import { queryOne } from './db/connection';
 import authRoutes from './routes/authRoutes';
@@ -13,6 +15,9 @@ import adminRoutes from './routes/adminRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+// Enable reverse proxy SSL termination & protocol detection
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
@@ -27,7 +32,8 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 // Whitelabel Branding Directory (Check persistent user data dir first, fallback to shipped default)
-const customBrandingDir = process.env.DATA_DIR ? path.join(process.env.DATA_DIR, 'branding') : path.join(__dirname, '../data/branding');
+const dataDir = process.env.DATA_DIR || path.join(__dirname, '../data');
+const customBrandingDir = path.join(dataDir, 'branding');
 const defaultBrandingDir = path.join(__dirname, '../branding');
 
 if (!fs.existsSync(customBrandingDir)) {
@@ -72,9 +78,19 @@ app.get('/api/branding/public', async (req, res) => {
   }
 });
 
-// Health Check
+// Health Check with Reverse Proxy & Protocol Diagnostic Info
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'WebNook Backend API', timestamp: new Date() });
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  
+  res.json({
+    status: 'ok',
+    service: 'WebNook Backend API',
+    detectedProtocol: protocol,
+    detectedHost: host,
+    isBehindProxy: req.headers['x-forwarded-proto'] ? true : false,
+    timestamp: new Date()
+  });
 });
 
 // Serve Frontend Static Files in production if built
@@ -93,13 +109,29 @@ async function startServer() {
   try {
     console.log('Initializing WebNook database migrations...');
     await runMigrations();
-    
-    app.listen(PORT, () => {
-      console.log(`====================================================`);
-      console.log(` WebNook Server running on port ${PORT}`);
-      console.log(` API Endpoint: http://localhost:${PORT}/api`);
-      console.log(`====================================================`);
-    });
+
+    const certPath = process.env.SSL_CERT || path.join(dataDir, 'cert.pem');
+    const keyPath = process.env.SSL_KEY || path.join(dataDir, 'key.pem');
+
+    if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+      const httpsOptions = {
+        cert: fs.readFileSync(certPath),
+        key: fs.readFileSync(keyPath)
+      };
+      https.createServer(httpsOptions, app).listen(PORT, () => {
+        console.log(`====================================================`);
+        console.log(` 🔒 WebNook Native HTTPS Server running on port ${PORT}`);
+        console.log(`====================================================`);
+      });
+    } else {
+      http.createServer(app).listen(PORT, () => {
+        console.log(`====================================================`);
+        console.log(` 🚀 WebNook HTTP Server running on port ${PORT}`);
+        console.log(` Reverse Proxy SSL Detection Enabled ('trust proxy')`);
+        console.log(` API Endpoint: http://localhost:${PORT}/api`);
+        console.log(`====================================================`);
+      });
+    }
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);

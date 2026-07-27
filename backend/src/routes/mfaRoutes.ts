@@ -12,10 +12,21 @@ import { authenticateToken, AuthenticatedRequest, JWT_SECRET } from '../middlewa
 import jwt from 'jsonwebtoken';
 
 const router = Router();
-
 const RP_NAME = 'WebNook Platform';
-const RP_ID = process.env.RP_ID || 'localhost';
-const ORIGIN = process.env.ORIGIN || `http://localhost:${process.env.PORT || 4000}`;
+
+// Helper to calculate dynamic RP_ID and Origin respecting Reverse Proxies (Nginx, Caddy, Cloudflare)
+function getOrigin(req: any): string {
+  if (process.env.ORIGIN) return process.env.ORIGIN;
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http') as string;
+  const host = (req.headers['x-forwarded-host'] || req.headers.host || 'localhost') as string;
+  return `${proto}://${host}`;
+}
+
+function getRpId(req: any): string {
+  if (process.env.RP_ID) return process.env.RP_ID;
+  const hostHeader = (req.headers['x-forwarded-host'] || req.headers.host || 'localhost') as string;
+  return hostHeader.split(':')[0];
+}
 
 // Store active webauthn challenges in memory temporarily
 const challenges: Record<string, string> = {};
@@ -31,7 +42,6 @@ router.post('/totp/setup', authenticateToken, async (req: AuthenticatedRequest, 
 
     const qrDataUrl = await QRCode.toDataURL(otpauth);
 
-    // Temporarily save secret to user record until verified
     await execute('UPDATE users SET totp_secret = ? WHERE id = ?', [secret, user.id]);
 
     return res.json({ secret, qrDataUrl });
@@ -67,7 +77,6 @@ router.post('/totp/verify', authenticateToken, async (req: AuthenticatedRequest,
 // Disable TOTP
 router.post('/totp/disable', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { password } = req.body;
     await execute('UPDATE users SET is_totp_enabled = 0, totp_secret = NULL WHERE id = ?', [req.user!.id]);
     return res.json({ message: 'TOTP 2FA disabled successfully' });
   } catch (err) {
@@ -82,10 +91,11 @@ router.post('/passkey/register-options', authenticateToken, async (req: Authenti
   try {
     const user = req.user!;
     const userPasskeys = await query<any>('SELECT id, transports FROM passkey_credentials WHERE user_id = ?', [user.id]);
+    const rpID = getRpId(req);
 
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
-      rpID: RP_ID,
+      rpID,
       userID: String(user.id),
       userName: user.username,
       userDisplayName: user.username,
@@ -123,8 +133,8 @@ router.post('/passkey/register-verify', authenticateToken, async (req: Authentic
     const verification = await verifyRegistrationResponse({
       response: req.body,
       expectedChallenge,
-      expectedOrigin: ORIGIN,
-      expectedRPID: RP_ID
+      expectedOrigin: getOrigin(req),
+      expectedRPID: getRpId(req)
     });
 
     const { verified, registrationInfo } = verification;
@@ -168,7 +178,7 @@ router.post('/passkey/login-options', async (req: AuthenticatedRequest, res: Res
     }
 
     const options = await generateAuthenticationOptions({
-      rpID: RP_ID,
+      rpID: getRpId(req),
       allowCredentials: userPasskeys.map(pk => ({
         id: pk.id,
         type: 'public-key' as const,
@@ -209,8 +219,8 @@ router.post('/passkey/login-verify', async (req: AuthenticatedRequest, res: Resp
     const verification = await verifyAuthenticationResponse({
       response,
       expectedChallenge,
-      expectedOrigin: ORIGIN,
-      expectedRPID: RP_ID,
+      expectedOrigin: getOrigin(req),
+      expectedRPID: getRpId(req),
       authenticator: {
         credentialID: passkey.id,
         credentialPublicKey: Buffer.from(passkey.public_key, 'base64'),
