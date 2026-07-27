@@ -1,0 +1,251 @@
+/* WebNook Theme Engine & Stylesheet System */
+
+:root {
+  --bg-primary: #0e0f17;
+  --bg-panel: rgba(24, 27, 43, 0.7);
+  --bg-panel-solid: #181b2b;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --accent-color: #6366f1;
+  --accent-hover: #4f46e5;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-radius-main: 16px;
+  --border-radius-btn: 10px;
+  --font-family-main: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --backdrop-blur: blur(16px);
+  --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Base resets & typography */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: var(--font-family-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+/* ========================================================
+   THEME 1: Modern Glassmorphism (Default)
+   ======================================================== */
+.theme-glassmorphism {
+  --bg-primary: #0f101d;
+  --bg-panel: rgba(26, 30, 50, 0.65);
+  --bg-panel-solid: #1a1e32;
+  --text-main: #ffffff;
+  --text-muted: #a0aec0;
+  --accent-color: #6366f1;
+  --accent-hover: #4f46e5;
+  --border-color: rgba(255, 255, 255, 0.14);
+  --border-radius-main: 20px;
+  --border-radius-btn: 12px;
+  --backdrop-blur: blur(20px);
+  --box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.theme-glassmorphism .nook-panel {
+  background: var(--bg-panel);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-main);
+  box-shadow: var(--box-shadow);
+  padding: 1.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-glassmorphism .nook-panel-header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent-color);
+}
+
+/* ========================================================
+   THEME 2: Retro Windows 98
+   ======================================================== */
+.theme-win98 {
+  --bg-primary: #008080; /* Classic Teal Desktop */
+  --bg-panel: #c0c0c0;
+  --bg-panel-solid: #c0c0c0;
+  --text-main: #000000;
+  --text-muted: #444444;
+  --accent-color: #000080;
+  --accent-hover: #1084d0;
+  --border-color: #000000;
+  --border-radius-main: 0px;
+  --border-radius-btn: 0px;
+  --font-family-main: 'Comic Sans MS', 'MS Sans Serif', Tahoma, sans-serif;
+  --backdrop-blur: none;
+  --box-shadow: 2px 2px 0px #000000;
+}
+
+.theme-win98 .nook-panel {
+  background: #c0c0c0;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-right: 2px solid #000000;
+  border-bottom: 2px solid #000000;
+  padding: 4px;
+  box-shadow: inset 1px 1px 0px #dfdfdf, inset -1px -1px 0px #808080;
+  margin-bottom: 1rem;
+}
+
+.theme-win98 .nook-panel-header {
+  background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+  color: #ffffff;
+  padding: 3px 6px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.theme-win98 .nook-panel-header::after {
+  content: 'X';
+  background: #c0c0c0;
+  color: #000;
+  border-top: 1px solid #ffffff;
+  border-left: 1px solid #ffffff;
+  border-right: 1px solid #000;
+  border-bottom: 1px solid #000;
+  padding: 0px 5px;
+  font-size: 10px;
+  font-family: sans-serif;
+  font-weight: bold;
+}
+
+.theme-win98 button {
+  background: #c0c0c0;
+  color: #000000;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-right: 2px solid #000000;
+  border-bottom: 2px solid #000000;
+  padding: 4px 12px;
+  font-weight: bold;
+}
+.theme-win98 button:active {
+  border-top: 2px solid #000000;
+  border-left: 2px solid #000000;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+}
+
+/* ========================================================
+   THEME 3: Windows 7 Frutiger Aero
+   ======================================================== */
+.theme-frutiger-aero {
+  --bg-primary: #1e3c72;
+  --bg-panel: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(210, 235, 255, 0.55) 100%);
+  --bg-panel-solid: #e2f1ff;
+  --text-main: #0c2340;
+  --text-muted: #4a6572;
+  --accent-color: #0080ff;
+  --accent-hover: #0066cc;
+  --border-color: rgba(255, 255, 255, 0.9);
+  --border-radius-main: 14px;
+  --border-radius-btn: 20px;
+  --backdrop-blur: blur(12px);
+  --box-shadow: 0 8px 24px rgba(0, 100, 200, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+}
+
+.theme-frutiger-aero .nook-panel {
+  background: var(--bg-panel);
+  backdrop-filter: var(--backdrop-blur);
+  border: 1.5 solid var(--border-color);
+  border-radius: var(--border-radius-main);
+  box-shadow: var(--box-shadow);
+  padding: 1.25rem;
+  color: var(--text-main);
+}
+
+.theme-frutiger-aero .nook-panel-header {
+  color: #0052a5;
+  font-size: 1.2rem;
+  font-weight: 800;
+  border-bottom: 2px solid rgba(0, 128, 255, 0.25);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.theme-frutiger-aero button {
+  background: linear-gradient(180deg, #66b2ff 0%, #0066cc 50%, #004c99 100%);
+  color: #ffffff;
+  border-radius: var(--border-radius-btn);
+  padding: 8px 18px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* ========================================================
+   THEME 4: Cyberpunk / Neon Y2K
+   ======================================================== */
+.theme-cyberpunk {
+  --bg-primary: #0a0512;
+  --bg-panel: rgba(20, 10, 35, 0.85);
+  --bg-panel-solid: #150a26;
+  --text-main: #00f3ff;
+  --text-muted: #ff007f;
+  --accent-color: #ff007f;
+  --accent-hover: #d00068;
+  --border-color: #00f3ff;
+  --border-radius-main: 4px;
+  --border-radius-btn: 2px;
+  --backdrop-blur: blur(8px);
+  --box-shadow: 0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(255, 0, 127, 0.2);
+}
+
+.theme-cyberpunk .nook-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--box-shadow);
+  padding: 1.25rem;
+  color: var(--text-main);
+}
+
+.theme-cyberpunk .nook-panel-header {
+  color: #ff007f;
+  text-shadow: 0 0 8px #ff007f;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #00f3ff;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.theme-cyberpunk button {
+  background: #ff007f;
+  color: #ffffff;
+  border: 1px solid #00f3ff;
+  box-shadow: 0 0 10px #ff007f;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
