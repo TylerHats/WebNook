@@ -101,7 +101,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
         borderBottom: '1px solid var(--border-color)',
         padding: '0.75rem 1.5rem',
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
       }}>
@@ -137,7 +137,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
         flexWrap: 'wrap',
         gap: '1.25rem',
         alignItems: 'center',
-        justify: 'space-between'
+        justifyContent: 'space-between'
       }}>
         {/* Preset Sticker Quick Add Dropdown */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

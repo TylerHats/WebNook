@@ -91,7 +91,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                     key={g.appid || idx}
                     style={{
                       display: 'flex',
-                      justify: 'space-between',
+                      justifyContent: 'space-between',
                       alignItems: 'center',
                       background: 'rgba(0,0,0,0.2)',
                       padding: '0.45rem 0.75rem',
