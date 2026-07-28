@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, Palette, Music, Users, Shield, UserPlus, LogIn, Heart, Home, Star, Smile } from 'lucide-react';
+import { Sparkles, Palette, Music, Users, Shield, UserPlus, LogIn, Heart, Home, Star, Smile, Film, BookOpen } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const { user } = useAuth();
@@ -69,9 +69,9 @@ export const HomePage: React.FC = () => {
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: 'var(--accent-color)' }}>
             <Palette size={26} />
           </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Express Your Vibe</h3>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Visual Sticker Studio</h3>
           <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
-            Pick cute retro themes, upload your favorite profile & banner pictures, change colors, and place cute stickers anywhere on your page!
+            Drag, rotate, scale, and layer cute stickers anywhere over your live Nook page preview with our real-time Sticker Studio!
           </p>
         </div>
 
@@ -79,9 +79,29 @@ export const HomePage: React.FC = () => {
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#22c55e' }}>
             <Music size={26} />
           </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Set Your Profile Anthem</h3>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Music & Spotify Playlists</h3>
           <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
-            Upload your favorite song audio file so friends can listen to your theme music whenever they visit your page!
+            Upload custom MP3 audio files or search Spotify to create custom music playlists that friends can listen to when visiting!
+          </p>
+        </div>
+
+        <div className="nook-panel">
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#ef4444' }}>
+            <Film size={26} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Movies & TV Showcase</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
+            Search movie and TV show databases to display poster artwork, release years, and your personal 5-star ratings!
+          </p>
+        </div>
+
+        <div className="nook-panel">
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#3b82f6' }}>
+            <BookOpen size={26} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Books & StoryGraph Nook</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
+            Curate your reading nook by searching books or importing your favorite reads directly from StoryGraph CSV files!
           </p>
         </div>
 
@@ -89,9 +109,9 @@ export const HomePage: React.FC = () => {
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(168, 85, 247, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#a855f7' }}>
             <Heart size={26} />
           </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Top Friends & Guestbook Notes</h3>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Top Friends & Guestbook</h3>
           <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
-            Show off your best friends in a special grid, write friendly notes in each other's guestbooks, and leave cute messages!
+            Showcase your best friends in a special profile grid, write friendly notes in guestbooks, and see who favorited you!
           </p>
         </div>
 
@@ -101,7 +121,7 @@ export const HomePage: React.FC = () => {
           </div>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Safe & Private Sanctuary</h3>
           <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
-            No advertisements, no algorithms telling you what to look at, and total privacy control over who gets to see your profile!
+            No ads, no algorithms, hardware Passkey & 2FA security, and complete control over who can view your profile!
           </p>
         </div>
       </div>

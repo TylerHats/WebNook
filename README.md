@@ -19,9 +19,9 @@
 
 ## 📌 Overview
 
-**WebNook** brings back personal expression and privacy to social networking. Designed specifically for friend groups and self-hosters, WebNook lets each user create a cute, highly customized personal page (**"Nook"**) at `website.com/nook/username`. 
+**WebNook** brings back personal expression, cozy vibes, and privacy to social networking. Designed specifically for friend groups and self-hosters, WebNook lets each user create a cute, highly customized personal page (**"Nook"**) at `website.com/nook/username`. 
 
-Featuring customizable themes (**Modern Glassmorphism**, **Retro Windows 98**, **Windows 7 Frutiger Aero**, and **Cyberpunk Y2K**), interactive sticker canvas overlays, background audio players, Spotify and Steam integrations, hardware Passkey/TOTP authentication, and complete Whitelabeling capabilities.
+Featuring 4 nostalgic themes (**Modern Glass**, **Windows 95 Classic**, **Windows 7 Frutiger Aero**, and **Cyberpunk Y2K**), a real-time **Visual Sticker Studio**, custom MP3 audio playlists, **Movies & TV Showcases**, **Books & StoryGraph Reading Nooks**, **Spotify & Steam integrations**, hardware Passkey / 2FA security, and auto-reloading Docker container self-upgrades.
 
 ---
 
@@ -29,13 +29,14 @@ Featuring customizable themes (**Modern Glassmorphism**, **Retro Windows 98**, *
 
 | Category | Highlights |
 | :--- | :--- |
-| **🎨 Personalization** | 4 curated themes, drag-and-drop sticker overlays, custom MP3 background audio player, custom CSS injection. |
-| **🔒 Privacy & Security** | Private by default profile viewing, fine-grained public visibility controls, email/password + TOTP 2FA & WebAuthn Passkeys. |
-| **🤝 Social Mechanics** | MySpace-style Top 8 / Top 12 friend grids, mutual friend approval, guestbook comments with moderation. |
-| **🎵 Integrations** | Spotify Top Artists & Tracks showcase, Steam Recently Played Games & status widget. |
-| **💼 Whitelabeling** | Customizable application title and web UI logo upload via Admin Settings. |
-| **⚡ Admin Suite** | Performance metrics, user role management, single-file SQLite database backup export, and PolyPress-style release updater. |
-| **📱 Mobile & Edge** | Installable Progressive Web App (PWA) with offline caching and native mobile UI layout. |
+| **🖼️ Visual Sticker Studio** | Live interactive canvas to drag, scale, rotate, and layer cute preset or custom stickers anywhere over your profile! |
+| **🎬 Movies & TV Showcase** | Search film & series databases (TMDB/OMDb) to display poster art, release years, and personal star ratings. |
+| **📚 Books & Reading Nook** | Search books (Open Library) or import your reading lists directly from StoryGraph CSV files with 1 click. |
+| **🎵 Music & Spotify OAuth** | Upload custom MP3 audio tracks, search Spotify catalog, or connect your personal Spotify account for top & recent tracks. |
+| **🎮 Steam Showcase** | Display online status, top all-time games, and recently played games. |
+| **🤝 Social Mechanics** | MySpace-style Top Friends grids, unidirectional favoriting with `⭐ Favorited You` badges, and full-width guestbooks. |
+| **🔒 Privacy & Security** | Private by default profile viewing, fine-grained card visibility controls, email/password + TOTP 2FA & WebAuthn Passkeys. |
+| **⚡ Admin & Container Suite** | Real-time health metrics, 1-click compressed SQLite backups, and automated Docker container process self-reloads. |
 
 ---
 
