@@ -15,14 +15,18 @@ interface StickerCanvasProps {
   stickers: Sticker[];
   targetLayer?: 'above_cards' | 'behind_cards';
   isEditing?: boolean;
+  selectedIdx?: number | null;
   onStickerUpdate?: (stickers: Sticker[]) => void;
+  onStickerSelect?: (originalIdx: number) => void;
 }
 
 export const StickerCanvas: React.FC<StickerCanvasProps> = ({
   stickers,
   targetLayer = 'above_cards',
   isEditing = false,
-  onStickerUpdate
+  selectedIdx,
+  onStickerUpdate,
+  onStickerSelect
 }) => {
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,6 +43,9 @@ export const StickerCanvas: React.FC<StickerCanvasProps> = ({
     e.stopPropagation();
     e.preventDefault();
     setDraggingIdx(originalIdx);
+    if (onStickerSelect) {
+      onStickerSelect(originalIdx);
+    }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -79,15 +86,16 @@ export const StickerCanvas: React.FC<StickerCanvasProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        pointerEvents: isEditing ? 'auto' : 'none',
-        zIndex: targetLayer === 'behind_cards' ? 1 : 40,
+        pointerEvents: 'none',
+        zIndex: targetLayer === 'behind_cards' ? 5 : 40,
         overflow: 'hidden'
       }}
     >
       {filteredIndices.map(({ s: sticker, originalIdx }) => {
         const isEmoji = !sticker.sticker_url.startsWith('/') && !sticker.sticker_url.startsWith('http');
-        const zIndex = sticker.z_index || (targetLayer === 'behind_cards' ? 1 + originalIdx : 40 + originalIdx);
+        const zIndex = sticker.z_index || (targetLayer === 'behind_cards' ? 5 + originalIdx : 40 + originalIdx);
         const isDragging = draggingIdx === originalIdx;
+        const isSelected = selectedIdx === originalIdx;
 
         return (
           <div
@@ -104,8 +112,9 @@ export const StickerCanvas: React.FC<StickerCanvasProps> = ({
               pointerEvents: isEditing ? 'auto' : 'none',
               padding: '6px',
               borderRadius: '8px',
-              border: isEditing ? (isDragging ? '2px dashed var(--accent-color)' : '1px dashed rgba(255,255,255,0.4)') : 'none',
-              background: isDragging ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+              border: isEditing ? (isSelected ? '2px solid #6366f1' : '1px dashed rgba(255,255,255,0.4)') : 'none',
+              boxShadow: isEditing && isSelected ? '0 0 12px rgba(99, 102, 241, 0.6)' : 'none',
+              background: isDragging ? 'rgba(99, 102, 241, 0.25)' : (isSelected ? 'rgba(99, 102, 241, 0.12)' : 'transparent'),
               transition: isDragging ? 'none' : 'transform 0.1s ease'
             }}
           >

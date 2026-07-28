@@ -25,7 +25,7 @@ export const NookViewPage: React.FC = () => {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch(`/api/nook/profile/${targetUsername}`, { headers })
+    fetch(`/api/nook/profile/${targetUsername}?_t=${Date.now()}`, { headers, cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         setProfileData(data);

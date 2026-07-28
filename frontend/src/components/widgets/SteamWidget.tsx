@@ -37,8 +37,8 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   const recentlyPlayed = data?.recentlyPlayed || [];
   const topGames = data?.topGames || [];
 
-  const showRecent = (displayMode === 'recently_played' || displayMode === 'both') && recentlyPlayed.length > 0;
-  const showTop = (displayMode === 'top_games' || displayMode === 'both') && topGames.length > 0;
+  const wantRecent = displayMode === 'recently_played' || displayMode === 'both';
+  const wantTop = displayMode === 'top_games' || displayMode === 'both';
 
   return (
     <div className="nook-panel">
@@ -80,40 +80,46 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
       {/* Render Games Lists according to displayMode */}
       {displayMode !== 'none' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {showRecent && (
+          {wantRecent && (
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
                 Top 3 Recently Played (Past 2 Weeks):
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {recentlyPlayed.slice(0, 3).map((g: any, idx: number) => (
-                  <div
-                    key={g.appid || idx}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      background: 'rgba(0,0,0,0.2)',
-                      padding: '0.45rem 0.75rem',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-color)',
-                      fontSize: '0.85rem'
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {g.icon && <img src={g.icon} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />}
-                      <span>{g.name}</span>
+              {recentlyPlayed.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {recentlyPlayed.slice(0, 3).map((g: any, idx: number) => (
+                    <div
+                      key={g.appid || idx}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: 'rgba(0,0,0,0.2)',
+                        padding: '0.45rem 0.75rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {g.icon && <img src={g.icon} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />}
+                        <span>{g.name}</span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 600 }}>
+                        {g.playtime_2weeks !== undefined ? `${g.playtime_2weeks} hrs (past 2 wks)` : `${g.playtime_forever} hrs total`}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 600 }}>
-                      {g.playtime_2weeks !== undefined ? `${g.playtime_2weeks} hrs (past 2 wks)` : `${g.playtime_forever} hrs total`}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.65rem', borderRadius: '6px', fontSize: '0.8rem', opacity: 0.7, textAlign: 'center' }}>
+                  No games played in the past 2 weeks 🎮
+                </div>
+              )}
             </div>
           )}
 
-          {showTop && (
+          {wantTop && topGames.length > 0 && (
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
                 Top 3 All-Time Games:

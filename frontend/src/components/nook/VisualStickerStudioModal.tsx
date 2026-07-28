@@ -4,6 +4,8 @@ import { PRESET_STICKERS } from '../../constants/presetStickers';
 import { X, Save, Layers, RotateCw, Maximize2, Trash2, Plus, Sparkles, Ghost, Eye } from 'lucide-react';
 import { MusicWidget } from '../widgets/MusicWidget';
 import { SteamWidget } from '../widgets/SteamWidget';
+import { MoviesWidget } from '../widgets/MoviesWidget';
+import { BooksWidget } from '../widgets/BooksWidget';
 
 interface VisualStickerStudioModalProps {
   isOpen: boolean;
@@ -297,7 +299,9 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           stickers={stickers}
           targetLayer="behind_cards"
           isEditing={true}
+          selectedIdx={selectedIndex}
           onStickerUpdate={setStickers}
+          onStickerSelect={(idx) => setSelectedIndex(idx)}
         />
 
         {/* Nook Profile Real Layout Preview */}
@@ -347,6 +351,11 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
                 spotifyTrackUrl={nookSettings?.spotify_track_url}
                 appleMusicUrl={nookSettings?.apple_music_url}
               />
+
+              {/* Movies & TV Widget Preview */}
+              <MoviesWidget
+                movies={nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : []}
+              />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -354,6 +363,12 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
               <SteamWidget
                 steamId64={nookSettings?.steam_id64 || '76561198000000000'}
                 displayMode={nookSettings?.steam_display_mode || 'both'}
+              />
+
+              {/* Books Widget Preview */}
+              <BooksWidget
+                books={nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : []}
+                storygraphUsername={nookSettings?.storygraph_username}
               />
             </div>
           </div>
@@ -364,7 +379,9 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           stickers={stickers}
           targetLayer="above_cards"
           isEditing={true}
+          selectedIdx={selectedIndex}
           onStickerUpdate={setStickers}
+          onStickerSelect={(idx) => setSelectedIndex(idx)}
         />
       </div>
     </div>

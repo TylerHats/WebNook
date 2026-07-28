@@ -26,6 +26,31 @@ function fetchJson(url: string, headers: Record<string, string> = {}): Promise<a
   return fetchText(url, headers).then(text => JSON.parse(text));
 }
 
+function postForm(urlStr: string, bodyObj: Record<string, string>, headers: Record<string, string> = {}): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = new URL(urlStr);
+    const postData = new URLSearchParams(bodyObj).toString();
+    const req = https.request({
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(postData),
+        ...headers
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => resolve(data));
+    });
+    req.on('error', reject);
+    req.write(postData);
+    req.end();
+  });
+}
+
 /**
  * Clean Steam Input:
  * Accepts:
@@ -236,10 +261,11 @@ router.get('/spotify/search', async (req: Request, res: Response) => {
     }
 
     const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const tokenText = await fetchText('https://accounts.spotify.com/api/token', {
-      'Authorization': `Basic ${authHeader}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    });
+    const tokenText = await postForm(
+      'https://accounts.spotify.com/api/token',
+      { grant_type: 'client_credentials' },
+      { 'Authorization': `Basic ${authHeader}` }
+    );
 
     const tokenData = JSON.parse(tokenText);
     if (!tokenData.access_token) throw new Error('Spotify auth failed');

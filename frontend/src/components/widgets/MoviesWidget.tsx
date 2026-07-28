@@ -1,5 +1,6 @@
 import React from 'react';
-import { Film, Tv, Star, Clapperboard } from 'lucide-react';
+import { Clapperboard } from 'lucide-react';
+import { StarRatingDisplay } from '../ui/StarRatingDisplay';
 
 export interface MovieItem {
   id: string;
@@ -8,7 +9,7 @@ export interface MovieItem {
   year?: string;
   posterUrl?: string;
   overview?: string;
-  rating?: string;
+  rating?: number | string;
 }
 
 interface MoviesWidgetProps {
@@ -35,11 +36,12 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
           No favorite movies or TV shows added yet 🍿
         </p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '1rem', justifyContent: 'start' }}>
           {movies.map((m, idx) => (
             <div
               key={m.id || idx}
               style={{
+                width: '135px',
                 background: 'rgba(0,0,0,0.2)',
                 borderRadius: '10px',
                 border: '1px solid var(--border-color)',
@@ -51,25 +53,21 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
               <img
                 src={m.posterUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=300&auto=format&fit=crop&q=80'}
                 alt={m.title}
-                style={{ width: '100%', height: '160px', objectFit: 'cover' }}
+                style={{ width: '100%', height: '175px', objectFit: 'cover' }}
               />
-              <div style={{ padding: '0.65rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ padding: '0.55rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.3, marginBottom: '0.2rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.25, marginBottom: '0.2rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {m.title}
                   </div>
-                  <div style={{ fontSize: '0.72rem', opacity: 0.7, display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
-                    <span>{m.type === 'TV Series' ? '📺 TV' : '🎬 Movie'}</span>
-                    {m.year && <span>• {m.year}</span>}
+                  <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>
+                    {m.type === 'TV Series' ? '📺 TV' : '🎬 Movie'} {m.year && `• ${m.year}`}
                   </div>
                 </div>
 
-                {m.rating && (
-                  <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                    <Star size={12} fill="var(--accent-color)" />
-                    <span>{m.rating}</span>
-                  </div>
-                )}
+                <div style={{ marginTop: '0.4rem' }}>
+                  <StarRatingDisplay rating={m.rating ?? 5} size={12} />
+                </div>
               </div>
             </div>
           ))}

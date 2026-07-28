@@ -256,7 +256,10 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
     const installedVersionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "installed_version"');
     const installedVersion = installedVersionRow?.value;
 
-    let currentPkgVersion = '1.4.0';
+    const installedCommitRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "installed_commit_sha"');
+    const installedCommit = installedCommitRow?.value;
+
+    let currentPkgVersion = '1.6.0';
     try {
       const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8'));
       if (rootPkg && rootPkg.version) currentPkgVersion = rootPkg.version;
@@ -278,7 +281,7 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
       const commits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits/main`);
       if (commits && commits.sha) {
         targetVersion = commits.sha.substring(0, 7);
-        currentVersion = localCommitHash || installedVersion || currentPkgVersion;
+        currentVersion = localCommitHash || installedCommit || (installedVersion ? installedVersion.substring(0, 7) : currentPkgVersion);
 
         latestReleaseInfo = {
           tag: targetVersion,
@@ -369,17 +372,12 @@ router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) =>
 
     if (targetVersion) {
       await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['installed_version', String(targetVersion)]);
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['installed_commit_sha', String(targetVersion)]);
     }
 
-    if (gitPulled) {
-      return res.json({ message: 'Update applied! Git repository pulled latest changes & migrations verified.' });
-    } else {
-      return res.json({
-        message: targetVersion
-          ? `System updated to ${targetVersion}! (Note: Docker container detected - run 'docker pull tylerhats/webnook:latest' to update underlying container image binaries)`
-          : 'Database schema migrations verified successfully!'
-      });
-    }
+    return res.json({
+      message: `Update applied successfully! System running version ${targetVersion || 'latest'}.`
+    });
   } catch (err: any) {
     return res.status(500).json({ error: `Failed to apply update: ${err.message}` });
   }

@@ -575,6 +575,10 @@ export const AdminDashboardPage: React.FC = () => {
                 <div style={{ background: 'rgba(0,0,0,0.25)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   {renderMarkdown(updateInfo.latestRelease?.notes)}
                 </div>
+
+                <div style={{ background: 'rgba(59, 130, 246, 0.12)', padding: '0.85rem', borderRadius: '10px', border: '1px solid #3b82f6', fontSize: '0.82rem', lineHeight: 1.5, marginTop: '1rem' }}>
+                  🐳 <strong>Docker Container Environment Notice:</strong> Applying updates via this UI updates your active running instance & database schema. <em>Note: Re-pulling or recreating your Docker container image will reset image binaries to the pushed tag release.</em>
+                </div>
               </div>
             )}
 

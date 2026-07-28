@@ -987,19 +987,34 @@ export const NookCustomizerPage: React.FC = () => {
 
             {/* Favorite Movies List */}
             {favoriteMovies.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '0.75rem' }}>
                 {favoriteMovies.map((m, idx) => (
                   <div key={m.id || idx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
                     <button
                       type="button"
                       onClick={() => setFavoriteMovies(favoriteMovies.filter((_, i) => i !== idx))}
-                      style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.8)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '0.75rem' }}
+                      style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.8)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '0.75rem', zIndex: 2 }}
                     >
                       ✕
                     </button>
                     <img src={m.posterUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{m.type} • {m.year}</div>
+                    <div style={{ marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.5"
+                        value={m.rating ?? 5}
+                        onChange={e => {
+                          const val = parseFloat(e.target.value) || 5;
+                          setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
+                        }}
+                        style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1090,19 +1105,34 @@ export const NookCustomizerPage: React.FC = () => {
 
             {/* Favorite Books List */}
             {favoriteBooks.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '0.75rem' }}>
                 {favoriteBooks.map((b, idx) => (
                   <div key={b.id || idx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
                     <button
                       type="button"
                       onClick={() => setFavoriteBooks(favoriteBooks.filter((_, i) => i !== idx))}
-                      style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.8)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '0.75rem' }}
+                      style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.8)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '0.75rem', zIndex: 2 }}
                     >
                       ✕
                     </button>
                     <img src={b.coverUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{b.author}</div>
+                    <div style={{ marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.5"
+                        value={b.rating ?? 5}
+                        onChange={e => {
+                          const val = parseFloat(e.target.value) || 5;
+                          setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
+                        }}
+                        style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
