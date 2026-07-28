@@ -2,7 +2,62 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { PasswordComplexityIndicator } from '../components/ui/PasswordComplexityIndicator';
-import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send } from 'lucide-react';
+import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send, Gamepad2 } from 'lucide-react';
+
+// Render Markdown helper for Release Notes
+const renderMarkdown = (text: string) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+
+  return (
+    <div style={{ lineHeight: 1.6, fontSize: '0.9rem' }}>
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={idx} style={{ height: '0.4rem' }} />;
+
+        if (trimmed.startsWith('### ')) {
+          return <h4 key={idx} style={{ fontSize: '1rem', fontWeight: 800, margin: '0.75rem 0 0.25rem', color: 'var(--accent-color)' }}>{trimmed.replace('### ', '')}</h4>;
+        }
+        if (trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
+          return <h3 key={idx} style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0.85rem 0 0.35rem', color: 'var(--accent-color)' }}>{trimmed.replace(/^#+\s*/, '')}</h3>;
+        }
+
+        const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.startsWith('* ');
+        const content = isBullet ? trimmed.replace(/^[-•*]\s*/, '') : trimmed;
+
+        const parts = content.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|\[.*?\]\(.*?\))/g);
+
+        const renderedParts = parts.map((part, pIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={pIdx} style={{ fontWeight: 800 }}>{part.slice(2, -2)}</strong>;
+          }
+          if (part.startsWith('*') && part.endsWith('*')) {
+            return <em key={pIdx}>{part.slice(1, -1)}</em>;
+          }
+          if (part.startsWith('`') && part.endsWith('`')) {
+            return <code key={pIdx} style={{ background: 'rgba(255,255,255,0.12)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{part.slice(1, -1)}</code>;
+          }
+          const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
+          if (linkMatch) {
+            return <a key={pIdx} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>{linkMatch[1]}</a>;
+          }
+          return part;
+        });
+
+        if (isBullet) {
+          return (
+            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginLeft: '0.5rem', marginBottom: '0.25rem' }}>
+              <span style={{ color: 'var(--accent-color)', fontWeight: 800, flexShrink: 0 }}>•</span>
+              <div>{renderedParts}</div>
+            </div>
+          );
+        }
+
+        return <p key={idx} style={{ margin: '0 0 0.35rem' }}>{renderedParts}</p>;
+      })}
+    </div>
+  );
+};
 
 export const AdminDashboardPage: React.FC = () => {
   const { token, user, logout } = useAuth();
@@ -394,61 +449,6 @@ export const AdminDashboardPage: React.FC = () => {
           <p style={{ opacity: 0.7 }}>Manage system performance, release updates, accounts, SMTP emails, compressed backups, and whitelabeling.</p>
         </div>
       </div>
-
-// Render Markdown helper for Release Notes
-const renderMarkdown = (text: string) => {
-  if (!text) return null;
-  const lines = text.split('\n');
-
-  return (
-    <div style={{ lineHeight: 1.6, fontSize: '0.9rem' }}>
-      {lines.map((line, idx) => {
-        const trimmed = line.trim();
-        if (!trimmed) return <div key={idx} style={{ height: '0.4rem' }} />;
-
-        if (trimmed.startsWith('### ')) {
-          return <h4 key={idx} style={{ fontSize: '1rem', fontWeight: 800, margin: '0.75rem 0 0.25rem', color: 'var(--accent-color)' }}>{trimmed.replace('### ', '')}</h4>;
-        }
-        if (trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
-          return <h3 key={idx} style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0.85rem 0 0.35rem', color: 'var(--accent-color)' }}>{trimmed.replace(/^#+\s*/, '')}</h3>;
-        }
-
-        const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.startsWith('* ');
-        const content = isBullet ? trimmed.replace(/^[-•*]\s*/, '') : trimmed;
-
-        const parts = content.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|\[.*?\]\(.*?\))/g);
-
-        const renderedParts = parts.map((part, pIdx) => {
-          if (part.startsWith('**') && part.endsWith('**')) {
-            return <strong key={pIdx} style={{ fontWeight: 800 }}>{part.slice(2, -2)}</strong>;
-          }
-          if (part.startsWith('*') && part.endsWith('*')) {
-            return <em key={pIdx}>{part.slice(1, -1)}</em>;
-          }
-          if (part.startsWith('`') && part.endsWith('`')) {
-            return <code key={pIdx} style={{ background: 'rgba(255,255,255,0.12)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{part.slice(1, -1)}</code>;
-          }
-          const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
-          if (linkMatch) {
-            return <a key={pIdx} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>{linkMatch[1]}</a>;
-          }
-          return part;
-        });
-
-        if (isBullet) {
-          return (
-            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginLeft: '0.5rem', marginBottom: '0.25rem' }}>
-              <span style={{ color: 'var(--accent-color)', fontWeight: 800, flexShrink: 0 }}>•</span>
-              <div>{renderedParts}</div>
-            </div>
-          );
-        }
-
-        return <p key={idx} style={{ margin: '0 0 0.35rem' }}>{renderedParts}</p>;
-      })}
-    </div>
-  );
-};
 
       {/* Admin Navigation Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
