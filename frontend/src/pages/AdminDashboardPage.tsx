@@ -207,7 +207,8 @@ export const AdminDashboardPage: React.FC = () => {
     try {
       const res = await fetch('/api/admin/update/apply', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ targetVersion: updateInfo?.targetVersion })
       });
       const data = await res.json();
       if (res.ok) {

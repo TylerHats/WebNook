@@ -28,7 +28,38 @@ export const NookCustomizerPage: React.FC = () => {
   const [bgMusicUrl, setBgMusicUrl] = useState('');
   const [bgMusicTitle, setBgMusicTitle] = useState('');
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
+  const [newTrackType, setNewTrackType] = useState<'spotify' | 'apple' | 'audio'>('spotify');
+  const [newTrackTitle, setNewTrackTitle] = useState('');
+  const [newTrackUrl, setNewTrackUrl] = useState('');
   const [showStickerStudio, setShowStickerStudio] = useState(false);
+
+  const handleAddTrack = () => {
+    if (!newTrackUrl && newTrackType !== 'audio') return;
+    const track: MusicTrack = {
+      id: `tr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      title: newTrackTitle.trim() || (newTrackType === 'spotify' ? 'Spotify Track' : newTrackType === 'apple' ? 'Apple Music Track' : 'Audio Track'),
+      type: newTrackType,
+      url: newTrackUrl.trim()
+    };
+    setMusicTracks(prev => [...prev, track]);
+    setNewTrackTitle('');
+    setNewTrackUrl('');
+    showToast('Track added to playlist draft!', 'info');
+  };
+
+  const handleRemoveTrack = (index: number) => {
+    setMusicTracks(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMoveTrack = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= musicTracks.length) return;
+    const updated = [...musicTracks];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    setMusicTracks(updated);
+  };
 
   // Card Enablement Toggles
   const [cardVisibility, setCardVisibility] = useState<Record<string, boolean>>({
@@ -225,7 +256,14 @@ export const NookCustomizerPage: React.FC = () => {
       const data = await res.json();
       if (res.ok) {
         setBgMusicUrl(data.bg_music_url);
-        showToast('Background audio file uploaded successfully!', 'success');
+        const newTrack: MusicTrack = {
+          id: `tr_${Date.now()}`,
+          title: bgMusicTitle.trim() || file.name,
+          type: 'audio',
+          url: data.bg_music_url
+        };
+        setMusicTracks(prev => [...prev, newTrack]);
+        showToast('Background audio file uploaded & added to playlist!', 'success');
       } else {
         showToast(data.error || 'Failed to upload audio file', 'error');
       }
@@ -312,6 +350,16 @@ export const NookCustomizerPage: React.FC = () => {
         accentColor={accentColor}
         textColor={textColor}
         borderColor={borderColor}
+        user={user}
+        nookSettings={{
+          steam_id64: steamId64,
+          steam_display_mode: steamDisplayMode,
+          bg_music_url: bgMusicUrl,
+          bg_music_title: bgMusicTitle,
+          spotify_track_url: spotifyTrackUrl,
+          apple_music_url: appleMusicUrl,
+          music_tracks_json: musicTracks
+        }}
       />
 
       <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 10 }}>
@@ -368,6 +416,8 @@ export const NookCustomizerPage: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {[
                 { id: 'glassmorphism', name: 'Modern Glass', desc: 'Frosted glass with dark blurred backdrops', palette: { bg: '#12131C', cardBg: 'rgba(255,255,255,0.06)', accent: '#6366f1', text: '#ffffff', border: 'rgba(255,255,255,0.1)' } },
+                { id: 'win98', name: 'Retro Windows 95/98', desc: 'Classic 90s teal desktop with bevelled 3D grey windows', palette: { bg: '#008080', cardBg: '#c0c0c0', accent: '#000080', text: '#000000', border: '#ffffff' } },
+                { id: 'frutiger-aero', name: 'Frutiger Aero (Win 7)', desc: 'Glossy Windows 7 glass with aqua blue sky gradients', palette: { bg: '#1c3b6f', cardBg: 'rgba(255, 255, 255, 0.85)', accent: '#0080ff', text: '#0c2340', border: 'rgba(255, 255, 255, 0.9)' } },
                 { id: 'synthwave', name: 'Synthwave Neon', desc: 'Neon magenta glow with synthwave purples', palette: { bg: '#0d0221', cardBg: '#190b34', accent: '#ff007f', text: '#00f5d4', border: '#ff007f' } },
                 { id: 'cyberpunk', name: 'Cyberpunk Y2K', desc: 'High-contrast dark synthwave & neon yellow', palette: { bg: '#050505', cardBg: '#121212', accent: '#facc15', text: '#00ffcc', border: '#facc15' } },
                 { id: 'pastel', name: 'Y2K Retro Pastel', desc: 'Warm soft pinks and playful pastel accents', palette: { bg: '#fef2f2', cardBg: '#ffffff', accent: '#ec4899', text: '#1f2937', border: '#f472b6' } },
@@ -522,38 +572,55 @@ export const NookCustomizerPage: React.FC = () => {
           <div className="nook-panel">
             <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Music size={20} style={{ flexShrink: 0 }} />
-              <span>Multi-Track Music Playlist & Audio Player</span>
+              <span>Multi-Track Music Playlist Manager ({musicTracks.length} tracks)</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Spotify Track Link</label>
-                  <input
-                    type="url"
-                    placeholder="https://open.spotify.com/track/..."
-                    value={spotifyTrackUrl}
-                    onChange={e => setSpotifyTrackUrl(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-                  />
-                </div>
+              {/* Form: Add New Streaming Track (Spotify / Apple Music) */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Add Streaming Track (Spotify or Apple Music):</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1.5fr auto', gap: '0.75rem', alignItems: 'center' }}>
+                  <select
+                    value={newTrackType}
+                    onChange={e => setNewTrackType(e.target.value as any)}
+                    style={{ padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                  >
+                    <option value="spotify">Spotify</option>
+                    <option value="apple">Apple Music</option>
+                  </select>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Apple Music Track Link</label>
+                  <input
+                    type="text"
+                    placeholder="Track Title (e.g. Midnight City)"
+                    value={newTrackTitle}
+                    onChange={e => setNewTrackTitle(e.target.value)}
+                    style={{ padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                  />
+
                   <input
                     type="url"
-                    placeholder="https://music.apple.com/..."
-                    value={appleMusicUrl}
-                    onChange={e => setAppleMusicUrl(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                    placeholder={newTrackType === 'spotify' ? 'https://open.spotify.com/track/...' : 'https://music.apple.com/...'}
+                    value={newTrackUrl}
+                    onChange={e => setNewTrackUrl(e.target.value)}
+                    style={{ padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
                   />
+
+                  <button
+                    type="button"
+                    onClick={handleAddTrack}
+                    className="btn-primary"
+                    style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                  >
+                    <Plus size={16} />
+                    <span>Add Track</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Upload MP3 File */}
+              {/* Upload Custom MP3 Track */}
               <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '10px', border: '1px dashed var(--border-color)' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Audio File (Converted to 44.1kHz stereo MP3)</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Audio File to Playlist (MP3 / WAV / OGG)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', alignItems: 'center' }}>
                   <input
                     type="text"
                     placeholder="Audio Track Title"
@@ -569,6 +636,59 @@ export const NookCustomizerPage: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Playlist Tracks List */}
+              {musicTracks.length > 0 ? (
+                <div>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.8, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Current Playlist Draft ({musicTracks.length} tracks):</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {musicTracks.map((tr, idx) => (
+                      <div key={tr.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.25)', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.6 }}>#{idx + 1}</span>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr.title}</span>
+                          <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.7, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
+                            {tr.type}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveTrack(idx, 'up')}
+                            disabled={idx === 0}
+                            style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: idx === 0 ? 'default' : 'pointer', opacity: idx === 0 ? 0.3 : 1 }}
+                            title="Move Up"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveTrack(idx, 'down')}
+                            disabled={idx === musicTracks.length - 1}
+                            style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: idx === musicTracks.length - 1 ? 'default' : 'pointer', opacity: idx === musicTracks.length - 1 ? 0.3 : 1 }}
+                            title="Move Down"
+                          >
+                            ▼
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTrack(idx)}
+                            style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer' }}
+                            title="Remove Track"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p style={{ fontSize: '0.8rem', opacity: 0.6, textAlign: 'center', margin: 0, padding: '0.5rem' }}>
+                  No tracks in playlist yet. Add Spotify or Apple Music tracks above!
+                </p>
+              )}
 
               {/* Spotify Playback Explanation Box */}
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>

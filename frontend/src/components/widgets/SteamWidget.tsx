@@ -105,7 +105,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                       <span>{g.name}</span>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 600 }}>
-                      {g.playtime_2weeks ? `${g.playtime_2weeks} hrs` : `${g.playtime_forever} hrs`}
+                      {g.playtime_2weeks !== undefined ? `${g.playtime_2weeks} hrs (past 2 wks)` : `${g.playtime_forever} hrs total`}
                     </div>
                   </div>
                 ))}

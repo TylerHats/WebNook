@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { StickerCanvas, Sticker } from './StickerCanvas';
 import { PRESET_STICKERS } from '../../constants/presetStickers';
-import { X, Save, Layers, RotateCw, Maximize2, Trash2, Plus, Sparkles, Move } from 'lucide-react';
+import { X, Save, Layers, RotateCw, Maximize2, Trash2, Plus, Sparkles, Ghost, Eye } from 'lucide-react';
+import { MusicWidget } from '../widgets/MusicWidget';
+import { SteamWidget } from '../widgets/SteamWidget';
 
 interface VisualStickerStudioModalProps {
   isOpen: boolean;
@@ -14,6 +16,8 @@ interface VisualStickerStudioModalProps {
   accentColor: string;
   textColor: string;
   borderColor: string;
+  user?: any;
+  nookSettings?: any;
 }
 
 export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> = ({
@@ -26,7 +30,9 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
   cardBgColor,
   accentColor,
   textColor,
-  borderColor
+  borderColor,
+  user,
+  nookSettings
 }) => {
   if (!isOpen) return null;
 
@@ -34,6 +40,8 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
   const [selectedIndex, setSelectedIndex] = useState<number | null>(
     initialStickers.length > 0 ? 0 : null
   );
+  const [ghostCards, setGhostCards] = useState(false);
+  const [showPresetPicker, setShowPresetPicker] = useState(false);
 
   const selectedSticker = selectedIndex !== null && stickers[selectedIndex] ? stickers[selectedIndex] : null;
 
@@ -49,6 +57,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
     const updated = [...stickers, newSticker];
     setStickers(updated);
     setSelectedIndex(updated.length - 1);
+    setShowPresetPicker(false);
   };
 
   const handleUpdateSelected = (changes: Partial<Sticker>) => {
@@ -109,11 +118,30 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           <Sparkles size={24} color="var(--accent-color)" />
           <div>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>Visual Sticker Studio</h2>
-            <p style={{ fontSize: '0.75rem', opacity: 0.7, margin: 0 }}>Click and drag stickers directly over your live Nook page preview!</p>
+            <p style={{ fontSize: '0.75rem', opacity: 0.7, margin: 0 }}>Drag, scale, and layer stickers over your live Nook page preview!</p>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          {/* Ghost Cards Mode Toggle Button */}
+          <button
+            onClick={() => setGhostCards(!ghostCards)}
+            className="btn-secondary"
+            style={{
+              padding: '0.4rem 0.85rem',
+              fontSize: '0.82rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              background: ghostCards ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255,255,255,0.08)',
+              border: ghostCards ? '1px solid var(--accent-color)' : '1px solid var(--border-color)'
+            }}
+            title="Ghost Cards Mode lets you click & drag stickers positioned behind cards!"
+          >
+            <Ghost size={16} color={ghostCards ? 'var(--accent-color)' : '#fff'} />
+            <span>{ghostCards ? 'Ghost Cards: ON 👻' : 'Ghost Cards: OFF'}</span>
+          </button>
+
           <button onClick={onClose} className="btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}>
             Cancel
           </button>
@@ -129,7 +157,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
         position: 'sticky',
         top: '60px',
         zIndex: 999,
-        background: 'rgba(24, 27, 43, 0.9)',
+        background: 'rgba(24, 27, 43, 0.92)',
         backdropFilter: 'blur(12px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0.6rem 1.5rem',
@@ -139,31 +167,20 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
-        {/* Preset Sticker Quick Add Dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.8 }}>Add Sticker:</span>
-          <div style={{ display: 'flex', gap: '0.35rem', overflowX: 'auto', maxWidth: '300px' }}>
-            {PRESET_STICKERS.slice(0, 10).map((st, i) => (
-              <button
-                key={i}
-                onClick={() => handleAddPreset(st.url)}
-                style={{
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  padding: '3px 6px',
-                  fontSize: '1.1rem',
-                  cursor: 'pointer'
-                }}
-                title={st.name}
-              >
-                {st.url.startsWith('/') || st.url.startsWith('http') ? '🖼️' : st.url}
-              </button>
-            ))}
-          </div>
+        {/* Preset Sticker Quick Add Button & Picker Launcher */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={() => setShowPresetPicker(!showPresetPicker)}
+            className="btn-primary"
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+          >
+            <Plus size={14} />
+            <span>Add Preset Sticker</span>
+          </button>
+          <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>({stickers.length} stickers on page)</span>
         </div>
 
-        {/* Selected Sticker Manipulator Controls */}
+        {/* Selected Sticker Controls */}
         {selectedSticker ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             {/* Scale Slider */}
@@ -222,11 +239,58 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
             </button>
           </div>
         ) : (
-          <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>No sticker selected. Click any sticker below to edit scale/rotation!</span>
+          <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>Click any sticker on screen to edit its scale, rotation, or layer!</span>
         )}
       </div>
 
-      {/* Interactive Canvas Canvas Layer */}
+      {/* Preset Sticker Grid Modal / Popover */}
+      {showPresetPicker && (
+        <div style={{
+          position: 'fixed',
+          top: '110px',
+          left: '1.5rem',
+          zIndex: 10000,
+          background: 'rgba(18, 20, 32, 0.98)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '12px',
+          padding: '1rem',
+          maxWidth: '420px',
+          boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(16px)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>Choose Preset Sticker:</span>
+            <button onClick={() => setShowPresetPicker(false)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer' }}>
+              <X size={16} />
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem', maxHeight: '240px', overflowY: 'auto', paddingRight: '0.2rem' }}>
+            {PRESET_STICKERS.map((st, i) => (
+              <button
+                key={i}
+                onClick={() => handleAddPreset(st.url)}
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  padding: '6px',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'transform 0.15s ease'
+                }}
+                title={st.name}
+              >
+                {st.url.startsWith('/') || st.url.startsWith('http') ? '🖼️' : st.url}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Canvas Area */}
       <div style={{ position: 'relative', minHeight: 'calc(100vh - 120px)', padding: '2rem 1rem' }}>
         {/* Layer 1: Behind Cards Stickers */}
         <StickerCanvas
@@ -236,21 +300,61 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           onStickerUpdate={setStickers}
         />
 
-        {/* Nook Layout Mock Preview */}
-        <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 10 }}>
-          <div className="nook-panel" style={{ marginBottom: '1.5rem', padding: '1.5rem', textAlign: 'center' }}>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-color)' }}>Interactive Sticker Canvas Area</h1>
-            <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>Drag any sticker around your cards to place it anywhere on your page!</p>
+        {/* Nook Profile Real Layout Preview */}
+        <div style={{
+          maxWidth: '900px',
+          margin: '0 auto',
+          position: 'relative',
+          zIndex: 10,
+          opacity: ghostCards ? 0.35 : 1,
+          pointerEvents: ghostCards ? 'none' : 'auto',
+          transition: 'all 0.2s ease'
+        }}>
+          {/* User Header Preview */}
+          <div className="nook-panel" style={{ marginBottom: '1.5rem', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <img
+                src={user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'}
+                alt=""
+                style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-color)' }}
+              />
+              <div>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, color: 'var(--accent-color)' }}>
+                  {user?.display_name || user?.username || 'My WebNook Space'}
+                </h1>
+                <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: '0.2rem 0 0' }}>
+                  {user?.status_message || 'Welcome to my cozy nook! ✨'}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="nook-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-            <div className="nook-panel" style={{ height: '220px' }}>
-              <div className="nook-panel-header">Sample Card (Left Column)</div>
-              <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>Stickers can float on top of or behind this panel!</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Bio Card */}
+              <div className="nook-panel">
+                <div className="nook-panel-header">About Me & Bio</div>
+                <p style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.5 }}>
+                  {user?.bio || 'Passionate web builder, gamer, music lover, and cozy space creator.'}
+                </p>
+              </div>
+
+              {/* Music Widget */}
+              <MusicWidget
+                tracks={nookSettings?.music_tracks_json ? (typeof nookSettings.music_tracks_json === 'string' ? JSON.parse(nookSettings.music_tracks_json) : nookSettings.music_tracks_json) : []}
+                bgMusicUrl={nookSettings?.bg_music_url}
+                bgMusicTitle={nookSettings?.bg_music_title}
+                spotifyTrackUrl={nookSettings?.spotify_track_url}
+                appleMusicUrl={nookSettings?.apple_music_url}
+              />
             </div>
-            <div className="nook-panel" style={{ height: '220px' }}>
-              <div className="nook-panel-header">Sample Card (Right Column)</div>
-              <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>Drag stickers across both columns seamlessly.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Steam Showcase */}
+              <SteamWidget
+                steamId64={nookSettings?.steam_id64 || '76561198000000000'}
+                displayMode={nookSettings?.steam_display_mode || 'both'}
+              />
             </div>
           </div>
         </div>

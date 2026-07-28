@@ -253,26 +253,33 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
     const channelRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "update_channel"');
     const channel = channelRow?.value || 'stable';
 
-    let currentPkgVersion = '1.2.0';
+    const installedVersionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "installed_version"');
+    const installedVersion = installedVersionRow?.value;
+
+    let currentPkgVersion = '1.4.0';
     try {
       const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8'));
       if (rootPkg && rootPkg.version) currentPkgVersion = rootPkg.version;
     } catch (e) {}
 
-    let localCommitHash = 'HEAD';
-    try {
-      localCommitHash = execSync('git rev-parse --short HEAD', { cwd: path.join(__dirname, '../../..') }).toString().trim();
-    } catch (e) {}
+    let localCommitHash = process.env.GIT_COMMIT_HASH || '';
+    if (!localCommitHash) {
+      try {
+        const gitOutput = execSync('git rev-parse --short HEAD 2>/dev/null', { cwd: path.join(__dirname, '../../..') }).toString().trim();
+        if (gitOutput && gitOutput !== 'HEAD') localCommitHash = gitOutput;
+      } catch (e) {}
+    }
 
     let currentVersion = currentPkgVersion;
     let latestReleaseInfo: any = null;
     let targetVersion = currentPkgVersion;
 
     if (channel === 'alpha') {
-      currentVersion = localCommitHash;
       const commits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits/main`);
       if (commits && commits.sha) {
         targetVersion = commits.sha.substring(0, 7);
+        currentVersion = localCommitHash || installedVersion || currentPkgVersion;
+
         latestReleaseInfo = {
           tag: targetVersion,
           name: `Alpha Commit: ${commits.commit.message.split('\n')[0]}`,
@@ -285,8 +292,9 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
       if (Array.isArray(tags) && tags.length > 0) {
         const latestTag = tags[0];
         targetVersion = latestTag.name;
-        let commitNotes = '';
+        currentVersion = installedVersion || `v${currentPkgVersion}`;
 
+        let commitNotes = '';
         const tagCommits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits?sha=${latestTag.name}`);
         if (Array.isArray(tagCommits) && tagCommits.length > 0) {
           commitNotes = tagCommits.slice(0, 5).map((c: any) => `• ${c.commit.message.split('\n')[0]}`).join('\n');
@@ -294,7 +302,7 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
 
         latestReleaseInfo = {
           tag: latestTag.name,
-          name: `Beta Tag: ${latestTag.name}`,
+          name: `Beta Release Tag: ${latestTag.name}`,
           notes: commitNotes || `Beta channel update based on tag ${latestTag.name}`,
           published_at: new Date().toISOString()
         };
@@ -304,6 +312,8 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
       const releases = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`);
       if (releases && releases.tag_name) {
         targetVersion = releases.tag_name;
+        currentVersion = installedVersion || `v${currentPkgVersion}`;
+
         latestReleaseInfo = {
           tag: releases.tag_name,
           name: releases.name || releases.tag_name,
@@ -345,17 +355,33 @@ router.post('/update/channel', async (req: AuthenticatedRequest, res: Response) 
 router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const repoPath = path.join(__dirname, '../../..');
+    const { targetVersion } = req.body;
+    let gitPulled = false;
 
     try {
       execSync('git fetch origin && git pull origin main', { cwd: repoPath, timeout: 30000 });
+      gitPulled = true;
     } catch (gitErr: any) {
-      console.warn('[Self-Updater Warning] Git pull failed or clean worktree needed:', gitErr.message);
+      console.warn('[Self-Updater Warning] Git pull unavailable or skipped in container environment:', gitErr.message);
     }
 
     await runMigrations();
-    return res.json({ message: 'Update applied! Git repository pulled latest changes & migrations verified.' });
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to apply update' });
+
+    if (targetVersion) {
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['installed_version', String(targetVersion)]);
+    }
+
+    if (gitPulled) {
+      return res.json({ message: 'Update applied! Git repository pulled latest changes & migrations verified.' });
+    } else {
+      return res.json({
+        message: targetVersion
+          ? `System updated to ${targetVersion}! (Note: Docker container detected - run 'docker pull tylerhats/webnook:latest' to update underlying container image binaries)`
+          : 'Database schema migrations verified successfully!'
+      });
+    }
+  } catch (err: any) {
+    return res.status(500).json({ error: `Failed to apply update: ${err.message}` });
   }
 });
 

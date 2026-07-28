@@ -199,6 +199,15 @@ const migrations: Migration[] = [
 
       try { await execute('ALTER TABLE friends ADD COLUMN is_favorite INTEGER DEFAULT 0'); } catch (e) {}
     }
+  },
+  {
+    version: 5,
+    name: 'v1.5.0_nook_columns',
+    up: async () => {
+      try { await execute('ALTER TABLE nooks ADD COLUMN steam_display_mode TEXT DEFAULT "both"'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN music_tracks_json TEXT DEFAULT "[]"'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN top_songs_json TEXT DEFAULT "[]"'); } catch (e) {}
+    }
   }
 ];
 
