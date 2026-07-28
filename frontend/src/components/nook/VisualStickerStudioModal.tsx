@@ -6,6 +6,8 @@ import { MusicWidget } from '../widgets/MusicWidget';
 import { SteamWidget } from '../widgets/SteamWidget';
 import { MoviesWidget } from '../widgets/MoviesWidget';
 import { BooksWidget } from '../widgets/BooksWidget';
+import { TopFriendsGrid } from './TopFriendsGrid';
+import { GuestbookWidget } from './GuestbookWidget';
 
 interface VisualStickerStudioModalProps {
   isOpen: boolean;
@@ -100,6 +102,33 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
     '--border-color': borderColor || 'rgba(255,255,255,0.12)'
   } as React.CSSProperties;
 
+  let cardVisibility: Record<string, boolean> = {
+    bio: true,
+    music: true,
+    friends: true,
+    steam: true,
+    guestbook: true,
+    movies: true,
+    books: true
+  };
+  if (nookSettings?.card_visibility_json) {
+    try {
+      const parsed = typeof nookSettings.card_visibility_json === 'string'
+        ? JSON.parse(nookSettings.card_visibility_json)
+        : nookSettings.card_visibility_json;
+      cardVisibility = { ...cardVisibility, ...parsed };
+    } catch (e) {}
+  }
+
+  let cardTitles: Record<string, string> = {};
+  if (nookSettings?.card_titles_json) {
+    try {
+      cardTitles = typeof nookSettings.card_titles_json === 'string'
+        ? JSON.parse(nookSettings.card_titles_json)
+        : nookSettings.card_titles_json;
+    } catch (e) {}
+  }
+
   return (
     <div className={`theme-${theme}`} style={customStyle}>
       {/* Floating Studio Control Header */}
@@ -141,94 +170,92 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
             title="Ghost Cards Mode lets you click & drag stickers positioned behind cards!"
           >
             <Ghost size={16} color={ghostCards ? 'var(--accent-color)' : '#fff'} />
-            <span>{ghostCards ? 'Ghost Cards: ON 👻' : 'Ghost Cards: OFF'}</span>
+            <span>{ghostCards ? 'Ghost Cards ON' : 'Ghost Cards OFF'}</span>
           </button>
 
-          <button onClick={onClose} className="btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}>
-            Cancel
-          </button>
-          <button onClick={handleSaveAndClose} className="btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+          <button onClick={handleSaveAndClose} className="btn-primary" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}>
             <Save size={16} />
-            <span>Save & Apply Stickers</span>
+            <span>Save Stickers & Return</span>
+          </button>
+
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0.8 }}>
+            <X size={22} />
           </button>
         </div>
       </div>
 
-      {/* Floating Controls Sub-Bar */}
+      {/* Floating Toolbar Options for Selected Sticker */}
       <div style={{
         position: 'sticky',
-        top: '60px',
+        top: '65px',
         zIndex: 999,
-        background: 'rgba(24, 27, 43, 0.92)',
+        background: 'rgba(24, 26, 42, 0.95)',
         backdropFilter: 'blur(12px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0.6rem 1.5rem',
         display: 'flex',
-        flexWrap: 'wrap',
-        gap: '1.25rem',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        gap: '1rem',
+        flexWrap: 'wrap'
       }}>
-        {/* Preset Sticker Quick Add Button & Picker Launcher */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <button
             onClick={() => setShowPresetPicker(!showPresetPicker)}
             className="btn-primary"
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
           >
-            <Plus size={14} />
-            <span>Add Preset Sticker</span>
+            <Plus size={16} />
+            <span>Add Sticker</span>
           </button>
-          <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>({stickers.length} stickers on page)</span>
         </div>
 
-        {/* Selected Sticker Controls */}
         {selectedSticker ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            {/* Scale Slider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+            {/* Layer Selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Maximize2 size={14} style={{ opacity: 0.7 }} />
-              <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Scale:</span>
-              <input
-                type="range"
-                min="0.4"
-                max="2.5"
-                step="0.1"
-                value={selectedSticker.scale || 1}
-                onChange={e => handleUpdateSelected({ scale: parseFloat(e.target.value) })}
-                style={{ width: '80px' }}
-              />
-              <span style={{ fontSize: '0.75rem', opacity: 0.6, width: '32px' }}>{selectedSticker.scale || 1}x</span>
+              <Layers size={16} color="var(--accent-color)" />
+              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Layer:</span>
+              <select
+                value={selectedSticker.layer || 'above_cards'}
+                onChange={(e) => handleUpdateSelected({ layer: e.target.value as any })}
+                style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid var(--border-color)', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.8rem' }}
+              >
+                <option value="above_cards">Above Cards</option>
+                <option value="behind_cards">Behind Cards</option>
+              </select>
             </div>
 
-            {/* Rotation Slider */}
+            {/* Scale Control */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <RotateCw size={14} style={{ opacity: 0.7 }} />
-              <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Rotate:</span>
+              <Maximize2 size={16} color="var(--accent-color)" />
+              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Scale:</span>
+              <input
+                type="range"
+                min="0.3"
+                max="3.0"
+                step="0.1"
+                value={selectedSticker.scale || 1.0}
+                onChange={(e) => handleUpdateSelected({ scale: parseFloat(e.target.value) })}
+                style={{ width: '90px' }}
+              />
+              <span style={{ fontSize: '0.75rem', opacity: 0.7, width: '32px' }}>{(selectedSticker.scale || 1.0).toFixed(1)}x</span>
+            </div>
+
+            {/* Rotation Control */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <RotateCw size={16} color="var(--accent-color)" />
+              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Rotation:</span>
               <input
                 type="range"
                 min="-180"
                 max="180"
                 step="5"
                 value={selectedSticker.rotation || 0}
-                onChange={e => handleUpdateSelected({ rotation: parseInt(e.target.value, 10) })}
-                style={{ width: '80px' }}
+                onChange={(e) => handleUpdateSelected({ rotation: parseInt(e.target.value) })}
+                style={{ width: '90px' }}
               />
-              <span style={{ fontSize: '0.75rem', opacity: 0.6, width: '36px' }}>{selectedSticker.rotation || 0}°</span>
-            </div>
-
-            {/* Layer Switcher */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Layers size={14} style={{ opacity: 0.7 }} />
-              <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Layer:</span>
-              <select
-                value={selectedSticker.layer || 'above_cards'}
-                onChange={e => handleUpdateSelected({ layer: e.target.value as any })}
-                style={{ background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
-              >
-                <option value="above_cards">Above Cards</option>
-                <option value="behind_cards">Behind Cards</option>
-              </select>
+              <span style={{ fontSize: '0.75rem', opacity: 0.7, width: '36px' }}>{selectedSticker.rotation || 0}°</span>
             </div>
 
             {/* Delete Selected Sticker */}
@@ -336,40 +363,69 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           <div className="nook-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Bio Card */}
-              <div className="nook-panel">
-                <div className="nook-panel-header">About Me & Bio</div>
-                <p style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.5 }}>
-                  {user?.bio || 'Passionate web builder, gamer, music lover, and cozy space creator.'}
-                </p>
-              </div>
+              {cardVisibility.bio !== false && (
+                <div className="nook-panel">
+                  <div className="nook-panel-header">{cardTitles.bio || 'About Me & Bio'}</div>
+                  <p style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.5 }}>
+                    {user?.bio || 'Passionate web builder, gamer, music lover, and cozy space creator.'}
+                  </p>
+                </div>
+              )}
 
               {/* Music Widget */}
-              <MusicWidget
-                tracks={nookSettings?.music_tracks_json ? (typeof nookSettings.music_tracks_json === 'string' ? JSON.parse(nookSettings.music_tracks_json) : nookSettings.music_tracks_json) : []}
-                bgMusicUrl={nookSettings?.bg_music_url}
-                bgMusicTitle={nookSettings?.bg_music_title}
-                spotifyTrackUrl={nookSettings?.spotify_track_url}
-                appleMusicUrl={nookSettings?.apple_music_url}
-              />
+              {cardVisibility.music !== false && (
+                <MusicWidget
+                  title={cardTitles.music || 'My Music Playlist'}
+                  tracks={nookSettings?.music_tracks_json ? (typeof nookSettings.music_tracks_json === 'string' ? JSON.parse(nookSettings.music_tracks_json) : nookSettings.music_tracks_json) : []}
+                  bgMusicUrl={nookSettings?.bg_music_url}
+                  bgMusicTitle={nookSettings?.bg_music_title}
+                  spotifyTrackUrl={nookSettings?.spotify_track_url}
+                  appleMusicUrl={nookSettings?.apple_music_url}
+                />
+              )}
 
               {/* Movies & TV Widget Preview */}
-              <MoviesWidget
-                movies={nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : []}
-              />
+              {cardVisibility.movies !== false && (
+                <MoviesWidget
+                  title={cardTitles.movies || 'Movies & TV Favorites'}
+                  movies={nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : []}
+                />
+              )}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Top Friends Showcase */}
+              {cardVisibility.friends !== false && (
+                <TopFriendsGrid
+                  title={cardTitles.friends || 'Top Friends'}
+                  topFriends={nookSettings?.top_friends || []}
+                />
+              )}
+
               {/* Steam Showcase */}
-              <SteamWidget
-                steamId64={nookSettings?.steam_id64 || '76561198000000000'}
-                displayMode={nookSettings?.steam_display_mode || 'both'}
-              />
+              {cardVisibility.steam !== false && (
+                <SteamWidget
+                  steamId64={nookSettings?.steam_id64 || '76561198000000000'}
+                  displayMode={nookSettings?.steam_display_mode || 'both'}
+                />
+              )}
 
               {/* Books Widget Preview */}
-              <BooksWidget
-                books={nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : []}
-                storygraphUsername={nookSettings?.storygraph_username}
-              />
+              {cardVisibility.books !== false && (
+                <BooksWidget
+                  title={cardTitles.books || 'Books & Reading Nook'}
+                  books={nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : []}
+                  storygraphUsername={nookSettings?.storygraph_username}
+                />
+              )}
+
+              {/* Guestbook Widget */}
+              {cardVisibility.guestbook !== false && (
+                <GuestbookWidget
+                  title={cardTitles.guestbook || 'Guestbook & Comments'}
+                  nookOwnerId={user?.id || 1}
+                />
+              )}
             </div>
           </div>
         </div>

@@ -76,6 +76,12 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
     return '';
   };
 
+  const getAppleMusicEmbedUrl = (url: string) => {
+    if (!url) return '';
+    const embedUrl = url.replace('music.apple.com', 'embed.music.apple.com');
+    return embedUrl.includes('?') ? `${embedUrl}&theme=dark` : `${embedUrl}?theme=dark`;
+  };
+
   return (
     <div className="nook-panel">
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -155,7 +161,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
                 <div style={{ borderRadius: '12px', overflow: 'hidden' }}>
                   <iframe
                     title="Apple Music Track"
-                    src={activeTrack.url.replace('music.apple.com', 'embed.music.apple.com')}
+                    src={getAppleMusicEmbedUrl(activeTrack.url)}
                     width="100%"
                     height="175"
                     frameBorder="0"
@@ -196,8 +202,8 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
                       <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr.title}</span>
                     </div>
 
-                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.7, background: 'rgba(255,255,255,0.08)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
-                      {tr.type}
+                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.8, background: 'rgba(255,255,255,0.08)', padding: '0.15rem 0.5rem', borderRadius: '10px', fontWeight: 700 }}>
+                      {tr.type === 'audio' ? 'MP3' : tr.type}
                     </span>
                   </div>
                 ))}

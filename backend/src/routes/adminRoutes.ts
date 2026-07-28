@@ -281,7 +281,7 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
       const commits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits/main`);
       if (commits && commits.sha) {
         targetVersion = commits.sha.substring(0, 7);
-        currentVersion = localCommitHash || installedCommit || (installedVersion ? installedVersion.substring(0, 7) : currentPkgVersion);
+        currentVersion = localCommitHash || installedCommit || (installedVersion && /^[0-9a-f]{7}$/i.test(installedVersion) ? installedVersion : targetVersion);
 
         latestReleaseInfo = {
           tag: targetVersion,

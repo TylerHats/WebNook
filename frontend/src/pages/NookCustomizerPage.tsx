@@ -309,6 +309,18 @@ export const NookCustomizerPage: React.FC = () => {
     if (!token) return;
     setIsSaving(true);
 
+    const cleanedMovies = favoriteMovies.map(m => {
+      let r = m.rating;
+      if (r === '' || r === null || r === undefined || Number.isNaN(Number(r))) r = 3;
+      return { ...m, rating: Math.max(0, Math.min(5, Number(r))) };
+    });
+
+    const cleanedBooks = favoriteBooks.map(b => {
+      let r = b.rating;
+      if (r === '' || r === null || r === undefined || Number.isNaN(Number(r))) r = 3;
+      return { ...b, rating: Math.max(0, Math.min(5, Number(r))) };
+    });
+
     try {
       // Save Nook Customization
       const custRes = await fetch('/api/nook/customization', {
@@ -333,8 +345,8 @@ export const NookCustomizerPage: React.FC = () => {
           card_colors_json: { cardBg: cardBgColor, border: borderColor },
           card_titles_json: cardTitles,
           music_tracks_json: musicTracks,
-          favorite_movies_json: favoriteMovies,
-          favorite_books_json: favoriteBooks,
+          favorite_movies_json: cleanedMovies,
+          favorite_books_json: cleanedBooks,
           storygraph_username: storygraphUsername,
           spotify_personal_mode: spotifyPersonalMode,
           custom_css: customCss
@@ -1003,13 +1015,11 @@ export const NookCustomizerPage: React.FC = () => {
                     <div style={{ marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
                       <input
-                        type="number"
-                        min="0"
-                        max="5"
-                        step="0.5"
-                        value={m.rating ?? 5}
+                        type="text"
+                        placeholder="3.0"
+                        value={m.rating !== undefined && m.rating !== null ? m.rating : ''}
                         onChange={e => {
-                          const val = parseFloat(e.target.value) || 5;
+                          const val = e.target.value;
                           setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
                         }}
                         style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
@@ -1121,13 +1131,11 @@ export const NookCustomizerPage: React.FC = () => {
                     <div style={{ marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
                       <input
-                        type="number"
-                        min="0"
-                        max="5"
-                        step="0.5"
-                        value={b.rating ?? 5}
+                        type="text"
+                        placeholder="3.0"
+                        value={b.rating !== undefined && b.rating !== null ? b.rating : ''}
                         onChange={e => {
-                          const val = parseFloat(e.target.value) || 5;
+                          const val = e.target.value;
                           setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
                         }}
                         style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
