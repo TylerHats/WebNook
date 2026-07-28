@@ -10,6 +10,7 @@ export interface MusicTrack {
 }
 
 interface MusicWidgetProps {
+  title?: string;
   tracks?: MusicTrack[];
   // Legacy fallback props
   bgMusicUrl?: string;
@@ -19,6 +20,7 @@ interface MusicWidgetProps {
 }
 
 export const MusicWidget: React.FC<MusicWidgetProps> = ({
+  title = 'My Music Playlist',
   tracks = [],
   bgMusicUrl,
   bgMusicTitle,
@@ -79,7 +81,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Music size={20} color="var(--accent-color)" />
-          <span>My Music Playlist ({playlist.length})</span>
+          <span>{title} ({playlist.length})</span>
         </div>
       </div>
 

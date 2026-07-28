@@ -3,10 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { TopFriendsGrid } from '../components/nook/TopFriendsGrid';
 import { MusicWidget } from '../components/widgets/MusicWidget';
-import { SteamWidget } from '../components/widgets/SteamWidget';
-import { TopSongsWidget } from '../components/widgets/TopSongsWidget';
-import { GuestbookWidget } from '../components/nook/GuestbookWidget';
-import { StickerCanvas } from '../components/nook/StickerCanvas';
+import { MoviesWidget } from '../components/widgets/MoviesWidget';
+import { BooksWidget } from '../components/widgets/BooksWidget';
 import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
@@ -134,6 +132,14 @@ export const NookViewPage: React.FC = () => {
         : nookSettings.card_colors_json;
       if (parsedColors.cardBg) cardBgColor = parsedColors.cardBg;
       if (parsedColors.border) borderColor = parsedColors.border;
+  }
+
+  let cardTitles: Record<string, string> = {};
+  if (nookSettings?.card_titles_json) {
+    try {
+      cardTitles = typeof nookSettings.card_titles_json === 'string'
+        ? JSON.parse(nookSettings.card_titles_json)
+        : nookSettings.card_titles_json;
     } catch (e) {}
   }
 
@@ -212,7 +218,7 @@ export const NookViewPage: React.FC = () => {
               <div className="nook-panel">
                 <div className="nook-panel-header">
                   <Heart size={20} />
-                  <span>About {owner.display_name || owner.username}</span>
+                  <span>{cardTitles.bio || `About ${owner.display_name || owner.username}`}</span>
                 </div>
                 <p style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{owner.bio}</p>
               </div>
@@ -220,6 +226,8 @@ export const NookViewPage: React.FC = () => {
 
             {cardVis.music !== false && (
               <MusicWidget
+                title={cardTitles.music || 'My Music Playlist'}
+                tracks={nookSettings?.music_tracks_json ? (typeof nookSettings.music_tracks_json === 'string' ? JSON.parse(nookSettings.music_tracks_json) : nookSettings.music_tracks_json) : []}
                 bgMusicUrl={nookSettings?.bg_music_url}
                 bgMusicTitle={nookSettings?.bg_music_title}
                 spotifyTrackUrl={nookSettings?.spotify_track_url}
@@ -227,9 +235,10 @@ export const NookViewPage: React.FC = () => {
               />
             )}
 
-            {cardVis.top_songs !== false && nookSettings?.top_songs_json && (
-              <TopSongsWidget
-                songs={typeof nookSettings.top_songs_json === 'string' ? JSON.parse(nookSettings.top_songs_json) : nookSettings.top_songs_json}
+            {cardVis.movies !== false && (
+              <MoviesWidget
+                title={cardTitles.movies || 'Movies & TV Favorites'}
+                movies={nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : []}
               />
             )}
           </div>
@@ -241,7 +250,7 @@ export const NookViewPage: React.FC = () => {
                 <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Users size={20} color="var(--accent-color)" />
-                    <span>Top Friends</span>
+                    <span>{cardTitles.friends || 'Top Friends'}</span>
                   </div>
                   <Link to="/friends" style={{ fontSize: '0.75rem', color: 'var(--accent-color)', textDecoration: 'none' }}>
                     View All →
@@ -269,6 +278,14 @@ export const NookViewPage: React.FC = () => {
                   </div>
                 )}
               </div>
+            )}
+
+            {cardVis.books !== false && (
+              <BooksWidget
+                title={cardTitles.books || 'Reading Nook & Favorite Books'}
+                books={nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : []}
+                storygraphUsername={nookSettings?.storygraph_username}
+              />
             )}
 
             {cardVis.steam !== false && nookSettings?.steam_id64 && (

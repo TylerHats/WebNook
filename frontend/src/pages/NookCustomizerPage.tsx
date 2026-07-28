@@ -61,14 +61,44 @@ export const NookCustomizerPage: React.FC = () => {
     setMusicTracks(updated);
   };
 
-  // Card Enablement Toggles
+  // Card Enablement Toggles & Custom Titles
   const [cardVisibility, setCardVisibility] = useState<Record<string, boolean>>({
     bio: true,
     music: true,
     friends: true,
     guestbook: true,
-    steam: true
+    steam: true,
+    movies: true,
+    books: true
   });
+
+  const [cardTitles, setCardTitles] = useState<Record<string, string>>({
+    bio: 'About Me',
+    music: 'My Music Playlist',
+    friends: 'Top Friends',
+    guestbook: 'Guestbook',
+    steam: 'Steam Showcase',
+    movies: 'Movies & TV Favorites',
+    books: 'Reading Nook & Books'
+  });
+
+  const [favoriteMovies, setFavoriteMovies] = useState<any[]>([]);
+  const [favoriteBooks, setFavoriteBooks] = useState<any[]>([]);
+  const [storygraphUsername, setStorygraphUsername] = useState('');
+  const [spotifyPersonalMode, setSpotifyPersonalMode] = useState('disabled');
+
+  // Search popover modals
+  const [showSpotifySearch, setShowSpotifySearch] = useState(false);
+  const [spotifySearchQ, setSpotifySearchQ] = useState('');
+  const [spotifyResults, setSpotifyResults] = useState<any[]>([]);
+
+  const [showMoviesSearch, setShowMoviesSearch] = useState(false);
+  const [moviesSearchQ, setMoviesSearchQ] = useState('');
+  const [moviesResults, setMoviesResults] = useState<any[]>([]);
+
+  const [showBooksSearch, setShowBooksSearch] = useState(false);
+  const [booksSearchQ, setBooksSearchQ] = useState('');
+  const [booksResults, setBooksResults] = useState<any[]>([]);
 
   const [customCss, setCustomCss] = useState('');
   const [stickers, setStickers] = useState<Sticker[]>([]);
@@ -93,6 +123,8 @@ export const NookCustomizerPage: React.FC = () => {
             setSteamDisplayMode(data.nookSettings.steam_display_mode || 'both');
             setSpotifyTrackUrl(data.nookSettings.spotify_track_url || '');
             setAppleMusicUrl(data.nookSettings.apple_music_url || '');
+            setStorygraphUsername(data.nookSettings.storygraph_username || '');
+            setSpotifyPersonalMode(data.nookSettings.spotify_personal_mode || 'disabled');
             setCustomCss(data.nookSettings.custom_css || '');
 
             if (data.nookSettings.music_tracks_json) {
@@ -101,6 +133,33 @@ export const NookCustomizerPage: React.FC = () => {
                   ? JSON.parse(data.nookSettings.music_tracks_json)
                   : data.nookSettings.music_tracks_json;
                 if (Array.isArray(parsedTracks)) setMusicTracks(parsedTracks);
+              } catch (e) {}
+            }
+
+            if (data.nookSettings.favorite_movies_json) {
+              try {
+                const parsed = typeof data.nookSettings.favorite_movies_json === 'string'
+                  ? JSON.parse(data.nookSettings.favorite_movies_json)
+                  : data.nookSettings.favorite_movies_json;
+                if (Array.isArray(parsed)) setFavoriteMovies(parsed);
+              } catch (e) {}
+            }
+
+            if (data.nookSettings.favorite_books_json) {
+              try {
+                const parsed = typeof data.nookSettings.favorite_books_json === 'string'
+                  ? JSON.parse(data.nookSettings.favorite_books_json)
+                  : data.nookSettings.favorite_books_json;
+                if (Array.isArray(parsed)) setFavoriteBooks(parsed);
+              } catch (e) {}
+            }
+
+            if (data.nookSettings.card_titles_json) {
+              try {
+                const parsed = typeof data.nookSettings.card_titles_json === 'string'
+                  ? JSON.parse(data.nookSettings.card_titles_json)
+                  : data.nookSettings.card_titles_json;
+                setCardTitles(prev => ({ ...prev, ...parsed }));
               } catch (e) {}
             }
 
@@ -190,6 +249,62 @@ export const NookCustomizerPage: React.FC = () => {
     }));
   };
 
+  const handleSearchSpotify = async () => {
+    if (!spotifySearchQ.trim()) return;
+    try {
+      const res = await fetch(`/api/integrations/spotify/search?q=${encodeURIComponent(spotifySearchQ)}`);
+      const data = await res.json();
+      setSpotifyResults(data.tracks || []);
+    } catch (e) {
+      showToast('Spotify search failed', 'error');
+    }
+  };
+
+  const handleSearchMovies = async () => {
+    if (!moviesSearchQ.trim()) return;
+    try {
+      const res = await fetch(`/api/integrations/movies/search?q=${encodeURIComponent(moviesSearchQ)}`);
+      const data = await res.json();
+      setMoviesResults(data.results || []);
+    } catch (e) {
+      showToast('Movies search failed', 'error');
+    }
+  };
+
+  const handleSearchBooks = async () => {
+    if (!booksSearchQ.trim()) return;
+    try {
+      const res = await fetch(`/api/integrations/books/search?q=${encodeURIComponent(booksSearchQ)}`);
+      const data = await res.json();
+      setBooksResults(data.books || []);
+    } catch (e) {
+      showToast('Books search failed', 'error');
+    }
+  };
+
+  const handleStoryGraphCsvUpload = async (file: File | null) => {
+    if (!file || !token) return;
+    const formData = new FormData();
+    formData.append('csv', file);
+
+    try {
+      const res = await fetch('/api/nook/import/storygraph', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.books)) {
+        setFavoriteBooks(prev => [...prev, ...data.books]);
+        showToast(data.message || 'StoryGraph CSV imported!', 'success');
+      } else {
+        showToast(data.error || 'Failed to import CSV', 'error');
+      }
+    } catch (e) {
+      showToast('Error importing StoryGraph CSV', 'error');
+    }
+  };
+
   const handleSave = async () => {
     if (!token) return;
     setIsSaving(true);
@@ -216,7 +331,12 @@ export const NookCustomizerPage: React.FC = () => {
           apple_music_url: appleMusicUrl,
           card_visibility_json: cardVisibility,
           card_colors_json: { cardBg: cardBgColor, border: borderColor },
+          card_titles_json: cardTitles,
           music_tracks_json: musicTracks,
+          favorite_movies_json: favoriteMovies,
+          favorite_books_json: favoriteBooks,
+          storygraph_username: storygraphUsername,
+          spotify_personal_mode: spotifyPersonalMode,
           custom_css: customCss
         })
       });
@@ -482,13 +602,15 @@ export const NookCustomizerPage: React.FC = () => {
             <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
               Select which cards and features to display on your public Nook page:
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {[
                 { key: 'bio', label: 'Bio & About Me Card' },
                 { key: 'music', label: 'Profile Anthem & Music Player' },
                 { key: 'friends', label: 'Top Friends Grid' },
                 { key: 'guestbook', label: 'Guestbook Notes' },
-                { key: 'steam', label: 'Steam Gaming Showcase' }
+                { key: 'steam', label: 'Steam Gaming Showcase' },
+                { key: 'movies', label: 'Movies & TV Showcase' },
+                { key: 'books', label: 'Reading Nook & Books Showcase' }
               ].map(c => (
                 <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
                   <input
@@ -499,6 +621,30 @@ export const NookCustomizerPage: React.FC = () => {
                   <span>{c.label}</span>
                 </label>
               ))}
+            </div>
+
+            {/* Custom Card Titles Editor */}
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Customize Card Header Titles:</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                {[
+                  { key: 'bio', label: 'Bio Header Title', defaultVal: 'About Me' },
+                  { key: 'music', label: 'Music Header Title', defaultVal: 'My Music Playlist' },
+                  { key: 'friends', label: 'Friends Header Title', defaultVal: 'Top Friends' },
+                  { key: 'movies', label: 'Movies Header Title', defaultVal: 'Movies & TV Favorites' },
+                  { key: 'books', label: 'Books Header Title', defaultVal: 'Reading Nook & Books' }
+                ].map(item => (
+                  <div key={item.key}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.2rem', opacity: 0.8 }}>{item.label}</label>
+                    <input
+                      type="text"
+                      value={cardTitles[item.key] ?? item.defaultVal}
+                      onChange={e => setCardTitles({ ...cardTitles, [item.key]: e.target.value })}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -690,6 +836,89 @@ export const NookCustomizerPage: React.FC = () => {
                 </p>
               )}
 
+              {/* Search Spotify Catalog Popover Trigger */}
+              <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--accent-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>Search Spotify Track Catalog 🔍</div>
+                  <div style={{ fontSize: '0.78rem', opacity: 0.8 }}>Find any track on Spotify and add it to your playlist automatically!</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSpotifySearch(!showSpotifySearch)}
+                  className="btn-primary"
+                  style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
+                >
+                  {showSpotifySearch ? 'Close Search' : 'Search Spotify Catalog'}
+                </button>
+              </div>
+
+              {/* Spotify Search Input & Modal Grid */}
+              {showSpotifySearch && (
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Search song title or artist..."
+                      value={spotifySearchQ}
+                      onChange={e => setSpotifySearchQ(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSearchSpotify()}
+                      style={{ flex: 1, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                    />
+                    <button type="button" onClick={handleSearchSpotify} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
+                      Search
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '200px', overflowY: 'auto' }}>
+                    {spotifyResults.map(tr => (
+                      <div key={tr.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.65rem', borderRadius: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <img src={tr.albumCover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'} alt="" style={{ width: '32px', height: '32px', borderRadius: '4px' }} />
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{tr.title}</div>
+                            <div style={{ fontSize: '0.72rem', opacity: 0.6 }}>{tr.artist}</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMusicTracks(prev => [...prev, { id: `sp_${Date.now()}`, title: `${tr.title} - ${tr.artist}`, type: 'spotify', url: tr.spotifyUrl }]);
+                            showToast(`Added "${tr.title}" to playlist!`, 'success');
+                          }}
+                          className="btn-primary"
+                          style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                        >
+                          + Add to Playlist
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Spotify Personal Songs Mode */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Connect Spotify Account for Personal Top/Recent Songs</label>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <select
+                    value={spotifyPersonalMode}
+                    onChange={e => setSpotifyPersonalMode(e.target.value)}
+                    style={{ flex: 1, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                  >
+                    <option value="disabled">Disabled (Manual Playlist Only)</option>
+                    <option value="top_tracks">Show My Personal Top 5 Songs on Spotify</option>
+                    <option value="recent_tracks">Show My 5 Recently Played Songs on Spotify</option>
+                  </select>
+                  <a
+                    href="/api/integrations/spotify/login"
+                    className="btn-secondary"
+                    style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                  >
+                    <span>Connect Spotify Account 🎵</span>
+                  </a>
+                </div>
+              </div>
+
               {/* Spotify Playback Explanation Box */}
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
                 💡 <strong>Note on Spotify & Streaming Track Playback:</strong>
@@ -698,6 +927,188 @@ export const NookCustomizerPage: React.FC = () => {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Movies & TV Showcase Panel */}
+          <div className="nook-panel">
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>🎬 Movies & TV Showcase Manager ({favoriteMovies.length} items)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMoviesSearch(!showMoviesSearch)}
+                className="btn-primary"
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+              >
+                {showMoviesSearch ? 'Close Search' : 'Search Movies & TV Shows 🍿'}
+              </button>
+            </div>
+
+            {/* Movies Search Popover */}
+            {showMoviesSearch && (
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Search movie or TV show title..."
+                    value={moviesSearchQ}
+                    onChange={e => setMoviesSearchQ(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSearchMovies()}
+                    style={{ flex: 1, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                  />
+                  <button type="button" onClick={handleSearchMovies} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
+                    Search
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto' }}>
+                  {moviesResults.map(m => (
+                    <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '8px', textAlign: 'center' }}>
+                      <img src={m.posterUrl} alt="" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
+                      <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{m.type} • {m.year}</div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFavoriteMovies(prev => [...prev, m]);
+                          showToast(`Added "${m.title}" to favorites!`, 'success');
+                        }}
+                        className="btn-primary"
+                        style={{ width: '100%', padding: '0.2rem', fontSize: '0.72rem', marginTop: '0.4rem' }}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Favorite Movies List */}
+            {favoriteMovies.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                {favoriteMovies.map((m, idx) => (
+                  <div key={m.id || idx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={() => setFavoriteMovies(favoriteMovies.filter((_, i) => i !== idx))}
+                      style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.8)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '0.75rem' }}
+                    >
+                      ✕
+                    </button>
+                    <img src={m.posterUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{m.type} • {m.year}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No movies or TV shows added yet. Search above! 🎬</p>
+            )}
+          </div>
+
+          {/* Books Showcase & Reading Nook Manager */}
+          <div className="nook-panel">
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>📖 Reading Nook & Favorite Books ({favoriteBooks.length} books)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBooksSearch(!showBooksSearch)}
+                className="btn-primary"
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+              >
+                {showBooksSearch ? 'Close Search' : 'Search Books 📚'}
+              </button>
+            </div>
+
+            {/* StoryGraph Profile Handle & CSV Import */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>StoryGraph Username / Handle</label>
+                <input
+                  type="text"
+                  placeholder="e.g. tylerhats"
+                  value={storygraphUsername}
+                  onChange={e => setStorygraphUsername(e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Import StoryGraph Library CSV</label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={e => handleStoryGraphCsvUpload(e.target.files?.[0] || null)}
+                  style={{ fontSize: '0.82rem' }}
+                />
+              </div>
+            </div>
+
+            {/* Books Search Popover */}
+            {showBooksSearch && (
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Search book title or author..."
+                    value={booksSearchQ}
+                    onChange={e => setBooksSearchQ(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSearchBooks()}
+                    style={{ flex: 1, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                  />
+                  <button type="button" onClick={handleSearchBooks} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
+                    Search
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto' }}>
+                  {booksResults.map(b => (
+                    <div key={b.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '8px', textAlign: 'center' }}>
+                      <img src={b.coverUrl} alt="" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
+                      <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{b.author}</div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFavoriteBooks(prev => [...prev, b]);
+                          showToast(`Added "${b.title}" to books!`, 'success');
+                        }}
+                        className="btn-primary"
+                        style={{ width: '100%', padding: '0.2rem', fontSize: '0.72rem', marginTop: '0.4rem' }}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Favorite Books List */}
+            {favoriteBooks.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                {favoriteBooks.map((b, idx) => (
+                  <div key={b.id || idx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={() => setFavoriteBooks(favoriteBooks.filter((_, i) => i !== idx))}
+                      style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.8)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '0.75rem' }}
+                    >
+                      ✕
+                    </button>
+                    <img src={b.coverUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{b.author}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No books added to your reading nook yet. Search or import CSV above! 📖</p>
+            )}
           </div>
 
           {/* Visual Sticker Studio & Badges Layer */}

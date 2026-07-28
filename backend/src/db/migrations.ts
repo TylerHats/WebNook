@@ -208,6 +208,27 @@ const migrations: Migration[] = [
       try { await execute('ALTER TABLE nooks ADD COLUMN music_tracks_json TEXT DEFAULT "[]"'); } catch (e) {}
       try { await execute('ALTER TABLE nooks ADD COLUMN top_songs_json TEXT DEFAULT "[]"'); } catch (e) {}
     }
+  },
+  {
+    version: 6,
+    name: 'v1.6.0_movies_books_spotify',
+    up: async () => {
+      try { await execute('ALTER TABLE nooks ADD COLUMN card_titles_json TEXT DEFAULT "{}"'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN favorite_movies_json TEXT DEFAULT "[]"'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN favorite_books_json TEXT DEFAULT "[]"'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN storygraph_username TEXT DEFAULT ""'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN spotify_personal_mode TEXT DEFAULT "disabled"'); } catch (e) {}
+      await execute(`
+        CREATE TABLE IF NOT EXISTS spotify_user_tokens (
+          user_id INTEGER PRIMARY KEY,
+          access_token TEXT NOT NULL,
+          refresh_token TEXT NOT NULL,
+          expires_at DATETIME NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+    }
   }
 ];
 

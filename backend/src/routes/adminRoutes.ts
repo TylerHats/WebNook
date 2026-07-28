@@ -648,7 +648,6 @@ router.post('/integrations/test/apple', async (req: AuthenticatedRequest, res: R
       return res.status(400).json({ status: 'not_configured', error: 'No Apple Music Developer Token configured' });
     }
 
-    // Verify token formatting and make request
     if (tokenVal.length < 20) {
       throw new Error('Apple Music developer token is invalid or too short');
     }
@@ -659,6 +658,38 @@ router.post('/integrations/test/apple', async (req: AuthenticatedRequest, res: R
   } catch (err: any) {
     await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['apple_api_status', 'broken']);
     return res.status(400).json({ status: 'broken', error: `Apple Music token error: ${err.message}` });
+  }
+});
+
+// Test TMDB API Integration
+router.post('/integrations/test/tmdb', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const keyRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "tmdb_api_key"');
+    const apiKey = req.body.tmdb_api_key || keyRow?.value;
+
+    if (!apiKey) {
+      return res.status(400).json({ status: 'not_configured', error: 'No TMDB API Key configured' });
+    }
+
+    const testUrl = `https://api.themoviedb.org/3/authentication?api_key=${apiKey}`;
+    const textData = await new Promise<string>((resolve, reject) => {
+      https.get(testUrl, (res) => {
+        let body = '';
+        res.on('data', (chunk: any) => body += chunk);
+        res.on('end', () => resolve(body));
+      }).on('error', reject);
+    });
+
+    const parsed = JSON.parse(textData);
+    if (parsed.success) {
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['tmdb_api_status', 'connected']);
+      return res.json({ status: 'connected', message: 'TMDB API key is valid and connected!' });
+    } else {
+      throw new Error(parsed.status_message || 'TMDB API authentication failed');
+    }
+  } catch (err: any) {
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['tmdb_api_status', 'broken']);
+    return res.status(400).json({ status: 'broken', error: `TMDB API validation failed: ${err.message}` });
   }
 });
 

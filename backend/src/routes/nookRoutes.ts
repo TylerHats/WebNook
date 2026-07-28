@@ -327,14 +327,22 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
       apple_music_url,
       card_visibility_json,
       card_colors_json,
+      card_titles_json,
       music_tracks_json,
-      top_songs_json
+      top_songs_json,
+      favorite_movies_json,
+      favorite_books_json,
+      storygraph_username,
+      spotify_personal_mode
     } = req.body;
 
     const cardVisString = typeof card_visibility_json === 'object' ? JSON.stringify(card_visibility_json) : card_visibility_json;
     const cardColorsString = typeof card_colors_json === 'object' ? JSON.stringify(card_colors_json) : card_colors_json;
+    const cardTitlesString = typeof card_titles_json === 'object' ? JSON.stringify(card_titles_json) : card_titles_json;
     const musicTracksString = typeof music_tracks_json === 'object' ? JSON.stringify(music_tracks_json) : music_tracks_json;
     const topSongsString = typeof top_songs_json === 'object' ? JSON.stringify(top_songs_json) : top_songs_json;
+    const favMoviesString = typeof favorite_movies_json === 'object' ? JSON.stringify(favorite_movies_json) : favorite_movies_json;
+    const favBooksString = typeof favorite_books_json === 'object' ? JSON.stringify(favorite_books_json) : favorite_books_json;
 
     await execute(
       `UPDATE nooks SET 
@@ -354,8 +362,13 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         apple_music_url = COALESCE(?, apple_music_url),
         card_visibility_json = COALESCE(?, card_visibility_json),
         card_colors_json = COALESCE(?, card_colors_json),
+        card_titles_json = COALESCE(?, card_titles_json),
         music_tracks_json = COALESCE(?, music_tracks_json),
         top_songs_json = COALESCE(?, top_songs_json),
+        favorite_movies_json = COALESCE(?, favorite_movies_json),
+        favorite_books_json = COALESCE(?, favorite_books_json),
+        storygraph_username = COALESCE(?, storygraph_username),
+        spotify_personal_mode = COALESCE(?, spotify_personal_mode),
         updated_at = CURRENT_TIMESTAMP 
        WHERE user_id = ?`,
       [
@@ -375,8 +388,13 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         apple_music_url,
         cardVisString,
         cardColorsString,
+        cardTitlesString,
         musicTracksString,
         topSongsString,
+        favMoviesString,
+        favBooksString,
+        storygraph_username,
+        spotify_personal_mode,
         userId
       ]
     );
@@ -385,6 +403,58 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
   } catch (err) {
     console.error('Customization update error:', err);
     return res.status(500).json({ error: 'Failed to update Nook customization' });
+  }
+});
+
+// StoryGraph CSV Import Endpoint
+const csvUpload = multer({ dest: path.join(os.tmpdir(), 'webnook-storygraph') });
+router.post('/import/storygraph', authenticateToken, csvUpload.single('csv'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.file || !fs.existsSync(req.file.path)) {
+      return res.status(400).json({ error: 'No StoryGraph CSV file uploaded' });
+    }
+
+    const fileContent = fs.readFileSync(req.file.path, 'utf8');
+    fs.unlinkSync(req.file.path);
+
+    const lines = fileContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length < 2) {
+      return res.status(400).json({ error: 'CSV file is empty or invalid' });
+    }
+
+    const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+    const titleIdx = headers.findIndex(h => h.includes('title'));
+    const authorIdx = headers.findIndex(h => h.includes('authors') || h.includes('author'));
+    const starIdx = headers.findIndex(h => h.includes('star rating') || h.includes('rating'));
+
+    const importedBooks: any[] = [];
+    for (let i = 1; i < lines.length && importedBooks.length < 15; i++) {
+      // Basic CSV regex split taking quotes into account
+      const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+      const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
+
+      const title = titleIdx !== -1 && cleanCols[titleIdx] ? cleanCols[titleIdx] : '';
+      const author = authorIdx !== -1 && cleanCols[authorIdx] ? cleanCols[authorIdx] : '';
+      const rating = starIdx !== -1 && cleanCols[starIdx] ? cleanCols[starIdx] : '5';
+
+      if (title && title.length > 1) {
+        importedBooks.push({
+          id: `sg_${Date.now()}_${i}`,
+          title,
+          author,
+          year: '',
+          rating: rating ? `${rating} ⭐` : '5 ⭐',
+          coverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&auto=format&fit=crop&q=80'
+        });
+      }
+    }
+
+    return res.json({
+      message: `Successfully imported ${importedBooks.length} books from StoryGraph CSV!`,
+      books: importedBooks
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: `StoryGraph import failed: ${err.message}` });
   }
 });
 

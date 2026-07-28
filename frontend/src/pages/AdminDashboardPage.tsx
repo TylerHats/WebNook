@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { PasswordComplexityIndicator } from '../components/ui/PasswordComplexityIndicator';
-import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send, Gamepad2 } from 'lucide-react';
+import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send, Gamepad2, Film, BookOpen } from 'lucide-react';
 
 // Render Markdown helper for Release Notes
 const renderMarkdown = (text: string) => {
@@ -1153,6 +1153,78 @@ export const AdminDashboardPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* Card 4: TMDB (The Movie Database) Integration */}
+          <div className="nook-panel">
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Film size={20} style={{ flexShrink: 0 }} />
+                <span>TMDB (The Movie Database) API Integration</span>
+              </div>
+              {renderStatusBadge('tmdb_api_status', !!settings.tmdb_api_key)}
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
+              Configure your TMDB API Key to search and fetch movie & TV series posters, release dates, and summaries.
+            </p>
+
+            <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>TMDB API Key (v3 auth)</label>
+                <input
+                  type="password"
+                  placeholder="32-character TMDB API Key"
+                  value={settings.tmdb_api_key || ''}
+                  onChange={e => setSettings({ ...settings, tmdb_api_key: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontFamily: 'monospace' }}
+                />
+              </div>
+
+              <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--accent-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                💡 <strong>TMDB Setup Instructions:</strong>
+                <ol style={{ marginLeft: '1.25rem', marginTop: '0.4rem' }}>
+                  <li>Create a free account at <a href="https://www.themoviedb.org/signup" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>themoviedb.org</a>.</li>
+                  <li>Go to <strong>Settings → API</strong> and request an API key for Developer / Personal use.</li>
+                  <li>Copy your <strong>API Key (v3 auth)</strong> into the field above and click <strong>Save Settings</strong>.</li>
+                </ol>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button type="submit" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Save size={16} style={{ flexShrink: 0 }} />
+                  <span>Save TMDB Settings</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTestIntegration('tmdb' as any)}
+                  className="btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <RefreshCw size={16} style={{ flexShrink: 0 }} />
+                  <span>Test Connection</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Card 5: Books & Open Library Integration */}
+          <div className="nook-panel">
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <BookOpen size={20} style={{ flexShrink: 0 }} />
+                <span>Books & Open Library Integration</span>
+              </div>
+              <span style={{ background: '#22c55e', color: '#fff', fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '12px', fontWeight: 700 }}>🟢 Active (No API Key Required)</span>
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '0.5rem' }}>
+              WebNook's book showcase is powered by <strong>Open Library</strong> (Internet Archive) and StoryGraph CSV importing.
+            </p>
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+              📖 <strong>Zero-Config Books Search & StoryGraph CSV Import:</strong>
+              <p style={{ marginTop: '0.3rem', opacity: 0.85 }}>
+                Open Library allows searching millions of public domain and published books out of the box with zero API key configuration! Additionally, users can import their StoryGraph library `.csv` files directly in their Nook Customizer.
+              </p>
+            </div>
           </div>
         </div>
       )}
