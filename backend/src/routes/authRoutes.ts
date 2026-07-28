@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { execute, queryOne } from '../db/connection';
 import { JWT_SECRET, authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { authenticator } from 'otplib';
+import { sendEmailVerificationEmail } from '../services/emailService';
 
 const router = Router();
 
@@ -30,13 +31,16 @@ router.post('/register', async (req: Request, res: Response) => {
 
     const password_hash = await bcrypt.hash(password, 10);
     
-    // Check if this is the first user (make first user admin)
+    // Check if this is the first user (make first user admin & auto-verify)
     const userCount = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM users');
-    const role = (userCount && userCount.count === 0) ? 'admin' : 'user';
+    const isFirstUser = !userCount || userCount.count === 0;
+    const role = isFirstUser ? 'admin' : 'user';
+    const isEmailVerified = isFirstUser ? 1 : 0;
+    const onboardingCompleted = isFirstUser ? 1 : 0;
 
     const result = await execute(
-      'INSERT INTO users (username, email, password_hash, display_name, role) VALUES (?, ?, ?, ?, ?)',
-      [cleanUsername, email.toLowerCase(), password_hash, display_name || cleanUsername, role]
+      'INSERT INTO users (username, email, password_hash, display_name, role, is_email_verified, onboarding_completed) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [cleanUsername, email.toLowerCase(), password_hash, display_name || cleanUsername, role, isEmailVerified, onboardingCompleted]
     );
 
     const userId = result.lastID;
@@ -61,6 +65,24 @@ router.post('/register', async (req: Request, res: Response) => {
       );
     }
 
+    // Send Verification Email if not pre-verified admin
+    let verifyToken = '';
+    if (!isEmailVerified) {
+      verifyToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 86400000).toISOString(); // 24 hours
+      await execute('INSERT INTO email_verifications (token, user_id, expires_at) VALUES (?, ?, ?)', [
+        verifyToken,
+        userId,
+        expiresAt
+      ]);
+
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const baseUrl = `${protocol}://${host}`;
+
+      sendEmailVerificationEmail(email.toLowerCase(), cleanUsername, verifyToken, baseUrl);
+    }
+
     const token = jwt.sign(
       { id: userId, username: cleanUsername, email: email.toLowerCase(), role },
       JWT_SECRET,
@@ -68,14 +90,16 @@ router.post('/register', async (req: Request, res: Response) => {
     );
 
     return res.json({
-      message: 'Account registered successfully',
+      message: isEmailVerified ? 'Account registered successfully' : 'Account registered! Please check your email to verify your address.',
       token,
       user: {
         id: userId,
         username: cleanUsername,
         email: email.toLowerCase(),
         display_name: display_name || cleanUsername,
-        role
+        role,
+        is_email_verified: !!isEmailVerified,
+        onboarding_completed: !!onboardingCompleted
       }
     });
   } catch (err: any) {
@@ -106,6 +130,11 @@ router.post('/login', async (req: Request, res: Response) => {
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    if (user.is_disabled) {
+      const reasonMsg = user.disabled_reason ? `: ${user.disabled_reason}` : '.';
+      return res.status(403).json({ error: `Your account has been disabled${reasonMsg}` });
     }
 
     // Check TOTP if enabled
@@ -143,7 +172,9 @@ router.post('/login', async (req: Request, res: Response) => {
         status_message: user.status_message,
         status_emoji: user.status_emoji,
         role: user.role,
-        is_totp_enabled: !!user.is_totp_enabled
+        is_totp_enabled: !!user.is_totp_enabled,
+        is_email_verified: !!user.is_email_verified,
+        onboarding_completed: !!user.onboarding_completed
       }
     });
   } catch (err: any) {
@@ -156,7 +187,7 @@ router.post('/login', async (req: Request, res: Response) => {
 router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = await queryOne<any>(
-      'SELECT id, username, email, display_name, bio, avatar_url, banner_url, status_message, status_emoji, role, is_totp_enabled, privacy_default, created_at FROM users WHERE id = ?',
+      'SELECT id, username, email, display_name, bio, avatar_url, banner_url, status_message, status_emoji, role, is_totp_enabled, is_email_verified, onboarding_completed, privacy_default, created_at FROM users WHERE id = ?',
       [req.user!.id]
     );
 
@@ -164,9 +195,101 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Resp
       return res.status(440).json({ error: 'User not found' });
     }
 
-    return res.json({ user: { ...user, is_totp_enabled: !!user.is_totp_enabled } });
+    return res.json({
+      user: {
+        ...user,
+        is_totp_enabled: !!user.is_totp_enabled,
+        is_email_verified: !!user.is_email_verified,
+        onboarding_completed: !!user.onboarding_completed
+      }
+    });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+// Verify Email Token
+router.get('/verify-email', async (req: Request, res: Response) => {
+  try {
+    const tokenParam = (req.query.token as string) || '';
+    if (!tokenParam) {
+      return res.status(400).json({ error: 'Verification token is required' });
+    }
+
+    const record = await queryOne<any>(
+      'SELECT * FROM email_verifications WHERE token = ? AND expires_at > ?',
+      [tokenParam, new Date().toISOString()]
+    );
+
+    if (!record) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+
+    await execute('UPDATE users SET is_email_verified = 1 WHERE id = ?', [record.user_id]);
+    await execute('DELETE FROM email_verifications WHERE token = ?', [tokenParam]);
+
+    return res.json({ message: 'Email address verified successfully! You may now complete your Nook setup.' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to verify email' });
+  }
+});
+
+router.post('/verify-email', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: 'Verification token is required' });
+    }
+
+    const record = await queryOne<any>(
+      'SELECT * FROM email_verifications WHERE token = ? AND expires_at > ?',
+      [token, new Date().toISOString()]
+    );
+
+    if (!record) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+
+    await execute('UPDATE users SET is_email_verified = 1 WHERE id = ?', [record.user_id]);
+    await execute('DELETE FROM email_verifications WHERE token = ?', [token]);
+
+    return res.json({ message: 'Email address verified successfully!' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to verify email' });
+  }
+});
+
+// Resend Verification Email
+router.post('/resend-verification', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const user = await queryOne<any>('SELECT id, username, email, is_email_verified FROM users WHERE id = ?', [req.user!.id]);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (user.is_email_verified) {
+      return res.json({ message: 'Your email address is already verified.' });
+    }
+
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 86400000).toISOString();
+
+    await execute('DELETE FROM email_verifications WHERE user_id = ?', [user.id]);
+    await execute('INSERT INTO email_verifications (token, user_id, expires_at) VALUES (?, ?, ?)', [
+      verifyToken,
+      user.id,
+      expiresAt
+    ]);
+
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const baseUrl = `${protocol}://${host}`;
+
+    const sent = await sendEmailVerificationEmail(user.email, user.username, verifyToken, baseUrl);
+    return res.json({
+      message: sent ? `Verification email resent to ${user.email}` : `Verification token generated: ${verifyToken}`,
+      token: verifyToken
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to resend verification email' });
   }
 });
 

@@ -133,6 +133,39 @@ const migrations: Migration[] = [
         );
       `);
     }
+  },
+  {
+    version: 2,
+    name: 'user_disable_columns',
+    up: async () => {
+      try {
+        await execute('ALTER TABLE users ADD COLUMN is_disabled INTEGER DEFAULT 0');
+      } catch (e) {}
+      try {
+        await execute('ALTER TABLE users ADD COLUMN disabled_reason TEXT DEFAULT ""');
+      } catch (e) {}
+    }
+  },
+  {
+    version: 3,
+    name: 'email_verification_and_onboarding',
+    up: async () => {
+      try {
+        await execute('ALTER TABLE users ADD COLUMN is_email_verified INTEGER DEFAULT 0');
+      } catch (e) {}
+      try {
+        await execute('ALTER TABLE users ADD COLUMN onboarding_completed INTEGER DEFAULT 0');
+      } catch (e) {}
+      await execute(`
+        CREATE TABLE IF NOT EXISTS email_verifications (
+          token TEXT PRIMARY KEY,
+          user_id INTEGER NOT NULL,
+          expires_at DATETIME NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+    }
   }
 ];
 

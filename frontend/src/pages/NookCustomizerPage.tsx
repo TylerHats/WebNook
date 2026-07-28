@@ -111,6 +111,70 @@ export const NookCustomizerPage: React.FC = () => {
     }
   };
 
+  const handleMusicFileUpload = async (file: File | null) => {
+    if (!file || !token) return;
+    const formData = new FormData();
+    formData.append('music', file);
+    try {
+      const res = await fetch('/api/nook/upload/music', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBgMusicUrl(data.bg_music_url);
+        showToast('Background audio file uploaded successfully!', 'success');
+      } else {
+        showToast(data.error || 'Failed to upload audio file', 'error');
+      }
+    } catch (e) {
+      showToast('Error uploading audio file', 'error');
+    }
+  };
+
+  const handleAvatarFileUpload = async (file: File | null) => {
+    if (!file || !token) return;
+    const formData = new FormData();
+    formData.append('avatar', file);
+    try {
+      const res = await fetch('/api/nook/upload/avatar', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Profile avatar uploaded successfully!', 'success');
+      } else {
+        showToast(data.error || 'Failed to upload avatar', 'error');
+      }
+    } catch (e) {
+      showToast('Error uploading avatar file', 'error');
+    }
+  };
+
+  const handleBannerFileUpload = async (file: File | null) => {
+    if (!file || !token) return;
+    const formData = new FormData();
+    formData.append('banner', file);
+    try {
+      const res = await fetch('/api/nook/upload/banner', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Banner image uploaded successfully!', 'success');
+      } else {
+        showToast(data.error || 'Failed to upload banner', 'error');
+      }
+    } catch (e) {
+      showToast('Error uploading banner file', 'error');
+    }
+  };
+
   if (!user) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem' }}>
@@ -138,6 +202,34 @@ export const NookCustomizerPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Direct Photo Uploads Panel */}
+          <div className="nook-panel">
+            <div className="nook-panel-header">
+              <Image size={20} />
+              <span>Upload Profile Avatar & Banner Images</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Avatar Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => handleAvatarFileUpload(e.target.files?.[0] || null)}
+                  style={{ fontSize: '0.85rem' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Banner Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => handleBannerFileUpload(e.target.files?.[0] || null)}
+                  style={{ fontSize: '0.85rem' }}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Theme Selector */}
           <div className="nook-panel">
             <div className="nook-panel-header">
@@ -195,31 +287,43 @@ export const NookCustomizerPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Background Audio Settings */}
+          {/* Background Audio Settings & File Uploader */}
           <div className="nook-panel">
             <div className="nook-panel-header">
               <Music size={20} />
               <span>Background Anthem Audio</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Audio Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g. My Favorite Song"
-                  value={bgMusicTitle}
-                  onChange={e => setBgMusicTitle(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-                />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Audio Title</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. My Favorite Song"
+                    value={bgMusicTitle}
+                    onChange={e => setBgMusicTitle(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>MP3 Audio File URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/song.mp3 or /uploads/..."
+                    value={bgMusicUrl}
+                    onChange={e => setBgMusicUrl(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  />
+                </div>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>MP3 Direct Audio URL</label>
+
+              <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '10px', border: '1px dashed var(--border-color)' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Direct Audio File Upload (MP3 / WAV / OGG)</label>
                 <input
-                  type="url"
-                  placeholder="https://example.com/song.mp3"
-                  value={bgMusicUrl}
-                  onChange={e => setBgMusicUrl(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  type="file"
+                  accept="audio/*"
+                  onChange={e => handleMusicFileUpload(e.target.files?.[0] || null)}
+                  style={{ fontSize: '0.85rem' }}
                 />
               </div>
             </div>

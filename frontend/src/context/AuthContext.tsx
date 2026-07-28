@@ -12,6 +12,8 @@ export interface User {
   status_emoji?: string;
   role: 'admin' | 'user';
   is_totp_enabled: boolean;
+  is_email_verified?: boolean;
+  onboarding_completed?: boolean;
   privacy_default?: string;
 }
 

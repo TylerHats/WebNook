@@ -119,6 +119,132 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
   }
 });
 
+import fs from 'fs';
+import path from 'path';
+import multer from 'multer';
+
+// Configure Multer Storage for Media Uploads (Avatars, Banners, Music files)
+const uploadsDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const mediaStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '';
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+  }
+});
+
+const uploadMedia = multer({
+  storage: mediaStorage,
+  limits: { fileSize: 25 * 1024 * 1024 } // 25MB max file size
+});
+
+// Upload User Avatar Image File
+router.post('/upload/avatar', authenticateToken, uploadMedia.single('avatar'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No avatar image file uploaded' });
+    }
+
+    const avatarUrl = `/uploads/${req.file.filename}`;
+    await execute('UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+      avatarUrl,
+      req.user!.id
+    ]);
+
+    return res.json({ message: 'Avatar image uploaded successfully', avatar_url: avatarUrl });
+  } catch (err: any) {
+    console.error('Avatar upload error:', err);
+    return res.status(500).json({ error: 'Failed to upload avatar image' });
+  }
+});
+
+// Upload User Banner Image File
+router.post('/upload/banner', authenticateToken, uploadMedia.single('banner'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No banner image file uploaded' });
+    }
+
+    const bannerUrl = `/uploads/${req.file.filename}`;
+    await execute('UPDATE users SET banner_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+      bannerUrl,
+      req.user!.id
+    ]);
+
+    return res.json({ message: 'Banner image uploaded successfully', banner_url: bannerUrl });
+  } catch (err: any) {
+    console.error('Banner upload error:', err);
+    return res.status(500).json({ error: 'Failed to upload banner image' });
+  }
+});
+
+// Upload Background Anthem Audio File (MP3 / WAV / OGG)
+router.post('/upload/music', authenticateToken, uploadMedia.single('music'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No audio file uploaded' });
+    }
+
+    const musicUrl = `/uploads/${req.file.filename}`;
+    await execute('UPDATE nooks SET bg_music_url = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?', [
+      musicUrl,
+      req.user!.id
+    ]);
+
+    return res.json({ message: 'Background music audio file uploaded successfully', bg_music_url: musicUrl });
+  } catch (err: any) {
+    console.error('Music upload error:', err);
+    return res.status(500).json({ error: 'Failed to upload audio file' });
+  }
+});
+
+// Complete Initial User Nook Onboarding Wizard
+router.post('/onboarding/complete', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { display_name, bio, status_message, status_emoji, bg_music_title } = req.body;
+
+    await execute(
+      `UPDATE users SET 
+        display_name = COALESCE(?, display_name), 
+        bio = COALESCE(?, bio), 
+        status_message = COALESCE(?, status_message), 
+        status_emoji = COALESCE(?, status_emoji), 
+        onboarding_completed = 1,
+        updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [display_name, bio, status_message, status_emoji, userId]
+    );
+
+    if (bg_music_title) {
+      await execute('UPDATE nooks SET bg_music_title = ? WHERE user_id = ?', [bg_music_title, userId]);
+    }
+
+    const updatedUser = await queryOne<any>(
+      'SELECT id, username, email, display_name, bio, avatar_url, banner_url, status_message, status_emoji, role, is_email_verified, onboarding_completed FROM users WHERE id = ?',
+      [userId]
+    );
+
+    return res.json({
+      message: 'Onboarding wizard completed successfully!',
+      user: {
+        ...updatedUser,
+        is_email_verified: !!updatedUser.is_email_verified,
+        onboarding_completed: !!updatedUser.onboarding_completed
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to complete onboarding' });
+  }
+});
+
 // Update Profile Info (Avatar, Banner, Bio, Status)
 router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {

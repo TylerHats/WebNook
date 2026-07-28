@@ -162,6 +162,52 @@ export const AccountSettingsPage: React.FC = () => {
     }
   };
 
+  const handleAvatarFileUpload = async (file: File | null) => {
+    if (!file || !token) return;
+    const formData = new FormData();
+    formData.append('avatar', file);
+    try {
+      const res = await fetch('/api/nook/upload/avatar', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAvatarUrl(data.avatar_url);
+        showToast('Avatar uploaded successfully!', 'success');
+        refreshUser();
+      } else {
+        showToast(data.error || 'Failed to upload avatar', 'error');
+      }
+    } catch (e) {
+      showToast('Error uploading avatar file', 'error');
+    }
+  };
+
+  const handleBannerFileUpload = async (file: File | null) => {
+    if (!file || !token) return;
+    const formData = new FormData();
+    formData.append('banner', file);
+    try {
+      const res = await fetch('/api/nook/upload/banner', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBannerUrl(data.banner_url);
+        showToast('Banner uploaded successfully!', 'success');
+        refreshUser();
+      } else {
+        showToast(data.error || 'Failed to upload banner', 'error');
+      }
+    } catch (e) {
+      showToast('Error uploading banner file', 'error');
+    }
+  };
+
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', padding: '2rem 1rem' }}>
       <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -213,23 +259,35 @@ export const AccountSettingsPage: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Avatar Image URL</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Avatar Image URL or Direct File Upload</label>
                 <input
                   type="url"
-                  placeholder="https://example.com/avatar.jpg"
+                  placeholder="https://example.com/avatar.jpg or /uploads/..."
                   value={avatarUrl}
                   onChange={e => setAvatarUrl(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => handleAvatarFileUpload(e.target.files?.[0] || null)}
+                  style={{ fontSize: '0.8rem' }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Header Banner URL</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Header Banner URL or Direct File Upload</label>
                 <input
                   type="url"
-                  placeholder="https://example.com/banner.jpg"
+                  placeholder="https://example.com/banner.jpg or /uploads/..."
                   value={bannerUrl}
                   onChange={e => setBannerUrl(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => handleBannerFileUpload(e.target.files?.[0] || null)}
+                  style={{ fontSize: '0.8rem' }}
                 />
               </div>
             </div>

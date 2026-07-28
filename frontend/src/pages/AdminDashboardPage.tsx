@@ -1,36 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image } from 'lucide-react';
+import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
   const { showToast } = useToast();
 
   const [metrics, setMetrics] = useState<any>(null);
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [backupsList, setBackupsList] = useState<any[]>([]);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [channel, setChannel] = useState('stable');
   const [isUpdating, setIsUpdating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'metrics' | 'updater' | 'users' | 'backups' | 'settings'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'updater' | 'users' | 'config'>('metrics');
 
   const [settings, setSettings] = useState<Record<string, string>>({
     app_name: 'WebNook',
     logo_url: '/branding/logo.png',
-    steam_api_key: '',
     smtp_host: '',
     smtp_port: '587',
     smtp_user: '',
-    smtp_pass: ''
+    smtp_pass: '',
+    smtp_from: '',
+    smtp_secure: 'false',
+    auto_backup_enabled: 'false',
+    auto_backup_interval: 'daily'
   });
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+
+  // Modals state
+  const [disableModalUser, setDisableModalUser] = useState<any | null>(null);
+  const [disableReason, setDisableReason] = useState('');
+
+  const [passwordModalUser, setPasswordModalUser] = useState<any | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+
+  const [deleteModalUser, setDeleteModalUser] = useState<any | null>(null);
+
+  const [showWipeModal, setShowWipeModal] = useState(false);
+  const [wipeConfirmInput, setWipeConfirmInput] = useState('');
+  const [isWiping, setIsWiping] = useState(false);
+
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
 
   useEffect(() => {
     if (token && user?.role === 'admin') {
       loadMetrics();
       loadUsers();
+      loadBackups();
       checkUpdates();
       loadSettings();
     }
@@ -47,6 +71,13 @@ export const AdminDashboardPage: React.FC = () => {
     fetch('/api/admin/users', { headers: { Authorization: `Bearer ${token}` } })
       .then(res => res.json())
       .then(data => { if (data.users) setUsersList(data.users); })
+      .catch(err => console.error(err));
+  };
+
+  const loadBackups = () => {
+    fetch('/api/admin/backups', { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.json())
+      .then(data => { if (data.backups) setBackupsList(data.backups); })
       .catch(err => console.error(err));
   };
 
@@ -114,11 +145,31 @@ export const AdminDashboardPage: React.FC = () => {
         body: JSON.stringify({ settings })
       });
       if (res.ok) {
-        showToast('Whitelabel & system settings saved!', 'success');
-        window.location.reload();
+        showToast('System configuration saved!', 'success');
       }
     } catch (e) {
       showToast('Failed to save settings', 'error');
+    }
+  };
+
+  const handleTestEmail = async () => {
+    setIsTestingEmail(true);
+    try {
+      const res = await fetch('/api/admin/settings/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ to_email: testEmailAddress || user?.email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.error || 'Failed to send test email', 'error');
+      }
+    } catch (e) {
+      showToast('Error testing SMTP connection', 'error');
+    } finally {
+      setIsTestingEmail(false);
     }
   };
 
@@ -168,6 +219,160 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
+  const handleDisableSubmit = async () => {
+    if (!disableModalUser) return;
+    const isCurrentlyDisabled = !!disableModalUser.is_disabled;
+    const targetDisabledState = !isCurrentlyDisabled;
+
+    try {
+      const res = await fetch(`/api/admin/users/${disableModalUser.id}/disable`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ disabled: targetDisabledState, reason: disableReason })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, 'success');
+        setDisableModalUser(null);
+        setDisableReason('');
+        loadUsers();
+      } else {
+        showToast(data.error || 'Failed to change disable status', 'error');
+      }
+    } catch (e) {
+      showToast('Error updating account status', 'error');
+    }
+  };
+
+  const handlePasswordResetSubmit = async (manual: boolean) => {
+    if (!passwordModalUser) return;
+    try {
+      const res = await fetch(`/api/admin/users/${passwordModalUser.id}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(manual ? { new_password: newPassword } : { send_reset_email: true })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, 'success');
+        setPasswordModalUser(null);
+        setNewPassword('');
+      } else {
+        showToast(data.error || 'Password reset failed', 'error');
+      }
+    } catch (e) {
+      showToast('Error executing password reset', 'error');
+    }
+  };
+
+  const handleDeleteUserSubmit = async () => {
+    if (!deleteModalUser) return;
+    try {
+      const res = await fetch(`/api/admin/users/${deleteModalUser.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, 'success');
+        setDeleteModalUser(null);
+        loadUsers();
+      } else {
+        showToast(data.error || 'Failed to delete user', 'error');
+      }
+    } catch (e) {
+      showToast('Error deleting user', 'error');
+    }
+  };
+
+  const handleCreateCompressedBackup = async () => {
+    setIsCreatingBackup(true);
+    try {
+      const res = await fetch('/api/admin/backups/create', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Compressed .tar.gz backup created successfully!', 'success');
+        loadBackups();
+        loadMetrics();
+      } else {
+        showToast(data.error || 'Backup creation failed', 'error');
+      }
+    } catch (e) {
+      showToast('Error generating compressed backup archive', 'error');
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const handleRestoreSubmit = async (filename?: string) => {
+    setIsRestoring(true);
+    const formData = new FormData();
+    if (restoreFile) {
+      formData.append('backup_file', restoreFile);
+    } else if (filename) {
+      formData.append('filename', filename);
+    }
+
+    try {
+      const res = await fetch('/api/admin/backups/restore', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Backup restored & DB schema migrated!', 'success');
+        setRestoreFile(null);
+        loadMetrics();
+        loadUsers();
+      } else {
+        showToast(data.error || 'Restore failed', 'error');
+      }
+    } catch (e) {
+      showToast('Error restoring backup', 'error');
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  const handleFactoryResetWipe = async () => {
+    if (wipeConfirmInput.toUpperCase() !== 'WIPE') {
+      showToast('Please type WIPE to confirm application reset!', 'error');
+      return;
+    }
+
+    setIsWiping(true);
+    try {
+      const res = await fetch('/api/admin/system/wipe', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Application wiped! Restarting setup...', 'success');
+        logout();
+        window.location.href = '/setup';
+      } else {
+        showToast(data.error || 'Wipe failed', 'error');
+      }
+    } catch (e) {
+      showToast('Error completing factory reset', 'error');
+    } finally {
+      setIsWiping(false);
+    }
+  };
+
+  const formatBytes = (bytes: number): string => {
+    if (!bytes || bytes <= 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   if (!user || user.role !== 'admin') {
     return (
       <div style={{ textAlign: 'center', padding: '4rem' }}>
@@ -185,18 +390,17 @@ export const AdminDashboardPage: React.FC = () => {
             <Shield size={28} color="var(--accent-color)" />
             <span>{settings.app_name || 'WebNook'} Administration Suite</span>
           </h1>
-          <p style={{ opacity: 0.7 }}>Manage performance, system self-updates, database backups, and whitelabel branding.</p>
+          <p style={{ opacity: 0.7 }}>Manage system performance, release updates, accounts, SMTP emails, compressed backups, and whitelabeling.</p>
         </div>
       </div>
 
       {/* Admin Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
         {[
           { id: 'metrics', label: 'System Metrics', icon: Activity },
           { id: 'updater', label: 'Self Updater', icon: Radio },
           { id: 'users', label: 'User Accounts', icon: Users },
-          { id: 'backups', label: 'Backup & Restore', icon: HardDrive },
-          { id: 'settings', label: 'Whitelabel & Config', icon: Settings }
+          { id: 'config', label: 'Config & System Suite', icon: Settings }
         ].map(t => {
           const IconComponent = t.icon;
           return (
@@ -229,8 +433,12 @@ export const AdminDashboardPage: React.FC = () => {
             <div style={{ fontSize: '2rem', fontWeight: 800, color: '#3b82f6' }}>v{metrics.stats.dbVersion}</div>
           </div>
           <div className="nook-panel">
-            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>Memory Usage</div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#eab308' }}>{metrics.system.memoryUsagePercent}%</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>Database File Size</div>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#eab308' }}>{formatBytes(metrics.stats.dbSizeBytes)}</div>
+          </div>
+          <div className="nook-panel">
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>Uploaded Files Size</div>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#a855f7' }}>{formatBytes(metrics.stats.uploadsSizeBytes)}</div>
           </div>
         </div>
       )}
@@ -271,7 +479,7 @@ export const AdminDashboardPage: React.FC = () => {
                     <span style={{ background: '#22c55e', color: '#fff', fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '20px', fontWeight: 700 }}>Update Available!</span>
                   )}
                 </div>
-                <p style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
                   {updateInfo.latestRelease?.notes}
                 </p>
               </div>
@@ -291,69 +499,105 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: User Accounts */}
+      {/* Tab 3: User Accounts Management Suite */}
       {activeTab === 'users' && (
         <div className="nook-panel">
           <div className="nook-panel-header">
             <Users size={20} />
-            <span>Registered Users ({usersList.length})</span>
+            <span>Registered User Accounts ({usersList.length})</span>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                <th style={{ padding: '0.6rem' }}>ID</th>
-                <th style={{ padding: '0.6rem' }}>Username</th>
-                <th style={{ padding: '0.6rem' }}>Email</th>
-                <th style={{ padding: '0.6rem' }}>Role</th>
-                <th style={{ padding: '0.6rem' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usersList.map(u => (
-                <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <td style={{ padding: '0.6rem' }}>#{u.id}</td>
-                  <td style={{ padding: '0.6rem', fontWeight: 600 }}>@{u.username}</td>
-                  <td style={{ padding: '0.6rem', opacity: 0.8 }}>{u.email}</td>
-                  <td style={{ padding: '0.6rem' }}>
-                    <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: u.role === 'admin' ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td style={{ padding: '0.6rem' }}>
-                    {u.id !== user.id && (
-                      <button onClick={() => handleToggleRole(u.id, u.role)} className="btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}>
-                        Toggle Role
-                      </button>
-                    )}
-                  </td>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                  <th style={{ padding: '0.6rem' }}>ID</th>
+                  <th style={{ padding: '0.6rem' }}>User</th>
+                  <th style={{ padding: '0.6rem' }}>Email</th>
+                  <th style={{ padding: '0.6rem' }}>Role</th>
+                  <th style={{ padding: '0.6rem' }}>Status</th>
+                  <th style={{ padding: '0.6rem' }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {usersList.map(u => (
+                  <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: '0.6rem' }}>#{u.id}</td>
+                    <td style={{ padding: '0.6rem', fontWeight: 600 }}>@{u.username}</td>
+                    <td style={{ padding: '0.6rem', opacity: 0.8 }}>{u.email}</td>
+                    <td style={{ padding: '0.6rem' }}>
+                      <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: u.role === 'admin' ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.6rem' }}>
+                      {u.is_disabled ? (
+                        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#ef4444', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
+                          Disabled
+                        </span>
+                      ) : (
+                        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#22c55e', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
+                          Active
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.6rem' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        {u.id !== user.id && (
+                          <>
+                            <button
+                              onClick={() => handleToggleRole(u.id, u.role)}
+                              className="btn-secondary"
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                              title="Toggle Role"
+                            >
+                              Role
+                            </button>
 
-      {/* Tab 4: Backup & Restore */}
-      {activeTab === 'backups' && (
-        <div className="nook-panel">
-          <div className="nook-panel-header">
-            <HardDrive size={20} />
-            <span>Database Backup & Export</span>
+                            <button
+                              onClick={() => { setDisableModalUser(u); setDisableReason(u.disabled_reason || ''); }}
+                              className="btn-secondary"
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: u.is_disabled ? '#22c55e' : '#eab308' }}
+                              title={u.is_disabled ? 'Enable Account' : 'Disable Account'}
+                            >
+                              <Power size={12} />
+                              <span>{u.is_disabled ? 'Enable' : 'Disable'}</span>
+                            </button>
+
+                            <button
+                              onClick={() => { setPasswordModalUser(u); setNewPassword(''); }}
+                              className="btn-secondary"
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                              title="Reset Password"
+                            >
+                              <Key size={12} />
+                              <span>Reset Pass</span>
+                            </button>
+
+                            <button
+                              onClick={() => setDeleteModalUser(u)}
+                              className="btn-secondary"
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: '#ef4444' }}
+                              title="Delete User"
+                            >
+                              <Trash2 size={12} />
+                              <span>Delete</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <p style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '1.25rem' }}>
-            Download a single-file SQLite database backup containing all Nooks, stickers, widgets, and user accounts.
-          </p>
-          <a href={`/api/admin/backup/export?token=${token}`} download className="btn-primary">
-            <Download size={18} />
-            <span>Download Database Backup</span>
-          </a>
         </div>
       )}
 
-      {/* Tab 5: Whitelabel Branding & System Settings */}
-      {activeTab === 'settings' && (
+      {/* Tab 4: Combined Config & System Suite */}
+      {activeTab === 'config' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Whitelabel Branding Card */}
+          {/* Card 1: Whitelabel Branding Settings */}
           <div className="nook-panel">
             <div className="nook-panel-header">
               <Image size={20} />
@@ -397,31 +641,313 @@ export const AdminDashboardPage: React.FC = () => {
 
               <button onClick={handleSaveSettings} className="btn-primary" style={{ alignSelf: 'flex-start' }}>
                 <Save size={16} />
-                <span>Save Application Name</span>
+                <span>Save Whitelabel Settings</span>
               </button>
             </div>
           </div>
 
-          {/* Steam & System Integrations Card */}
+          {/* Card 2: SMTP Mail Engine Credentials */}
           <div className="nook-panel">
             <div className="nook-panel-header">
-              <Settings size={20} />
-              <span>Integrations & API Keys</span>
+              <Mail size={20} />
+              <span>SMTP Mail Engine Credentials (System Notifications)</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam Web API Key</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>SMTP Host</label>
                 <input
                   type="text"
-                  placeholder="Enter Steam Web API Key"
-                  value={settings.steam_api_key}
-                  onChange={e => setSettings({ ...settings, steam_api_key: e.target.value })}
+                  placeholder="smtp.example.com"
+                  value={settings.smtp_host}
+                  onChange={e => setSettings({ ...settings, smtp_host: e.target.value })}
                   style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
                 />
               </div>
-              <button onClick={handleSaveSettings} className="btn-primary" style={{ alignSelf: 'flex-start' }}>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>SMTP Port</label>
+                <input
+                  type="text"
+                  placeholder="587"
+                  value={settings.smtp_port}
+                  onChange={e => setSettings({ ...settings, smtp_port: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>SMTP Username</label>
+                <input
+                  type="text"
+                  placeholder="user@example.com"
+                  value={settings.smtp_user}
+                  onChange={e => setSettings({ ...settings, smtp_user: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>SMTP Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={settings.smtp_pass}
+                  onChange={e => setSettings({ ...settings, smtp_pass: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>From Address</label>
+                <input
+                  type="email"
+                  placeholder="noreply@webnook.local"
+                  value={settings.smtp_from}
+                  onChange={e => setSettings({ ...settings, smtp_from: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Test Destination Email</label>
+                <input
+                  type="email"
+                  placeholder={user.email}
+                  value={testEmailAddress}
+                  onChange={e => setTestEmailAddress(e.target.value)}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button onClick={handleSaveSettings} className="btn-primary">
                 <Save size={16} />
-                <span>Save API Keys</span>
+                <span>Save SMTP Settings</span>
+              </button>
+              <button onClick={handleTestEmail} className="btn-secondary" disabled={isTestingEmail}>
+                <Send size={16} />
+                <span>{isTestingEmail ? 'Sending Test Email...' : 'Send Test Email'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 3: Compressed Backup & Schema-Aware Restore Suite */}
+          <div className="nook-panel">
+            <div className="nook-panel-header">
+              <HardDrive size={20} />
+              <span>Compressed Backup & Schema-Aware Restore Suite</span>
+            </div>
+
+            <p style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '1.25rem' }}>
+              Generate single compressed <code>.tar.gz</code> backup archives containing your SQLite database, uploaded profile images, stickers, and custom branding assets.
+            </p>
+
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+              <button onClick={handleCreateCompressedBackup} className="btn-primary" disabled={isCreatingBackup}>
+                <Download size={18} />
+                <span>{isCreatingBackup ? 'Creating Compressed Archive...' : 'Create Compressed Backup (.tar.gz)'}</span>
+              </button>
+            </div>
+
+            {/* List of Available Local Backups */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.5rem' }}>Available Local Backup Archives ({backupsList.length})</h4>
+              {backupsList.length === 0 ? (
+                <p style={{ fontSize: '0.85rem', opacity: 0.6 }}>No local backup archives found.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {backupsList.map(b => (
+                    <div key={b.filename} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.65rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{b.filename}</div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{formatBytes(b.sizeBytes)} • {new Date(b.created_at).toLocaleString()}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <a href={`/api/admin/backups/download/${b.filename}?token=${token}`} download className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
+                          <Download size={14} />
+                          <span>Download</span>
+                        </a>
+                        <button onClick={() => handleRestoreSubmit(b.filename)} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: '#3b82f6' }} disabled={isRestoring}>
+                          <RefreshCw size={14} />
+                          <span>Restore</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Restore File Uploader */}
+            <div style={{ background: 'rgba(255,255,255,0.04)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem' }}>Restore Backup File (Automatic Schema Migration)</h4>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <input
+                  type="file"
+                  accept=".tar.gz,.db"
+                  onChange={e => setRestoreFile(e.target.files?.[0] || null)}
+                  style={{ fontSize: '0.85rem' }}
+                />
+                <button onClick={() => handleRestoreSubmit()} className="btn-primary" disabled={!restoreFile || isRestoring}>
+                  <Upload size={16} />
+                  <span>{isRestoring ? 'Restoring & Migrating DB...' : 'Upload & Restore'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Danger Zone - Factory Reset & Wipe Application */}
+          <div className="nook-panel" style={{ border: '1px solid #ef4444' }}>
+            <div className="nook-panel-header" style={{ color: '#ef4444' }}>
+              <AlertTriangle size={20} />
+              <span>Danger Zone: Factory Reset & OOBE Application Wipe</span>
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.85, marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              Wipe all database records (users, nooks, widgets, stickers, guestbooks) and uploaded media files, resetting WebNook to its initial Out-Of-The-Box Experience (OOBE) setup wizard.
+            </p>
+            <button onClick={() => { setShowWipeModal(true); setWipeConfirmInput(''); }} className="btn-secondary" style={{ color: '#ef4444', borderColor: '#ef4444', alignSelf: 'flex-start' }}>
+              <Trash2 size={16} />
+              <span>Factory Reset & Wipe Application</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: Disable Account Reason Modal */}
+      {disableModalUser && (
+        <div className="custom-modal-backdrop">
+          <div className="custom-modal-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                {disableModalUser.is_disabled ? 'Re-enable Account' : 'Disable Account'} @{disableModalUser.username}
+              </h3>
+              <button onClick={() => setDisableModalUser(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+
+            {!disableModalUser.is_disabled ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <p style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+                  Disabling an account blocks the user from logging in and sends a styled notification email explaining the reason.
+                </p>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Reason for Disabling Account</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Enter reason (e.g. Terms of Service violation)..."
+                    value={disableReason}
+                    onChange={e => setDisableReason(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', resize: 'vertical' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button onClick={() => setDisableModalUser(null)} className="btn-secondary">Cancel</button>
+                  <button onClick={handleDisableSubmit} className="btn-primary" style={{ background: '#ef4444' }}>Disable & Send Notice Email</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <p style={{ fontSize: '0.85rem', opacity: 0.8 }}>Are you sure you want to re-enable account @{disableModalUser.username}?</p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button onClick={() => setDisableModalUser(null)} className="btn-secondary">Cancel</button>
+                  <button onClick={handleDisableSubmit} className="btn-primary">Enable Account</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Reset Password Modal */}
+      {passwordModalUser && (
+        <div className="custom-modal-backdrop">
+          <div className="custom-modal-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Reset Password for @{passwordModalUser.username}</h3>
+              <button onClick={() => setPasswordModalUser(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Option A: Manual Password */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem' }}>Option 1: Set New Password Manually</h4>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="password"
+                    placeholder="Enter new password (min 6 chars)"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                  />
+                  <button onClick={() => handlePasswordResetSubmit(true)} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                    Set Password
+                  </button>
+                </div>
+              </div>
+
+              {/* Option B: Send Reset Email */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem' }}>Option 2: Send Password Reset Email Link</h4>
+                <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '0.75rem' }}>Sends a styled email token link to {passwordModalUser.email}</p>
+                <button onClick={() => handlePasswordResetSubmit(false)} className="btn-secondary" style={{ fontSize: '0.85rem' }}>
+                  <Mail size={16} />
+                  <span>Send Reset Email</span>
+                </button>
+              </div>
+
+              <button onClick={() => setPasswordModalUser(null)} className="btn-secondary" style={{ alignSelf: 'flex-end' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Delete User Confirmation Modal */}
+      {deleteModalUser && (
+        <div className="custom-modal-backdrop">
+          <div className="custom-modal-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ef4444' }}>Delete User Account @{deleteModalUser.username}</h3>
+              <button onClick={() => setDeleteModalUser(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.85, lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              CAUTION: This will permanently delete @<strong>{deleteModalUser.username}</strong>, their Nook profile, widgets, stickers, guestbook entries, and uploaded media files. This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button onClick={() => setDeleteModalUser(null)} className="btn-secondary">Cancel</button>
+              <button onClick={handleDeleteUserSubmit} className="btn-primary" style={{ background: '#ef4444' }}>Delete User Entirely</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: Factory Reset WIPE Confirmation Modal */}
+      {showWipeModal && (
+        <div className="custom-modal-backdrop">
+          <div className="custom-modal-content" style={{ border: '1px solid #ef4444' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ef4444' }}>Factory Reset & Application Wipe</h3>
+              <button onClick={() => setShowWipeModal(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.9, lineHeight: 1.5, marginBottom: '1rem' }}>
+              WARNING: This action will completely erase all database tables, user accounts, Nook customizations, uploaded files, and system settings. The server will restart at the initial OOBE setup wizard.
+            </p>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.3rem', color: '#ef4444' }}>
+                Type "WIPE" to confirm permanent application reset:
+              </label>
+              <input
+                type="text"
+                placeholder="WIPE"
+                value={wipeConfirmInput}
+                onChange={e => setWipeConfirmInput(e.target.value)}
+                style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.4)', border: '1px solid #ef4444', color: '#fff', fontSize: '0.9rem', letterSpacing: '1px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button onClick={() => setShowWipeModal(false)} className="btn-secondary">Cancel</button>
+              <button onClick={handleFactoryResetWipe} className="btn-primary" style={{ background: '#ef4444' }} disabled={isWiping}>
+                {isWiping ? 'Wiping System...' : 'Permanently Wipe System'}
               </button>
             </div>
           </div>

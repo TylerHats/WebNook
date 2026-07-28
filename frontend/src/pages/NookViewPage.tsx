@@ -28,6 +28,9 @@ export const NookViewPage: React.FC = () => {
       .then(res => res.json())
       .then(data => {
         setProfileData(data);
+        if (data.owner) {
+          document.title = `${data.owner.display_name || data.owner.username}'s Nook | WebNook`;
+        }
         setIsLoading(false);
       })
       .catch(err => {

@@ -52,8 +52,7 @@ export const SetupWizardPage: React.FC = () => {
           admin_username: adminUsername,
           admin_email: adminEmail,
           admin_password: adminPassword,
-          admin_display_name: adminDisplayName,
-          steam_api_key: steamApiKey
+          admin_display_name: adminDisplayName
         })
       });
 
@@ -76,13 +75,12 @@ export const SetupWizardPage: React.FC = () => {
         });
       }
 
-      // 3. Log admin in & redirect
+      // 3. Log admin in & hard redirect to Home Page
       login(initData.token, initData.user);
       showToast('OOBE Setup wizard completed successfully!', 'success');
-      navigate(`/nook/${initData.user.username}`);
+      window.location.href = '/';
     } catch (err) {
       showToast('Error completing setup wizard', 'error');
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -102,7 +100,7 @@ export const SetupWizardPage: React.FC = () => {
           {[
             { num: 1, label: 'Branding' },
             { num: 2, label: 'Admin Account' },
-            { num: 3, label: 'Integrations' }
+            { num: 3, label: 'Confirmation' }
           ].map(s => (
             <div
               key={s.num}
@@ -226,34 +224,23 @@ export const SetupWizardPage: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
               <button onClick={() => setStep(1)} className="btn-secondary">Back</button>
               <button onClick={() => setStep(3)} className="btn-primary">
-                <span>Next: Integrations</span>
+                <span>Next: Confirmation</span>
                 <ArrowRight size={16} />
               </button>
             </div>
           </div>
         )}
 
-        {/* STEP 3: Integrations & Complete */}
+        {/* STEP 3: Confirmation & Complete */}
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <CheckCircle2 size={20} color="#22c55e" />
-              <span>Finish Setup & Optional Integrations</span>
+              <span>Confirm & Launch Platform</span>
             </h3>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam Web API Key (Optional)</label>
-              <input
-                type="text"
-                placeholder="Enter Steam Web API Key"
-                value={steamApiKey}
-                onChange={e => setSteamApiKey(e.target.value)}
-                style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-              />
-            </div>
-
             <div style={{ background: 'rgba(99, 102, 241, 0.12)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--accent-color)' }}>
-              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-color)', marginBottom: '0.3rem' }}>Summary Overview:</h4>
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-color)', marginBottom: '0.3rem' }}>Setup Overview:</h4>
               <p style={{ fontSize: '0.85rem', opacity: 0.9 }}>• Application Name: <strong>{appName}</strong></p>
               <p style={{ fontSize: '0.85rem', opacity: 0.9 }}>• Admin Handle: <strong>@{adminUsername}</strong></p>
               <p style={{ fontSize: '0.85rem', opacity: 0.9 }}>• Admin Email: <strong>{adminEmail}</strong></p>

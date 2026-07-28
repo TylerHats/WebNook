@@ -26,8 +26,14 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests for static assets, bypass API calls
-  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+  const url = event.request.url;
+
+  // Only cache http/https GET requests for static assets, bypass API calls and extension/scheme requests
+  if (
+    event.request.method !== 'GET' ||
+    !url.startsWith('http://') && !url.startsWith('https://') ||
+    url.includes('/api/')
+  ) {
     return;
   }
 
@@ -42,8 +48,10 @@ self.addEventListener('fetch', (event) => {
         }
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
+          cache.put(event.request, responseToCache).catch(() => {
+            // Ignore put failures for non-standard requests
+          });
+        }).catch(() => {});
         return response;
       }).catch(() => {
         return caches.match('/');
