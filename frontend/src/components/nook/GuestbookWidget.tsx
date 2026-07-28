@@ -13,10 +13,16 @@ interface GuestbookEntry {
 }
 
 interface GuestbookWidgetProps {
-  nookUsername: string;
+  title?: string;
+  nookUsername?: string;
+  nookOwnerId?: number;
 }
 
-export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({ nookUsername }) => {
+export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({
+  title = 'Guestbook & Comments',
+  nookUsername = 'User',
+  nookOwnerId
+}) => {
   const { user, token } = useAuth();
   const { showToast } = useToast();
   const [entries, setEntries] = useState<GuestbookEntry[]>([]);
@@ -86,7 +92,7 @@ export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({ nookUsername }
     <div className="nook-panel">
       <div className="nook-panel-header">
         <MessageSquare size={20} />
-        <span>Guestbook ({entries.length})</span>
+        <span>{title} ({entries.length})</span>
       </div>
 
       {user ? (

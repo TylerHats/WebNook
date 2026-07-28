@@ -13,18 +13,27 @@ export interface FriendCard {
 }
 
 interface TopFriendsGridProps {
-  friends: FriendCard[];
-  ownerUsername: string;
+  title?: string;
+  friends?: FriendCard[];
+  topFriends?: FriendCard[];
+  ownerUsername?: string;
 }
 
-export const TopFriendsGrid: React.FC<TopFriendsGridProps> = ({ friends, ownerUsername }) => {
+export const TopFriendsGrid: React.FC<TopFriendsGridProps> = ({
+  title = 'Top Friends',
+  friends,
+  topFriends,
+  ownerUsername = 'User'
+}) => {
+  const friendList = friends || topFriends || [];
+
   return (
     <div className="nook-panel">
       <div className="nook-panel-header">
         <Users size={20} />
-        <span>Top Friends ({friends.length})</span>
+        <span>{title} ({friendList.length})</span>
       </div>
-      {friends.length === 0 ? (
+      {friendList.length === 0 ? (
         <p style={{ opacity: 0.7, fontSize: '0.9rem', fontStyle: 'italic' }}>
           {ownerUsername} hasn't selected any Top Friends yet!
         </p>
