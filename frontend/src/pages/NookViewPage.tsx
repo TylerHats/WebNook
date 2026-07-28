@@ -132,6 +132,7 @@ export const NookViewPage: React.FC = () => {
         : nookSettings.card_colors_json;
       if (parsedColors.cardBg) cardBgColor = parsedColors.cardBg;
       if (parsedColors.border) borderColor = parsedColors.border;
+    } catch (e) {}
   }
 
   let cardTitles: Record<string, string> = {};
