@@ -69,7 +69,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [channel, setChannel] = useState('stable');
   const [isUpdating, setIsUpdating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'metrics' | 'updater' | 'users' | 'config'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'updater' | 'users' | 'config' | 'integrations'>('metrics');
 
   const [settings, setSettings] = useState<Record<string, string>>({
     app_name: 'WebNook',

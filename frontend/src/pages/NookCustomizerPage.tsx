@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare } from 'lucide-react';
-import { Sticker } from '../components/nook/StickerCanvas';
+import { StickerCanvas, Sticker } from '../components/nook/StickerCanvas';
 import { PRESET_STICKERS } from '../constants/presetStickers';
 
 export const NookCustomizerPage: React.FC = () => {
