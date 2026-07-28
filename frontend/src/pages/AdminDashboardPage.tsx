@@ -154,6 +154,37 @@ export const AdminDashboardPage: React.FC = () => {
       .catch(err => console.error(err));
   };
 
+  const handleTestIntegration = async (type: 'steam' | 'spotify' | 'apple') => {
+    try {
+      const res = await fetch(`/api/admin/integrations/test/${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(settings)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || `${type.toUpperCase()} integration test passed!`, 'success');
+        loadSettings();
+      } else {
+        showToast(data.error || `${type.toUpperCase()} integration test failed`, 'error');
+        loadSettings();
+      }
+    } catch (e) {
+      showToast(`Error testing ${type} integration`, 'error');
+    }
+  };
+
+  const renderStatusBadge = (statusKey: string, configured: boolean) => {
+    const status = settings[statusKey] || (configured ? 'connected' : 'not_configured');
+    if (status === 'connected') {
+      return <span style={{ background: '#22c55e', color: '#fff', fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '12px', fontWeight: 700 }}>🟢 Connected / Working</span>;
+    }
+    if (status === 'broken') {
+      return <span style={{ background: '#ef4444', color: '#fff', fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '12px', fontWeight: 700 }}>🔴 Broken / Error</span>;
+    }
+    return <span style={{ background: 'rgba(255,255,255,0.1)', color: '#aaa', fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '12px' }}>⚪ Not Configured</span>;
+  };
+
   const handleChangeChannel = async (newChannel: string) => {
     setChannel(newChannel);
     try {
@@ -956,9 +987,12 @@ export const AdminDashboardPage: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Card 1: Steam Integration */}
           <div className="nook-panel">
-            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Gamepad2 size={20} style={{ flexShrink: 0 }} />
-              <span>Steam Web API Key & Integration</span>
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Gamepad2 size={20} style={{ flexShrink: 0 }} />
+                <span>Steam Web API Key & Integration</span>
+              </div>
+              {renderStatusBadge('steam_api_status', !!settings.steam_api_key)}
             </div>
             <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
               Configure your system-wide Steam API Key to fetch official player summaries and recently played games.
@@ -986,18 +1020,32 @@ export const AdminDashboardPage: React.FC = () => {
                 </ol>
               </div>
 
-              <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Save size={16} style={{ flexShrink: 0 }} />
-                <span>Save Steam Settings</span>
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button type="submit" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Save size={16} style={{ flexShrink: 0 }} />
+                  <span>Save Steam Settings</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTestIntegration('steam')}
+                  className="btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <RefreshCw size={16} style={{ flexShrink: 0 }} />
+                  <span>Test Connection</span>
+                </button>
+              </div>
             </form>
           </div>
 
           {/* Card 2: Spotify Developer Integration */}
           <div className="nook-panel">
-            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Radio size={20} style={{ flexShrink: 0 }} />
-              <span>Spotify API Credentials (Developer Dashboard)</span>
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Radio size={20} style={{ flexShrink: 0 }} />
+                <span>Spotify API Credentials (Developer Dashboard)</span>
+              </div>
+              {renderStatusBadge('spotify_api_status', !!(settings.spotify_client_id && settings.spotify_client_secret))}
             </div>
             <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
               Optional API keys for fetching top artist picks and Spotify search previews.
@@ -1036,10 +1084,73 @@ export const AdminDashboardPage: React.FC = () => {
                 </ol>
               </div>
 
-              <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Save size={16} style={{ flexShrink: 0 }} />
-                <span>Save Spotify Credentials</span>
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button type="submit" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Save size={16} style={{ flexShrink: 0 }} />
+                  <span>Save Spotify Credentials</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTestIntegration('spotify')}
+                  className="btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <RefreshCw size={16} style={{ flexShrink: 0 }} />
+                  <span>Test Connection</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Card 3: Apple Music Developer Integration */}
+          <div className="nook-panel">
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Radio size={20} style={{ flexShrink: 0 }} />
+                <span>Apple Music Kit Integration</span>
+              </div>
+              {renderStatusBadge('apple_api_status', !!settings.apple_music_token)}
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
+              Optional MusicKit developer token for querying the Apple Music catalog.
+            </p>
+
+            <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Apple Music Developer Token (JWT)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Bearer eyJhbGciOiJFUzI1NiIs..."
+                  value={settings.apple_music_token || ''}
+                  onChange={e => setSettings({ ...settings, apple_music_token: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontFamily: 'monospace' }}
+                />
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                💡 <strong>Apple Music Setup Instructions:</strong>
+                <ol style={{ marginLeft: '1.25rem', marginTop: '0.4rem' }}>
+                  <li>Visit <a href="https://developer.apple.com/account/resources/certificates/list" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>developer.apple.com</a> with your Apple Developer Account.</li>
+                  <li>Create a MusicKit Key and download the <code style={{ background: 'rgba(0,0,0,0.3)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>.p8</code> private key file.</li>
+                  <li>Generate a MusicKit Developer JWT Token and paste it above.</li>
+                </ol>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button type="submit" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Save size={16} style={{ flexShrink: 0 }} />
+                  <span>Save Apple Music Settings</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTestIntegration('apple')}
+                  className="btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <RefreshCw size={16} style={{ flexShrink: 0 }} />
+                  <span>Test Connection</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

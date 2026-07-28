@@ -165,3 +165,35 @@ export async function sendEmailVerificationEmail(email: string, username: string
     safetyUrl: verifyUrl
   });
 }
+
+export async function sendIntegrationErrorEmail(integrationName: string, errorDetails: string): Promise<boolean> {
+  try {
+    const adminRows = await query<any>('SELECT email, username FROM users WHERE role = "admin" AND is_disabled = 0');
+    if (!adminRows || adminRows.length === 0) return false;
+
+    let allSent = true;
+    for (const admin of adminRows) {
+      const sent = await sendStyledEmail({
+        to: admin.email,
+        subject: `[SYSTEM ALERT] Integration API Error - ${integrationName}`,
+        title: `Integration Health Alert: ${integrationName} API Error`,
+        bodyHtml: `
+          <p>Hello Administrator @<strong>${admin.username}</strong>,</p>
+          <p>WebNook's automated health monitoring detected multiple consecutive failures for the <strong>${integrationName}</strong> integration.</p>
+          <div class="reason-box">
+            <strong>Error Details:</strong><br>
+            ${errorDetails || 'API Key failed authentication or encountered repeated network/rate-limit errors.'}
+          </div>
+          <p>The status of this integration has automatically been set to <span style="color: #ef4444; font-weight: bold;">Broken / Error</span>.</p>
+          <p>Please log in to your Admin Dashboard → <strong>Integrations & API Keys</strong> tab to re-test or update your credentials.</p>
+        `
+      });
+      if (!sent) allSent = false;
+    }
+
+    return allSent;
+  } catch (err) {
+    console.error('[Email Service Error] Failed to send integration alert emails:', err);
+    return false;
+  }
+}

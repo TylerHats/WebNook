@@ -272,7 +272,10 @@ export const NookViewPage: React.FC = () => {
             )}
 
             {cardVis.steam !== false && nookSettings?.steam_id64 && (
-              <SteamWidget steamId64={nookSettings.steam_id64} />
+              <SteamWidget
+                steamId64={nookSettings.steam_id64}
+                displayMode={nookSettings.steam_display_mode || 'both'}
+              />
             )}
           </div>
 

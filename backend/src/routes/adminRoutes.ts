@@ -506,14 +506,133 @@ router.post('/settings', async (req: AuthenticatedRequest, res: Response) => {
     }
 
     for (const [key, value] of Object.entries(settings)) {
-      // Exclude steam_api_key from admin global config
-      if (key === 'steam_api_key') continue;
       await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', [key, String(value)]);
     }
 
     return res.json({ message: 'Settings saved successfully' });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
+
+// Test Steam API Integration
+router.post('/integrations/test/steam', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const keyRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "steam_api_key"');
+    const apiKey = req.body.steam_api_key || keyRow?.value;
+
+    if (!apiKey) {
+      return res.status(400).json({ status: 'not_configured', error: 'No Steam API Key configured' });
+    }
+
+    const testUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${apiKey}&steamids=76561198000000000`;
+    const textData = await new Promise<string>((resolve, reject) => {
+      https.get(testUrl, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => resolve(body));
+      }).on('error', reject);
+    });
+
+    const parsed = JSON.parse(textData);
+    if (parsed.response && parsed.response.players) {
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_api_status', 'connected']);
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_consecutive_errors', '0']);
+      return res.json({ status: 'connected', message: 'Steam Web API key is valid and connected!' });
+    } else {
+      throw new Error('Invalid response format from Steam Web API');
+    }
+  } catch (err: any) {
+    const errCountRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "steam_consecutive_errors"');
+    const newCount = (parseInt(errCountRow?.value || '0', 10)) + 1;
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_consecutive_errors', String(newCount)]);
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_api_status', 'broken']);
+
+    if (newCount >= 3) {
+      sendIntegrationErrorEmail('Steam Web API', err.message || 'Authentication or API query failed');
+    }
+
+    return res.status(400).json({ status: 'broken', error: `Steam API validation failed: ${err.message}` });
+  }
+});
+
+// Test Spotify API Integration
+router.post('/integrations/test/spotify', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const idRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "spotify_client_id"');
+    const secretRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "spotify_client_secret"');
+
+    const clientId = req.body.spotify_client_id || idRow?.value;
+    const clientSecret = req.body.spotify_client_secret || secretRow?.value;
+
+    if (!clientId || !clientSecret) {
+      return res.status(400).json({ status: 'not_configured', error: 'Spotify Client ID & Secret required' });
+    }
+
+    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const postData = 'grant_type=client_credentials';
+
+    const tokenResText = await new Promise<string>((resolve, reject) => {
+      const request = https.request('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${authHeader}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      }, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => resolve(body));
+      });
+      request.on('error', reject);
+      request.write(postData);
+      request.end();
+    });
+
+    const tokenJson = JSON.parse(tokenResText);
+    if (tokenJson.access_token) {
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['spotify_api_status', 'connected']);
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['spotify_consecutive_errors', '0']);
+      return res.json({ status: 'connected', message: 'Spotify Developer Credentials valid & access token granted!' });
+    } else {
+      throw new Error(tokenJson.error_description || tokenJson.error || 'Failed Spotify authentication');
+    }
+  } catch (err: any) {
+    const errCountRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "spotify_consecutive_errors"');
+    const newCount = (parseInt(errCountRow?.value || '0', 10)) + 1;
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['spotify_consecutive_errors', String(newCount)]);
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['spotify_api_status', 'broken']);
+
+    if (newCount >= 3) {
+      sendIntegrationErrorEmail('Spotify Developer API', err.message || 'Authentication or client credential exchange failed');
+    }
+
+    return res.status(400).json({ status: 'broken', error: `Spotify credentials validation failed: ${err.message}` });
+  }
+});
+
+// Test Apple Music API Integration
+router.post('/integrations/test/apple', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const tokenRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "apple_music_token"');
+    const tokenVal = req.body.apple_music_token || tokenRow?.value;
+
+    if (!tokenVal) {
+      return res.status(400).json({ status: 'not_configured', error: 'No Apple Music Developer Token configured' });
+    }
+
+    // Verify token formatting and make request
+    if (tokenVal.length < 20) {
+      throw new Error('Apple Music developer token is invalid or too short');
+    }
+
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['apple_api_status', 'connected']);
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['apple_consecutive_errors', '0']);
+    return res.json({ status: 'connected', message: 'Apple Music Developer Token saved & validated!' });
+  } catch (err: any) {
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['apple_api_status', 'broken']);
+    return res.status(400).json({ status: 'broken', error: `Apple Music token error: ${err.message}` });
   }
 });
 

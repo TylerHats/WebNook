@@ -5,6 +5,9 @@ import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad
 import { StickerCanvas, Sticker } from '../components/nook/StickerCanvas';
 import { PRESET_STICKERS } from '../constants/presetStickers';
 
+import { VisualStickerStudioModal } from '../components/nook/VisualStickerStudioModal';
+import { MusicTrack } from '../components/widgets/MusicWidget';
+
 export const NookCustomizerPage: React.FC = () => {
   const { user, token } = useAuth();
   const { showToast } = useToast();
@@ -19,10 +22,13 @@ export const NookCustomizerPage: React.FC = () => {
 
   // Steam & Music integration state
   const [steamId64, setSteamId64] = useState('');
+  const [steamDisplayMode, setSteamDisplayMode] = useState<'none' | 'recently_played' | 'top_games' | 'both'>('both');
   const [spotifyTrackUrl, setSpotifyTrackUrl] = useState('');
   const [appleMusicUrl, setAppleMusicUrl] = useState('');
   const [bgMusicUrl, setBgMusicUrl] = useState('');
   const [bgMusicTitle, setBgMusicTitle] = useState('');
+  const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
+  const [showStickerStudio, setShowStickerStudio] = useState(false);
 
   // Card Enablement Toggles
   const [cardVisibility, setCardVisibility] = useState<Record<string, boolean>>({
@@ -53,9 +59,19 @@ export const NookCustomizerPage: React.FC = () => {
             setBgMusicUrl(data.nookSettings.bg_music_url || '');
             setBgMusicTitle(data.nookSettings.bg_music_title || '');
             setSteamId64(data.nookSettings.steam_id64 || '');
+            setSteamDisplayMode(data.nookSettings.steam_display_mode || 'both');
             setSpotifyTrackUrl(data.nookSettings.spotify_track_url || '');
             setAppleMusicUrl(data.nookSettings.apple_music_url || '');
             setCustomCss(data.nookSettings.custom_css || '');
+
+            if (data.nookSettings.music_tracks_json) {
+              try {
+                const parsedTracks = typeof data.nookSettings.music_tracks_json === 'string'
+                  ? JSON.parse(data.nookSettings.music_tracks_json)
+                  : data.nookSettings.music_tracks_json;
+                if (Array.isArray(parsedTracks)) setMusicTracks(parsedTracks);
+              } catch (e) {}
+            }
 
             if (data.nookSettings.card_visibility_json) {
               try {
@@ -164,10 +180,12 @@ export const NookCustomizerPage: React.FC = () => {
           bg_music_url: bgMusicUrl,
           bg_music_title: bgMusicTitle,
           steam_id64: steamId64,
+          steam_display_mode: steamDisplayMode,
           spotify_track_url: spotifyTrackUrl,
           apple_music_url: appleMusicUrl,
           card_visibility_json: cardVisibility,
           card_colors_json: { cardBg: cardBgColor, border: borderColor },
+          music_tracks_json: musicTracks,
           custom_css: customCss
         })
       });
@@ -282,18 +300,18 @@ export const NookCustomizerPage: React.FC = () => {
 
   return (
     <div className={`theme-${theme}`} style={customStyle}>
-      {/* Interactive Sticker Drag Overlay */}
-      <StickerCanvas
+      {/* Dedicated Visual Sticker Studio Modal */}
+      <VisualStickerStudioModal
+        isOpen={showStickerStudio}
+        onClose={() => setShowStickerStudio(false)}
         stickers={stickers}
-        targetLayer="behind_cards"
-        isEditing={true}
-        onStickerUpdate={setStickers}
-      />
-      <StickerCanvas
-        stickers={stickers}
-        targetLayer="above_cards"
-        isEditing={true}
-        onStickerUpdate={setStickers}
+        onSaveStickers={setStickers}
+        theme={theme}
+        bgColor={bgColor}
+        cardBgColor={cardBgColor}
+        accentColor={accentColor}
+        textColor={textColor}
+        borderColor={borderColor}
       />
 
       <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 10 }}>
@@ -461,35 +479,50 @@ export const NookCustomizerPage: React.FC = () => {
 
           {/* Steam Setup Section */}
           <div className="nook-panel">
-            <div className="nook-panel-header">
-              <Gamepad2 size={20} />
-              <span>Steam Account Integration Setup</span>
+            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Gamepad2 size={20} style={{ flexShrink: 0 }} />
+              <span>Steam Account Integration & Game Showcase Setup</span>
             </div>
             <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
-              Link your Steam account to display your live avatar, online status, and recently played games!
+              Link your Steam account to display your live avatar, online status, and game showcase!
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam ID64 (17-Digit Number)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 76561198000000000"
-                  value={steamId64}
-                  onChange={e => setSteamId64(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontFamily: 'monospace' }}
-                />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam Profile ID / Custom Vanity URL / SteamID64</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. TylerHats or https://steamcommunity.com/id/TylerHats or 765611980..."
+                    value={steamId64}
+                    onChange={e => setSteamId64(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Games Showcase Display Mode</label>
+                  <select
+                    value={steamDisplayMode}
+                    onChange={e => setSteamDisplayMode(e.target.value as any)}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  >
+                    <option value="both">Top 3 Recently Played + Top 3 All-Time Games (Both)</option>
+                    <option value="recently_played">Top 3 Recently Played Games (Past 2 Weeks Only)</option>
+                    <option value="top_games">Top 3 All-Time Games (Lifetime Hours Only)</option>
+                    <option value="none">Hide Games List (Show Avatar & Status Only)</option>
+                  </select>
+                </div>
               </div>
               <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--accent-color)', fontSize: '0.8rem', lineHeight: 1.5 }}>
-                💡 <strong>How to find your Steam ID64:</strong> Visit your Steam Profile page in a browser, or go to <a href="https://steamid.io" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>steamid.io</a> and paste your custom URL handle to get your 17-digit Steam ID64.
+                💡 <strong>Flexible Steam Format:</strong> You can paste your 64-bit ID, custom handle (e.g. <code style={{ background: 'rgba(0,0,0,0.3)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>TylerHats</code>), or full profile URL! WebNook automatically resolves vanity names and fetches real-time stats.
               </div>
             </div>
           </div>
 
-          {/* Background Audio & Music Services (Spotify & Apple Music) */}
+          {/* Multi-Track Music Playlist Manager */}
           <div className="nook-panel">
-            <div className="nook-panel-header">
-              <Music size={20} />
-              <span>Profile Anthem & Music Services (Spotify / Apple Music)</span>
+            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Music size={20} style={{ flexShrink: 0 }} />
+              <span>Multi-Track Music Playlist & Audio Player</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -503,7 +536,6 @@ export const NookCustomizerPage: React.FC = () => {
                     onChange={e => setSpotifyTrackUrl(e.target.value)}
                     style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
                   />
-                  <span style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '2px', display: 'block' }}>Copy song link from Spotify share menu</span>
                 </div>
 
                 <div>
@@ -515,17 +547,16 @@ export const NookCustomizerPage: React.FC = () => {
                     onChange={e => setAppleMusicUrl(e.target.value)}
                     style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
                   />
-                  <span style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '2px', display: 'block' }}>Copy track link from Apple Music</span>
                 </div>
               </div>
 
-              {/* Upload MP3 Anthem File */}
+              {/* Upload MP3 File */}
               <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '10px', border: '1px dashed var(--border-color)' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Anthem MP3 File (Converted to 44.1kHz stereo MP3)</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Audio File (Converted to 44.1kHz stereo MP3)</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <input
                     type="text"
-                    placeholder="Song Title (e.g. Synthwave Dreams)"
+                    placeholder="Audio Track Title"
                     value={bgMusicTitle}
                     onChange={e => setBgMusicTitle(e.target.value)}
                     style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
@@ -538,24 +569,44 @@ export const NookCustomizerPage: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Spotify Playback Explanation Box */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                💡 <strong>Note on Spotify & Streaming Track Playback:</strong>
+                <p style={{ marginTop: '0.3rem', opacity: 0.85 }}>
+                  Due to Spotify licensing regulations, Spotify web embeds play a <strong>30-second audio preview clip</strong> for visitors unless the visitor is logged into Spotify in their browser. For guaranteed 100% full track playback for all visitors, upload your custom MP3 file above!
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Stickers Studio & Badges Layer */}
+          {/* Visual Sticker Studio & Badges Layer */}
           <div className="nook-panel">
-            <div className="nook-panel-header">
-              <Layers size={20} />
-              <span>Stickers Studio & Custom Uploads</span>
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Layers size={20} style={{ flexShrink: 0 }} />
+                <span>Visual Sticker Studio & Custom Uploads</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowStickerStudio(true)}
+                className="btn-primary"
+                style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Sparkles size={16} />
+                <span>Open Visual Sticker Studio</span>
+              </button>
             </div>
+
             <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
-              Add cute stickers to your profile! Choose preset stickers or upload custom transparent image files:
+              Click <strong>Open Visual Sticker Studio</strong> above to launch a live interactive editor where you can drag, scale, rotate, and assign sticker layers over your Nook layout!
             </p>
 
             {/* Custom Sticker Upload */}
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.2rem' }}>Upload Custom Sticker Image (PNG / GIF / SVG / WebP)</label>
-                <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>Files are automatically processed to WebP format to save bandwidth.</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>Uploaded custom stickers appear automatically in your Visual Sticker Studio.</span>
               </div>
               <input
                 type="file"

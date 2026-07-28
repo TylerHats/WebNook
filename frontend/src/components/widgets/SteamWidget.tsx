@@ -3,22 +3,26 @@ import { Gamepad2, ExternalLink, Sparkles } from 'lucide-react';
 
 interface SteamWidgetProps {
   steamId64?: string;
+  displayMode?: 'none' | 'recently_played' | 'top_games' | 'both';
 }
 
-export const SteamWidget: React.FC<SteamWidgetProps> = ({ steamId64 }) => {
+export const SteamWidget: React.FC<SteamWidgetProps> = ({
+  steamId64,
+  displayMode = 'both'
+}) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const targetId = steamId64 || '76561198000000000';
-    fetch(`/api/integrations/steam/${targetId}`)
+    fetch(`/api/integrations/steam/${encodeURIComponent(targetId)}?mode=${displayMode}`)
       .then(res => res.json())
       .then(resData => {
         setData(resData);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [steamId64]);
+  }, [steamId64, displayMode]);
 
   if (loading) {
     return (
@@ -30,7 +34,11 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({ steamId64 }) => {
   }
 
   const player = data?.player;
-  const games = data?.games || [];
+  const recentlyPlayed = data?.recentlyPlayed || [];
+  const topGames = data?.topGames || [];
+
+  const showRecent = (displayMode === 'recently_played' || displayMode === 'both') && recentlyPlayed.length > 0;
+  const showTop = (displayMode === 'top_games' || displayMode === 'both') && topGames.length > 0;
 
   return (
     <div className="nook-panel">
@@ -39,9 +47,9 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({ steamId64 }) => {
           <Gamepad2 size={20} color="var(--accent-color)" />
           <span>Steam Showcase</span>
         </div>
-        {steamId64 && (
+        {player?.profileUrl && (
           <a
-            href={`https://steamcommunity.com/profiles/${steamId64}`}
+            href={player.profileUrl}
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'var(--accent-color)', opacity: 0.8, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.2rem', textDecoration: 'none' }}
@@ -53,7 +61,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({ steamId64 }) => {
       </div>
 
       {player && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: displayMode === 'none' ? '0' : '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '10px' }}>
           <img
             src={player.avatar}
             alt={player.personaName}
@@ -63,39 +71,81 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({ steamId64 }) => {
             <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>{player.personaName}</div>
             <div style={{ fontSize: '0.75rem', color: player.personaState ? '#22c55e' : '#9ca3af', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '2px' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: player.personaState ? '#22c55e' : '#9ca3af' }} />
-              <span>{player.personaState ? 'Online / Gaming' : 'Offline'}</span>
+              <span>{player.personaState ? (player.stateMessage || 'Online / Gaming') : 'Offline'}</span>
             </div>
           </div>
         </div>
       )}
 
-      {games.length > 0 && (
-        <div>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-            Recently Played Games:
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {games.map((g: any) => (
-              <div
-                key={g.appid}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  background: 'rgba(255,255,255,0.03)',
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  fontSize: '0.85rem'
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>{g.name}</div>
-                <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>
-                  {g.playtime_2weeks ? `${g.playtime_2weeks} hrs past 2 weeks` : `${g.playtime_forever} hrs total`}
-                </div>
+      {/* Render Games Lists according to displayMode */}
+      {displayMode !== 'none' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {showRecent && (
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
+                Top 3 Recently Played (Past 2 Weeks):
               </div>
-            ))}
-          </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {recentlyPlayed.slice(0, 3).map((g: any, idx: number) => (
+                  <div
+                    key={g.appid || idx}
+                    style={{
+                      display: 'flex',
+                      justify: 'space-between',
+                      alignItems: 'center',
+                      background: 'rgba(0,0,0,0.2)',
+                      padding: '0.45rem 0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {g.icon && <img src={g.icon} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />}
+                      <span>{g.name}</span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 600 }}>
+                      {g.playtime_2weeks ? `${g.playtime_2weeks} hrs` : `${g.playtime_forever} hrs`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showTop && (
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
+                Top 3 All-Time Games:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {topGames.slice(0, 3).map((g: any, idx: number) => (
+                  <div
+                    key={g.appid || idx}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: 'rgba(0,0,0,0.2)',
+                      padding: '0.45rem 0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 700 }}>#{idx + 1}</span>
+                      {g.icon && <img src={g.icon} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />}
+                      <span>{g.name}</span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                      {g.playtime_forever} hrs total
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

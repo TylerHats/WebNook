@@ -322,11 +322,19 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
       visibility_widgets,
       visibility_guestbook,
       steam_id64,
+      steam_display_mode,
       spotify_track_url,
       apple_music_url,
       card_visibility_json,
-      card_colors_json
+      card_colors_json,
+      music_tracks_json,
+      top_songs_json
     } = req.body;
+
+    const cardVisString = typeof card_visibility_json === 'object' ? JSON.stringify(card_visibility_json) : card_visibility_json;
+    const cardColorsString = typeof card_colors_json === 'object' ? JSON.stringify(card_colors_json) : card_colors_json;
+    const musicTracksString = typeof music_tracks_json === 'object' ? JSON.stringify(music_tracks_json) : music_tracks_json;
+    const topSongsString = typeof top_songs_json === 'object' ? JSON.stringify(top_songs_json) : top_songs_json;
 
     await execute(
       `UPDATE nooks SET 
@@ -341,10 +349,13 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         visibility_widgets = COALESCE(?, visibility_widgets), 
         visibility_guestbook = COALESCE(?, visibility_guestbook), 
         steam_id64 = COALESCE(?, steam_id64),
+        steam_display_mode = COALESCE(?, steam_display_mode),
         spotify_track_url = COALESCE(?, spotify_track_url),
         apple_music_url = COALESCE(?, apple_music_url),
         card_visibility_json = COALESCE(?, card_visibility_json),
         card_colors_json = COALESCE(?, card_colors_json),
+        music_tracks_json = COALESCE(?, music_tracks_json),
+        top_songs_json = COALESCE(?, top_songs_json),
         updated_at = CURRENT_TIMESTAMP 
        WHERE user_id = ?`,
       [
@@ -359,17 +370,20 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         visibility_widgets,
         visibility_guestbook,
         steam_id64,
+        steam_display_mode,
         spotify_track_url,
         apple_music_url,
-        typeof card_visibility_json === 'object' ? JSON.stringify(card_visibility_json) : card_visibility_json,
-        typeof card_colors_json === 'object' ? JSON.stringify(card_colors_json) : card_colors_json,
+        cardVisString,
+        cardColorsString,
+        musicTracksString,
+        topSongsString,
         userId
       ]
     );
 
-    return res.json({ message: 'Nook customization saved' });
+    return res.json({ message: 'Nook customization updated successfully' });
   } catch (err) {
-    console.error('Nook customization error:', err);
+    console.error('Customization update error:', err);
     return res.status(500).json({ error: 'Failed to update Nook customization' });
   }
 });
