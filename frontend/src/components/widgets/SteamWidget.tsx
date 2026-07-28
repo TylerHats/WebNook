@@ -80,7 +80,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({ steamId64 }) => {
                 key={g.appid}
                 style={{
                   display: 'flex',
-                  justify: 'space-between',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
                   background: 'rgba(255,255,255,0.03)',
                   padding: '0.5rem 0.75rem',
