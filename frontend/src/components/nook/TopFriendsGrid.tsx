@@ -39,7 +39,7 @@ export const TopFriendsGrid: React.FC<TopFriendsGridProps> = ({
         </p>
       ) : (
         <div className="top-friends-grid">
-          {friends.slice(0, 12).map((friend) => (
+          {friendList.slice(0, 12).map((friend) => (
             <Link key={friend.id} to={`/nook/${friend.username}`} className="top-friend-card">
               <img
                 src={friend.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
