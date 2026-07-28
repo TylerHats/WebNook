@@ -267,19 +267,46 @@ export const NookCustomizerPage: React.FC = () => {
     );
   }
 
+  const customStyle = {
+    minHeight: '100vh',
+    padding: '2rem 1rem',
+    position: 'relative',
+    backgroundColor: bgColor,
+    color: textColor,
+    '--bg-primary': bgColor,
+    '--bg-panel': cardBgColor || 'rgba(0,0,0,0.3)',
+    '--accent-color': accentColor,
+    '--text-main': textColor,
+    '--border-color': borderColor
+  } as React.CSSProperties;
+
   return (
-    <div className={`theme-${theme}`} style={{ minHeight: '100vh', padding: '2rem 1rem' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div className={`theme-${theme}`} style={customStyle}>
+      {/* Interactive Sticker Drag Overlay */}
+      <StickerCanvas
+        stickers={stickers}
+        targetLayer="behind_cards"
+        isEditing={true}
+        onStickerUpdate={setStickers}
+      />
+      <StickerCanvas
+        stickers={stickers}
+        targetLayer="above_cards"
+        isEditing={true}
+        onStickerUpdate={setStickers}
+      />
+
+      <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Palette size={28} />
+              <Palette size={28} style={{ flexShrink: 0 }} />
               <span>Nook Visual Studio & Customizer</span>
             </h1>
             <p style={{ opacity: 0.7 }}>Design your dream page with cute themes, audio, stickers, and custom CSS.</p>
           </div>
-          <button onClick={handleSave} className="btn-primary" disabled={isSaving}>
-            <Save size={18} />
+          <button onClick={handleSave} className="btn-primary" disabled={isSaving} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+            <Save size={18} style={{ flexShrink: 0 }} />
             <span>{isSaving ? 'Saving...' : 'Save Nook'}</span>
           </button>
         </div>

@@ -395,13 +395,69 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       </div>
 
+// Render Markdown helper for Release Notes
+const renderMarkdown = (text: string) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+
+  return (
+    <div style={{ lineHeight: 1.6, fontSize: '0.9rem' }}>
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={idx} style={{ height: '0.4rem' }} />;
+
+        if (trimmed.startsWith('### ')) {
+          return <h4 key={idx} style={{ fontSize: '1rem', fontWeight: 800, margin: '0.75rem 0 0.25rem', color: 'var(--accent-color)' }}>{trimmed.replace('### ', '')}</h4>;
+        }
+        if (trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
+          return <h3 key={idx} style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0.85rem 0 0.35rem', color: 'var(--accent-color)' }}>{trimmed.replace(/^#+\s*/, '')}</h3>;
+        }
+
+        const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.startsWith('* ');
+        const content = isBullet ? trimmed.replace(/^[-•*]\s*/, '') : trimmed;
+
+        const parts = content.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|\[.*?\]\(.*?\))/g);
+
+        const renderedParts = parts.map((part, pIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={pIdx} style={{ fontWeight: 800 }}>{part.slice(2, -2)}</strong>;
+          }
+          if (part.startsWith('*') && part.endsWith('*')) {
+            return <em key={pIdx}>{part.slice(1, -1)}</em>;
+          }
+          if (part.startsWith('`') && part.endsWith('`')) {
+            return <code key={pIdx} style={{ background: 'rgba(255,255,255,0.12)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{part.slice(1, -1)}</code>;
+          }
+          const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
+          if (linkMatch) {
+            return <a key={pIdx} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>{linkMatch[1]}</a>;
+          }
+          return part;
+        });
+
+        if (isBullet) {
+          return (
+            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginLeft: '0.5rem', marginBottom: '0.25rem' }}>
+              <span style={{ color: 'var(--accent-color)', fontWeight: 800, flexShrink: 0 }}>•</span>
+              <div>{renderedParts}</div>
+            </div>
+          );
+        }
+
+        return <p key={idx} style={{ margin: '0 0 0.35rem' }}>{renderedParts}</p>;
+      })}
+    </div>
+  );
+};
+
       {/* Admin Navigation Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
         {[
           { id: 'metrics', label: 'System Metrics', icon: Activity },
           { id: 'updater', label: 'Self Updater', icon: Radio },
           { id: 'users', label: 'User Accounts', icon: Users },
-          { id: 'config', label: 'Config & System Suite', icon: Settings }
+          { id: 'config', label: 'Config & System Suite', icon: Settings },
+          { id: 'integrations', label: 'Integrations & API Keys', icon: Gamepad2 }
         ].map(t => {
           const IconComponent = t.icon;
           return (
@@ -409,9 +465,9 @@ export const AdminDashboardPage: React.FC = () => {
               key={t.id}
               onClick={() => setActiveTab(t.id as any)}
               className={activeTab === t.id ? 'btn-primary' : 'btn-secondary'}
-              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}
             >
-              <IconComponent size={16} />
+              <IconComponent size={16} style={{ flexShrink: 0 }} />
               <span>{t.label}</span>
             </button>
           );
@@ -448,9 +504,9 @@ export const AdminDashboardPage: React.FC = () => {
       {activeTab === 'updater' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="nook-panel">
-            <div className="nook-panel-header">
-              <Radio size={20} />
-              <span>PolyPress Release Channel & Auto-Update</span>
+            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Radio size={20} style={{ flexShrink: 0 }} />
+              <span>Release Channel & Auto-Update Engine</span>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -471,35 +527,45 @@ export const AdminDashboardPage: React.FC = () => {
 
             {updateInfo && (
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>{updateInfo.latestRelease?.name || 'Latest Version'}</h3>
-                    <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>Channel: {updateInfo.channel?.toUpperCase()} | Current: {updateInfo.currentVersion}</p>
+                    <p style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '2px' }}>
+                      <strong>Channel:</strong> {updateInfo.channel?.toUpperCase()} | <strong>Current:</strong> <code style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>{updateInfo.currentVersion}</code> → <strong>New:</strong> <code style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>{updateInfo.targetVersion || updateInfo.latestRelease?.tag}</code>
+                    </p>
                   </div>
-                  {updateInfo.updateAvailable && (
-                    <span style={{ background: '#22c55e', color: '#fff', fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '20px', fontWeight: 700 }}>Update Available!</span>
+                  {updateInfo.updateAvailable ? (
+                    <span style={{ background: '#22c55e', color: '#fff', fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '20px', fontWeight: 700 }}>Update Available!</span>
+                  ) : (
+                    <span style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '20px', opacity: 0.7 }}>Up to Date</span>
                   )}
                 </div>
-                <div style={{ fontSize: '0.85rem', opacity: 0.9, lineHeight: 1.6, fontFamily: 'inherit', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
-                  {updateInfo.latestRelease?.notes ? (
-                    updateInfo.latestRelease.notes.split('\n').map((line: string, idx: number) => {
-                      if (line.startsWith('#')) return <h4 key={idx} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-color)', margin: '0.5rem 0 0.3rem' }}>{line.replace(/^#+\s*/, '')}</h4>;
-                      if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) return <div key={idx} style={{ marginLeft: '0.75rem', marginBottom: '0.25rem' }}>• {line.replace(/^[-•*]\s*/, '')}</div>;
-                      return <p key={idx} style={{ margin: '0 0 0.3rem' }}>{line}</p>;
-                    })
-                  ) : 'You are running the latest version.'}
+                <div style={{ background: 'rgba(0,0,0,0.25)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  {renderMarkdown(updateInfo.latestRelease?.notes)}
                 </div>
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
               <button onClick={checkUpdates} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                 <RefreshCw size={16} style={{ flexShrink: 0 }} />
                 <span>Check GitHub Releases</span>
               </button>
-              <button onClick={handleApplyUpdate} className="btn-primary" disabled={isUpdating} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+              <button
+                onClick={handleApplyUpdate}
+                className={updateInfo?.updateAvailable ? 'btn-primary' : 'btn-secondary'}
+                disabled={isUpdating || !updateInfo?.updateAvailable}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  flexShrink: 0,
+                  opacity: updateInfo?.updateAvailable ? 1 : 0.4,
+                  cursor: updateInfo?.updateAvailable ? 'pointer' : 'not-allowed'
+                }}
+              >
                 <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
-                <span>{isUpdating ? 'Updating & Migrating DB...' : 'Apply Update & Migrate Database'}</span>
+                <span>{isUpdating ? 'Updating & Migrating DB...' : updateInfo?.updateAvailable ? 'Apply Update & Pull Code' : 'No Update Available'}</span>
               </button>
             </div>
           </div>
@@ -881,6 +947,100 @@ export const AdminDashboardPage: React.FC = () => {
               <Trash2 size={16} />
               <span>Factory Reset & Wipe Application</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Integrations & API Keys Suite */}
+      {activeTab === 'integrations' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Card 1: Steam Integration */}
+          <div className="nook-panel">
+            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Gamepad2 size={20} style={{ flexShrink: 0 }} />
+              <span>Steam Web API Key & Integration</span>
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
+              Configure your system-wide Steam API Key to fetch official player summaries and recently played games.
+            </p>
+
+            <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam Web API Key</label>
+                <input
+                  type="password"
+                  placeholder="32-character hexadecimal key (e.g. 1234567890ABCDEF1234567890ABCDEF)"
+                  value={settings.steam_api_key || ''}
+                  onChange={e => setSettings({ ...settings, steam_api_key: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontFamily: 'monospace' }}
+                />
+              </div>
+
+              <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--accent-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                💡 <strong>Steam API Setup Instructions:</strong>
+                <ol style={{ marginLeft: '1.25rem', marginTop: '0.4rem' }}>
+                  <li>Log in to Steam and visit <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>steamcommunity.com/dev/apikey</a>.</li>
+                  <li>Enter your domain name (e.g. <code style={{ background: 'rgba(0,0,0,0.3)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>webnook.example.com</code>) and click <strong>Register</strong>.</li>
+                  <li>Copy your 32-character API Key into the field above and click <strong>Save Settings</strong>.</li>
+                  <li><em>Note: Even without an API key, WebNook automatically falls back to live public profile XML scraping!</em></li>
+                </ol>
+              </div>
+
+              <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Save size={16} style={{ flexShrink: 0 }} />
+                <span>Save Steam Settings</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Card 2: Spotify Developer Integration */}
+          <div className="nook-panel">
+            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Radio size={20} style={{ flexShrink: 0 }} />
+              <span>Spotify API Credentials (Developer Dashboard)</span>
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
+              Optional API keys for fetching top artist picks and Spotify search previews.
+            </p>
+
+            <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Spotify Client ID</label>
+                  <input
+                    type="text"
+                    placeholder="Spotify Client ID"
+                    value={settings.spotify_client_id || ''}
+                    onChange={e => setSettings({ ...settings, spotify_client_id: e.target.value })}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontFamily: 'monospace' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Spotify Client Secret</label>
+                  <input
+                    type="password"
+                    placeholder="Spotify Client Secret"
+                    value={settings.spotify_client_secret || ''}
+                    onChange={e => setSettings({ ...settings, spotify_client_secret: e.target.value })}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontFamily: 'monospace' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                💡 <strong>Spotify Setup Instructions:</strong>
+                <ol style={{ marginLeft: '1.25rem', marginTop: '0.4rem' }}>
+                  <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>developer.spotify.com/dashboard</a>.</li>
+                  <li>Click <strong>Create App</strong>, set App Name to <em>WebNook Social</em>, and save.</li>
+                  <li>Copy the Client ID and Client Secret into the inputs above and click <strong>Save Settings</strong>.</li>
+                </ol>
+              </div>
+
+              <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Save size={16} style={{ flexShrink: 0 }} />
+                <span>Save Spotify Credentials</span>
+              </button>
+            </form>
           </div>
         </div>
       )}

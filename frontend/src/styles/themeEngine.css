@@ -42,6 +42,29 @@ input, textarea, select {
   font-family: inherit;
 }
 
+/* Standard nook-panel base */
+.nook-panel {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-main);
+  box-shadow: var(--box-shadow);
+  padding: 1.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nook-panel-header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent-color);
+}
+
 /* ========================================================
    THEME 1: Modern Glassmorphism (Default)
    ======================================================== */
@@ -61,33 +84,15 @@ input, textarea, select {
 }
 
 .theme-glassmorphism .nook-panel {
-  background: var(--bg-panel);
   backdrop-filter: var(--backdrop-blur);
   -webkit-backdrop-filter: var(--backdrop-blur);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-main);
-  box-shadow: var(--box-shadow);
-  padding: 1.5rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.theme-glassmorphism .nook-panel-header {
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.75rem;
-  margin-bottom: 1rem;
-  font-weight: 700;
-  font-size: 1.15rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--accent-color);
 }
 
 /* ========================================================
-   THEME 2: Retro Windows 98
+   THEME 2: Retro Windows 98 / 95
    ======================================================== */
 .theme-win98 {
-  --bg-primary: #008080; /* Classic Teal Desktop */
+  --bg-primary: #008080;
   --bg-panel: #c0c0c0;
   --bg-panel-solid: #c0c0c0;
   --text-main: #000000;
@@ -97,110 +102,117 @@ input, textarea, select {
   --border-color: #000000;
   --border-radius-main: 0px;
   --border-radius-btn: 0px;
-  --font-family-main: 'Comic Sans MS', 'MS Sans Serif', Tahoma, sans-serif;
+  --font-family-main: 'MS Sans Serif', Tahoma, sans-serif;
   --backdrop-blur: none;
   --box-shadow: 2px 2px 0px #000000;
 }
 
 .theme-win98 .nook-panel {
-  background: #c0c0c0;
-  border-top: 2px solid #ffffff;
-  border-left: 2px solid #ffffff;
-  border-right: 2px solid #000000;
-  border-bottom: 2px solid #000000;
-  padding: 4px;
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border-top: 2px solid #ffffff !important;
+  border-left: 2px solid #ffffff !important;
+  border-right: 2px solid #000000 !important;
+  border-bottom: 2px solid #000000 !important;
+  border-radius: 0px !important;
+  padding: 8px;
   box-shadow: inset 1px 1px 0px #dfdfdf, inset -1px -1px 0px #808080;
   margin-bottom: 1rem;
 }
 
 .theme-win98 .nook-panel-header {
-  background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
-  color: #ffffff;
-  padding: 3px 6px;
+  background: linear-gradient(90deg, var(--accent-color) 0%, #1084d0 100%);
+  color: #ffffff !important;
+  padding: 4px 8px;
   font-weight: bold;
   font-size: 0.9rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: none;
 }
 
 .theme-win98 .nook-panel-header::after {
   content: 'X';
   background: #c0c0c0;
-  color: #000;
+  color: #000000;
   border-top: 1px solid #ffffff;
   border-left: 1px solid #ffffff;
-  border-right: 1px solid #000;
-  border-bottom: 1px solid #000;
-  padding: 0px 5px;
+  border-right: 1px solid #000000;
+  border-bottom: 1px solid #000000;
+  padding: 1px 6px;
   font-size: 10px;
-  font-family: sans-serif;
   font-weight: bold;
 }
 
-.theme-win98 button {
-  background: #c0c0c0;
-  color: #000000;
-  border-top: 2px solid #ffffff;
-  border-left: 2px solid #ffffff;
-  border-right: 2px solid #000000;
-  border-bottom: 2px solid #000000;
+.theme-win98 button, .theme-win98 .btn-primary, .theme-win98 .btn-secondary {
+  background: #c0c0c0 !important;
+  color: #000000 !important;
+  border-top: 2px solid #ffffff !important;
+  border-left: 2px solid #ffffff !important;
+  border-right: 2px solid #000000 !important;
+  border-bottom: 2px solid #000000 !important;
+  border-radius: 0px !important;
   padding: 4px 12px;
   font-weight: bold;
+  box-shadow: none;
 }
+
 .theme-win98 button:active {
-  border-top: 2px solid #000000;
-  border-left: 2px solid #000000;
-  border-right: 2px solid #ffffff;
-  border-bottom: 2px solid #ffffff;
+  border-top: 2px solid #000000 !important;
+  border-left: 2px solid #000000 !important;
+  border-right: 2px solid #ffffff !important;
+  border-bottom: 2px solid #ffffff !important;
 }
 
 /* ========================================================
    THEME 3: Windows 7 Frutiger Aero
    ======================================================== */
 .theme-frutiger-aero {
-  --bg-primary: #1e3c72;
-  --bg-panel: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(210, 235, 255, 0.55) 100%);
+  --bg-primary: #1c3b6f;
+  --bg-panel: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(210, 235, 255, 0.7) 100%);
   --bg-panel-solid: #e2f1ff;
   --text-main: #0c2340;
   --text-muted: #4a6572;
   --accent-color: #0080ff;
   --accent-hover: #0066cc;
   --border-color: rgba(255, 255, 255, 0.9);
-  --border-radius-main: 14px;
+  --border-radius-main: 16px;
   --border-radius-btn: 20px;
-  --backdrop-blur: blur(12px);
-  --box-shadow: 0 8px 24px rgba(0, 100, 200, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  --backdrop-blur: blur(14px);
+  --box-shadow: 0 8px 28px rgba(0, 100, 200, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.9);
 }
 
 .theme-frutiger-aero .nook-panel {
   background: var(--bg-panel);
   backdrop-filter: var(--backdrop-blur);
-  border: 1.5 solid var(--border-color);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border: 2px solid var(--border-color);
   border-radius: var(--border-radius-main);
   box-shadow: var(--box-shadow);
-  padding: 1.25rem;
+  padding: 1.5rem;
   color: var(--text-main);
 }
 
 .theme-frutiger-aero .nook-panel-header {
-  color: #0052a5;
+  color: var(--accent-color);
   font-size: 1.2rem;
   font-weight: 800;
-  border-bottom: 2px solid rgba(0, 128, 255, 0.25);
+  border-bottom: 2px solid rgba(0, 128, 255, 0.3);
   padding-bottom: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.theme-frutiger-aero button {
-  background: linear-gradient(180deg, #66b2ff 0%, #0066cc 50%, #004c99 100%);
-  color: #ffffff;
-  border-radius: var(--border-radius-btn);
-  padding: 8px 18px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+.theme-frutiger-aero button, .theme-frutiger-aero .btn-primary {
+  background: linear-gradient(180deg, #66b2ff 0%, #0066cc 50%, #004c99 100%) !important;
+  color: #ffffff !important;
+  border-radius: 20px !important;
+  padding: 8px 20px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0, 102, 204, 0.4), inset 0 2px 2px rgba(255, 255, 255, 0.8) !important;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.6) !important;
 }
 
 /* ========================================================
@@ -218,7 +230,7 @@ input, textarea, select {
   --border-radius-main: 4px;
   --border-radius-btn: 2px;
   --backdrop-blur: blur(8px);
-  --box-shadow: 0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(255, 0, 127, 0.2);
+  --box-shadow: 0 0 18px rgba(0, 243, 255, 0.35), inset 0 0 10px rgba(255, 0, 127, 0.2);
 }
 
 .theme-cyberpunk .nook-panel {
@@ -230,22 +242,140 @@ input, textarea, select {
 }
 
 .theme-cyberpunk .nook-panel-header {
-  color: #ff007f;
-  text-shadow: 0 0 8px #ff007f;
+  color: var(--accent-color);
+  text-shadow: 0 0 8px var(--accent-color);
   font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
-  border-bottom: 1px solid #00f3ff;
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.theme-cyberpunk button {
-  background: #ff007f;
-  color: #ffffff;
-  border: 1px solid #00f3ff;
-  box-shadow: 0 0 10px #ff007f;
+.theme-cyberpunk button, .theme-cyberpunk .btn-primary {
+  background: var(--accent-color) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 0 12px var(--accent-color) !important;
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 1px;
+  border-radius: 2px !important;
+}
+
+/* ========================================================
+   THEME 5: Synthwave Neon
+   ======================================================== */
+.theme-synthwave {
+  --bg-primary: #0d0221;
+  --bg-panel: rgba(25, 11, 52, 0.85);
+  --bg-panel-solid: #190b34;
+  --text-main: #00f5d4;
+  --text-muted: #ff007f;
+  --accent-color: #ff007f;
+  --accent-hover: #e0006c;
+  --border-color: #ff007f;
+  --border-radius-main: 12px;
+  --border-radius-btn: 8px;
+  --box-shadow: 0 0 20px rgba(255, 0, 127, 0.4), inset 0 0 10px rgba(0, 245, 212, 0.15);
+}
+
+.theme-synthwave .nook-panel {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--box-shadow);
+}
+
+.theme-synthwave .nook-panel-header {
+  color: var(--accent-color);
+  border-bottom: 1px solid var(--accent-color);
+}
+
+/* ========================================================
+   THEME 6: Y2K Retro Pastel
+   ======================================================== */
+.theme-pastel {
+  --bg-primary: #fef2f2;
+  --bg-panel: #ffffff;
+  --bg-panel-solid: #ffffff;
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --accent-color: #ec4899;
+  --accent-hover: #db2777;
+  --border-color: #f472b6;
+  --border-radius-main: 24px;
+  --border-radius-btn: 16px;
+  --box-shadow: 0 8px 24px rgba(236, 72, 153, 0.15);
+}
+
+.theme-pastel .nook-panel {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-main);
+  box-shadow: var(--box-shadow);
+}
+
+.theme-pastel .nook-panel-header {
+  color: var(--accent-color);
+  border-bottom: 2px dashed var(--border-color);
+}
+
+/* ========================================================
+   THEME 7: Cozy Coffee
+   ======================================================== */
+.theme-coffee {
+  --bg-primary: #1c1917;
+  --bg-panel: #292524;
+  --bg-panel-solid: #292524;
+  --text-main: #f5f5f4;
+  --text-muted: #a8a29e;
+  --accent-color: #d97706;
+  --accent-hover: #b45309;
+  --border-color: #78350f;
+  --border-radius-main: 14px;
+  --border-radius-btn: 10px;
+  --box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.theme-coffee .nook-panel {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--box-shadow);
+}
+
+.theme-coffee .nook-panel-header {
+  color: var(--accent-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* ========================================================
+   THEME 8: Midnight Velvet
+   ======================================================== */
+.theme-velvet {
+  --bg-primary: #09090b;
+  --bg-panel: #18181b;
+  --bg-panel-solid: #18181b;
+  --text-main: #fafafa;
+  --text-muted: #a1a1aa;
+  --accent-color: #a855f7;
+  --accent-hover: #9333ea;
+  --border-color: #3f3f46;
+  --border-radius-main: 16px;
+  --border-radius-btn: 10px;
+  --box-shadow: 0 10px 30px rgba(168, 85, 247, 0.2);
+}
+
+.theme-velvet .nook-panel {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--box-shadow);
+}
+
+.theme-velvet .nook-panel-header {
+  color: var(--accent-color);
+  border-bottom: 1px solid var(--border-color);
 }

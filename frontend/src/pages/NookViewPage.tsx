@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { TopFriendsGrid } from '../components/nook/TopFriendsGrid';
 import { MusicWidget } from '../components/widgets/MusicWidget';
 import { SteamWidget } from '../components/widgets/SteamWidget';
+import { TopSongsWidget } from '../components/widgets/TopSongsWidget';
 import { GuestbookWidget } from '../components/nook/GuestbookWidget';
 import { StickerCanvas } from '../components/nook/StickerCanvas';
 import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users } from 'lucide-react';
@@ -123,8 +124,33 @@ export const NookViewPage: React.FC = () => {
     } catch (e) {}
   }
 
+  // Parse custom colors
+  let cardBgColor = 'rgba(0,0,0,0.3)';
+  let borderColor = 'rgba(255,255,255,0.12)';
+  if (nookSettings?.card_colors_json) {
+    try {
+      const parsedColors = typeof nookSettings.card_colors_json === 'string'
+        ? JSON.parse(nookSettings.card_colors_json)
+        : nookSettings.card_colors_json;
+      if (parsedColors.cardBg) cardBgColor = parsedColors.cardBg;
+      if (parsedColors.border) borderColor = parsedColors.border;
+    } catch (e) {}
+  }
+
+  const customStyle = {
+    minHeight: '100vh',
+    position: 'relative',
+    backgroundColor: nookSettings?.bg_color || undefined,
+    color: nookSettings?.text_color || undefined,
+    '--bg-primary': nookSettings?.bg_color || undefined,
+    '--bg-panel': cardBgColor,
+    '--accent-color': nookSettings?.accent_color || undefined,
+    '--text-main': nookSettings?.text_color || undefined,
+    '--border-color': borderColor
+  } as React.CSSProperties;
+
   return (
-    <div className={themeClass} style={{ minHeight: '100vh', position: 'relative' }}>
+    <div className={themeClass} style={customStyle}>
       {/* Custom CSS Injection */}
       {nookSettings?.custom_css && (
         <style dangerouslySetInnerHTML={{ __html: nookSettings.custom_css }} />
@@ -198,6 +224,12 @@ export const NookViewPage: React.FC = () => {
                 bgMusicTitle={nookSettings?.bg_music_title}
                 spotifyTrackUrl={nookSettings?.spotify_track_url}
                 appleMusicUrl={nookSettings?.apple_music_url}
+              />
+            )}
+
+            {cardVis.top_songs !== false && nookSettings?.top_songs_json && (
+              <TopSongsWidget
+                songs={typeof nookSettings.top_songs_json === 'string' ? JSON.parse(nookSettings.top_songs_json) : nookSettings.top_songs_json}
               />
             )}
           </div>

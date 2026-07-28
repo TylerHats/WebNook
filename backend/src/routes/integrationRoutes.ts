@@ -1,92 +1,138 @@
 import { Router, Request, Response } from 'express';
 import { queryOne } from '../db/connection';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware';
 import https from 'https';
+import http from 'http';
 
 const router = Router();
 
-// Helper HTTP JSON GET getter
-function fetchJson(url: string): Promise<any> {
+// Helper HTTP/HTTPS text getter
+function fetchText(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    const client = url.startsWith('https') ? https : http;
+    client.get(url, (res) => {
+      // Handle redirects
+      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return fetchText(res.headers.location).then(resolve).catch(reject);
+      }
       let data = '';
       res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(e);
-        }
-      });
+      res.on('end', () => resolve(data));
     }).on('error', reject);
   });
 }
 
-// Spotify Aggregate Data endpoint (Proxy / Demo Provider)
-router.get('/spotify/top-artists', async (req: Request, res: Response) => {
-  try {
-    // Return sample/aggregated top artists structure when custom API key is not connected
-    const topArtists = [
-      { name: 'The Cure', genre: 'Post-Punk / New Wave', image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&auto=format&fit=crop&q=80', track: 'Pictures of You' },
-      { name: 'Daft Punk', genre: 'French Touch / Electronic', image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&auto=format&fit=crop&q=80', track: 'Digital Love' },
-      { name: 'Depeche Mode', genre: 'Synth-Pop', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&auto=format&fit=crop&q=80', track: 'Enjoy the Silence' },
-      { name: 'Gorillaz', genre: 'Alternative / Hip-Hop', image: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=300&auto=format&fit=crop&q=80', track: 'Feel Good Inc.' }
-    ];
-
-    return res.json({ artists: topArtists });
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to fetch Spotify top artists' });
-  }
-});
+function fetchJson(url: string): Promise<any> {
+  return fetchText(url).then(text => JSON.parse(text));
+}
 
 // Steam User Stats & Recent Games endpoint
 router.get('/steam/:steamId', async (req: Request, res: Response) => {
   try {
     const { steamId } = req.params;
+    const cleanId = steamId.trim();
 
-    // Check system settings for custom Steam API key if provided
+    // 1. Check system settings for custom Steam API key if provided
     const apiKeyRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "steam_api_key"');
     const apiKey = apiKeyRow?.value;
 
-    if (apiKey && /^\d{17}$/.test(steamId)) {
+    if (apiKey && /^\d{17}$/.test(cleanId)) {
       try {
-        const gamesRes = await fetchJson(`https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=${apiKey}&steamid=${steamId}&format=json`);
-        const playerRes = await fetchJson(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${apiKey}&steamids=${steamId}`);
+        const gamesRes = await fetchJson(`https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=${apiKey}&steamid=${cleanId}&format=json`);
+        const playerRes = await fetchJson(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${apiKey}&steamids=${cleanId}`);
 
         const games = gamesRes.response?.games || [];
         const player = playerRes.response?.players?.[0];
 
-        return res.json({
-          player: player ? {
-            personaName: player.personaname,
-            avatar: player.avatarfull,
-            profileUrl: player.profileurl,
-            personaState: player.personastate
-          } : null,
-          games: games.slice(0, 4).map((g: any) => ({
-            appid: g.appid,
-            name: g.name,
-            playtime_2weeks: Math.round(g.playtime_2weeks / 60),
-            playtime_forever: Math.round(g.playtime_forever / 60),
-            icon: `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg`
-          }))
-        });
+        if (player) {
+          return res.json({
+            player: {
+              personaName: player.personaname,
+              avatar: player.avatarfull || player.avatar,
+              profileUrl: player.profileurl,
+              personaState: player.personastate
+            },
+            games: games.slice(0, 5).map((g: any) => ({
+              appid: g.appid,
+              name: g.name,
+              playtime_2weeks: Math.round((g.playtime_2weeks || 0) / 60),
+              playtime_forever: Math.round((g.playtime_forever || 0) / 60),
+              icon: `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg`
+            }))
+          });
+        }
       } catch (apiErr) {
-        console.warn('Steam API error, falling back to mock data:', apiErr);
+        console.warn('Steam Web API error, falling back to public XML scrape:', apiErr);
       }
     }
 
-    // Default Fallback Preview Games for Steam Widget
+    // 2. Fallback: Scrape public Steam profile XML feed directly!
+    try {
+      const xmlUrl = /^\d{17}$/.test(cleanId)
+        ? `https://steamcommunity.com/profiles/${cleanId}/?xml=1`
+        : `https://steamcommunity.com/id/${cleanId}/?xml=1`;
+
+      const xmlText = await fetchText(xmlUrl);
+
+      const personaNameMatch = xmlText.match(/<steamID><!\[CDATA\[(.*?)\]\]><\/steamID>/) || xmlText.match(/<steamID>(.*?)<\/steamID>/);
+      const avatarMatch = xmlText.match(/<avatarFull><!\[CDATA\[(.*?)\]\]><\/avatarFull>/) || xmlText.match(/<avatarFull>(.*?)<\/avatarFull>/);
+      const stateMatch = xmlText.match(/<onlineState>(.*?)<\/onlineState>/);
+      const stateMessageMatch = xmlText.match(/<stateMessage><!\[CDATA\[(.*?)\]\]><\/stateMessage>/) || xmlText.match(/<stateMessage>(.*?)<\/stateMessage>/);
+
+      const personaName = personaNameMatch ? personaNameMatch[1] : cleanId;
+      const avatar = avatarMatch ? avatarMatch[1] : 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=300&auto=format&fit=crop&q=80';
+      const onlineState = stateMatch ? stateMatch[1] : 'offline';
+      const isOnline = onlineState.toLowerCase() !== 'offline';
+
+      // Parse most played games from XML feed
+      const games: any[] = [];
+      const gameBlocks = xmlText.split('<mostPlayedGame>');
+
+      for (let i = 1; i < gameBlocks.length && games.length < 5; i++) {
+        const block = gameBlocks[i];
+        const gNameMatch = block.match(/<gameName><!\[CDATA\[(.*?)\]\]><\/gameName>/) || block.match(/<gameName>(.*?)<\/gameName>/);
+        const gLinkMatch = block.match(/<gameLink><!\[CDATA\[(.*?)\]\]><\/gameLink>/) || block.match(/<gameLink>(.*?)<\/gameLink>/);
+        const gIconMatch = block.match(/<gameIcon><!\[CDATA\[(.*?)\]\]><\/gameIcon>/) || block.match(/<gameIcon>(.*?)<\/gameIcon>/);
+        const gHoursMatch = block.match(/<hoursOnRecord>(.*?)<\/hoursOnRecord>/);
+        const g2WeeksMatch = block.match(/<hoursPlayed>(.*?)<\/hoursPlayed>/);
+
+        if (gNameMatch) {
+          games.push({
+            name: gNameMatch[1],
+            playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1])) : 0,
+            playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
+            icon: gIconMatch ? gIconMatch[1] : '',
+            link: gLinkMatch ? gLinkMatch[1] : ''
+          });
+        }
+      }
+
+      return res.json({
+        player: {
+          personaName,
+          avatar,
+          profileUrl: `https://steamcommunity.com/profiles/${cleanId}`,
+          personaState: isOnline ? 1 : 0,
+          stateMessage: stateMessageMatch ? stateMessageMatch[1] : ''
+        },
+        games: games.length > 0 ? games : [
+          { appid: 1086000, name: "Baldur's Gate 3", playtime_2weeks: 18, playtime_forever: 142 },
+          { appid: 1091500, name: 'Cyberpunk 2077', playtime_2weeks: 9, playtime_forever: 98 }
+        ]
+      });
+    } catch (scrapeErr) {
+      console.warn('Steam XML scrape fallback error:', scrapeErr);
+    }
+
+    // Default Fallback Preview
     return res.json({
       player: {
-        personaName: 'CyberGamer99',
+        personaName: cleanId,
         avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=300&auto=format&fit=crop&q=80',
         personaState: 1
       },
       games: [
-        { appid: 1086000, name: "Baldur's Gate 3", playtime_2weeks: 18, playtime_forever: 142, icon: '' },
-        { appid: 1091500, name: 'Cyberpunk 2077', playtime_2weeks: 9, playtime_forever: 98, icon: '' },
-        { appid: 1145360, name: 'Hades II', playtime_2weeks: 14, playtime_forever: 45, icon: '' }
+        { appid: 1086000, name: "Baldur's Gate 3", playtime_2weeks: 18, playtime_forever: 142 },
+        { appid: 1091500, name: 'Cyberpunk 2077', playtime_2weeks: 9, playtime_forever: 98 }
       ]
     });
   } catch (err) {

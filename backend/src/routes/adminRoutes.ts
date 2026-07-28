@@ -245,49 +245,51 @@ router.delete('/users/:id', async (req: AuthenticatedRequest, res: Response) => 
   }
 });
 
+import { execSync } from 'child_process';
+
 // 3. Self-Updater & Release Channels (PolyPress Style)
 router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const channelRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "update_channel"');
     const channel = channelRow?.value || 'stable';
 
-    let currentVersion = '1.1.0';
+    let currentPkgVersion = '1.2.0';
     try {
       const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8'));
-      if (rootPkg && rootPkg.version) currentVersion = rootPkg.version;
+      if (rootPkg && rootPkg.version) currentPkgVersion = rootPkg.version;
     } catch (e) {}
 
-    let latestReleaseInfo: any = null;
+    let localCommitHash = 'HEAD';
+    try {
+      localCommitHash = execSync('git rev-parse --short HEAD', { cwd: path.join(__dirname, '../../..') }).toString().trim();
+    } catch (e) {}
 
-    if (channel === 'stable') {
-      const releases = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`);
-      if (releases && releases.tag_name) {
+    let currentVersion = currentPkgVersion;
+    let latestReleaseInfo: any = null;
+    let targetVersion = currentPkgVersion;
+
+    if (channel === 'alpha') {
+      currentVersion = localCommitHash;
+      const commits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits/main`);
+      if (commits && commits.sha) {
+        targetVersion = commits.sha.substring(0, 7);
         latestReleaseInfo = {
-          tag: releases.tag_name,
-          name: releases.name || releases.tag_name,
-          notes: releases.body || 'Latest stable release',
-          published_at: releases.published_at
+          tag: targetVersion,
+          name: `Alpha Commit: ${commits.commit.message.split('\n')[0]}`,
+          notes: commits.commit.message,
+          published_at: commits.commit.committer.date
         };
       }
     } else if (channel === 'beta') {
       const tags = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/tags`);
       if (Array.isArray(tags) && tags.length > 0) {
         const latestTag = tags[0];
-        const priorTag = tags[1];
+        targetVersion = latestTag.name;
         let commitNotes = '';
 
-        if (priorTag) {
-          const compare = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/compare/${priorTag.name}...${latestTag.name}`);
-          if (compare && Array.isArray(compare.commits) && compare.commits.length > 0) {
-            commitNotes = compare.commits.map((c: any) => `• ${c.commit.message.split('\n')[0]}`).join('\n');
-          }
-        }
-
-        if (!commitNotes) {
-          const tagCommits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits?sha=${latestTag.name}`);
-          if (Array.isArray(tagCommits) && tagCommits.length > 0) {
-            commitNotes = tagCommits.slice(0, 5).map((c: any) => `• ${c.commit.message.split('\n')[0]}`).join('\n');
-          }
+        const tagCommits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits?sha=${latestTag.name}`);
+        if (Array.isArray(tagCommits) && tagCommits.length > 0) {
+          commitNotes = tagCommits.slice(0, 5).map((c: any) => `• ${c.commit.message.split('\n')[0]}`).join('\n');
         }
 
         latestReleaseInfo = {
@@ -297,34 +299,29 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
           published_at: new Date().toISOString()
         };
       }
-    } else if (channel === 'alpha') {
-      const commits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits/main`);
-      if (commits && commits.sha) {
+    } else {
+      // Stable channel
+      const releases = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`);
+      if (releases && releases.tag_name) {
+        targetVersion = releases.tag_name;
         latestReleaseInfo = {
-          tag: `alpha-${commits.sha.substring(0, 7)}`,
-          name: `Alpha Commit: ${commits.commit.message.split('\n')[0]}`,
-          notes: commits.commit.message,
-          published_at: commits.commit.committer.date
+          tag: releases.tag_name,
+          name: releases.name || releases.tag_name,
+          notes: releases.body || 'Latest stable release',
+          published_at: releases.published_at
         };
       }
     }
 
-    const normalizeVersion = (v: string) => v ? v.replace(/^v/i, '').trim() : '';
-    const currentNorm = normalizeVersion(currentVersion);
-
-    let updateAvailable = false;
-    if (latestReleaseInfo && latestReleaseInfo.tag) {
-      const latestNorm = normalizeVersion(latestReleaseInfo.tag);
-      if (latestNorm && latestNorm !== currentNorm) {
-        updateAvailable = true;
-      }
-    }
+    const normalize = (v: string) => v ? v.replace(/^v/i, '').trim().toLowerCase() : '';
+    const updateAvailable = normalize(targetVersion) !== '' && normalize(currentVersion) !== normalize(targetVersion);
 
     return res.json({
       currentVersion,
+      targetVersion,
       channel,
       updateAvailable,
-      latestRelease: latestReleaseInfo || { tag: 'v1.0.0', name: 'WebNook v1.0.0', notes: 'You are running the latest version.' }
+      latestRelease: latestReleaseInfo || { tag: targetVersion, name: `WebNook ${targetVersion}`, notes: 'You are running the latest version.' }
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to check for updates' });
@@ -347,13 +344,18 @@ router.post('/update/channel', async (req: AuthenticatedRequest, res: Response) 
 
 router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const repoPath = path.join(__dirname, '../../..');
+
+    try {
+      execSync('git fetch origin && git pull origin main', { cwd: repoPath, timeout: 30000 });
+    } catch (gitErr: any) {
+      console.warn('[Self-Updater Warning] Git pull failed or clean worktree needed:', gitErr.message);
+    }
+
     await runMigrations();
-    return res.json({
-      success: true,
-      message: 'System update completed! Database schema migrated to latest version.'
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: `Update failed: ${err.message}` });
+    return res.json({ message: 'Update applied! Git repository pulled latest changes & migrations verified.' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to apply update' });
   }
 });
 

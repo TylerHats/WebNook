@@ -142,7 +142,7 @@ const mediaStorage = multer.diskStorage({
 
 const uploadMedia = multer({
   storage: mediaStorage,
-  limits: { fileSize: 25 * 1024 * 1024 } // 25MB max file size
+  limits: { fileSize: 50 * 1024 * 1024 } // Generous 50MB max file size limit
 });
 
 import { processImageUpload, processAudioUpload } from '../services/mediaService';

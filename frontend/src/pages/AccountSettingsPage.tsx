@@ -244,8 +244,8 @@ export const AccountSettingsPage: React.FC = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Profile Information Form */}
         <div className="nook-panel">
-          <div className="nook-panel-header">
-            <User size={20} />
+          <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <User size={20} style={{ flexShrink: 0 }} />
             <span>Profile Information</span>
           </div>
           <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -316,8 +316,8 @@ export const AccountSettingsPage: React.FC = () => {
               />
             </div>
 
-            <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>
-              <Save size={16} />
+            <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Save size={16} style={{ flexShrink: 0 }} />
               <span>Save Profile Info</span>
             </button>
           </form>
@@ -325,14 +325,14 @@ export const AccountSettingsPage: React.FC = () => {
 
         {/* TOTP Authenticator Setup */}
         <div className="nook-panel">
-          <div className="nook-panel-header">
-            <QrCode size={20} />
+          <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <QrCode size={20} style={{ flexShrink: 0 }} />
             <span>TOTP Authenticator 2FA</span>
           </div>
 
           {user?.is_totp_enabled ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#22c55e', background: 'rgba(34, 197, 94, 0.1)', padding: '0.75rem 1rem', borderRadius: '10px' }}>
-              <CheckCircle2 size={20} />
+              <CheckCircle2 size={20} style={{ flexShrink: 0 }} />
               <span>TOTP Authenticator is enabled on your account.</span>
             </div>
           ) : (
@@ -366,16 +366,16 @@ export const AccountSettingsPage: React.FC = () => {
 
         {/* WebAuthn / Passkeys Setup */}
         <div className="nook-panel">
-          <div className="nook-panel-header">
-            <KeyRound size={20} />
+          <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <KeyRound size={20} style={{ flexShrink: 0 }} />
             <span>Passkeys & Hardware Keys (WebAuthn)</span>
           </div>
           <p style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '1rem' }}>
             Passkeys allow instant, passwordless biometrics (FaceID, TouchID, YubiKey) login.
           </p>
 
-          <button onClick={handleRegisterPasskey} className="btn-primary" style={{ marginBottom: '1rem' }}>
-            <KeyRound size={16} />
+          <button onClick={handleRegisterPasskey} className="btn-primary" style={{ marginBottom: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <KeyRound size={16} style={{ flexShrink: 0 }} />
             <span>Register New Passkey</span>
           </button>
 
@@ -385,7 +385,7 @@ export const AccountSettingsPage: React.FC = () => {
               {passkeys.map(pk => (
                 <div key={pk.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.6rem 0.85rem', borderRadius: '8px' }}>
                   <span style={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>Passkey ID: {pk.id.substring(0, 16)}...</span>
-                  <Trash2 size={16} style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => handleDeletePasskey(pk.id)} />
+                  <Trash2 size={16} style={{ cursor: 'pointer', color: '#ef4444', flexShrink: 0 }} onClick={() => handleDeletePasskey(pk.id)} />
                 </div>
               ))}
             </div>
@@ -394,8 +394,8 @@ export const AccountSettingsPage: React.FC = () => {
 
         {/* Email Notifications Preferences Card */}
         <div className="nook-panel">
-          <div className="nook-panel-header">
-            <Mail size={20} />
+          <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Mail size={20} style={{ flexShrink: 0 }} />
             <span>Email Notification Preferences</span>
           </div>
           <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
