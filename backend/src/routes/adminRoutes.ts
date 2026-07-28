@@ -3,9 +3,11 @@ import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
+import https from 'https';
 import { execute, query, queryOne } from '../db/connection';
 import { authenticateToken, requireAdmin, AuthenticatedRequest } from '../middleware/authMiddleware';
-import { sendIntegrationErrorEmail, sendStyledEmail } from '../services/emailService';
+import { runMigrations } from '../db/migrations';
+import { sendIntegrationErrorEmail, sendAccountDisabledEmail, sendPasswordResetEmail, sendStyledEmail } from '../services/emailService';
 
 const router = Router();
 router.use(authenticateToken as any, requireAdmin as any);
@@ -116,7 +118,6 @@ router.get('/metrics', async (req: AuthenticatedRequest, res: Response) => {
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { exec } from 'child_process';
-import { sendAccountDisabledEmail, sendPasswordResetEmail, sendStyledEmail } from '../services/emailService';
 
 function execPromise(command: string, cwd?: string): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
