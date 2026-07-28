@@ -28,7 +28,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
   appleMusicUrl
 }) => {
   // Construct playlist array from tracks prop or legacy fallback props
-  const playlist: MusicTrack[] = [...tracks];
+  const playlist: MusicTrack[] = [...(tracks || [])];
 
   if (playlist.length === 0) {
     if (bgMusicUrl) {

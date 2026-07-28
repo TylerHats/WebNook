@@ -576,8 +576,20 @@ export const AdminDashboardPage: React.FC = () => {
                   {renderMarkdown(updateInfo.latestRelease?.notes)}
                 </div>
 
-                <div style={{ background: 'rgba(59, 130, 246, 0.12)', padding: '0.85rem', borderRadius: '10px', border: '1px solid #3b82f6', fontSize: '0.82rem', lineHeight: 1.5, marginTop: '1rem' }}>
-                  🐳 <strong>Docker Container Environment Notice:</strong> Applying updates via this UI updates your active running instance & database schema. <em>Note: Re-pulling or recreating your Docker container image will reset image binaries to the pushed tag release.</em>
+                <div style={{ background: updateInfo.is_docker ? 'rgba(234, 179, 8, 0.15)' : 'rgba(59, 130, 246, 0.12)', padding: '1rem', borderRadius: '10px', border: updateInfo.is_docker ? '1px solid #eab308' : '1px solid #3b82f6', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '1rem' }}>
+                  🐳 <strong>{updateInfo.is_docker ? 'Docker Environment Detected (UI Self-Update Disabled)' : 'Git Host Installation Environment'}</strong>
+                  {updateInfo.is_docker ? (
+                    <div style={{ marginTop: '0.4rem' }}>
+                      WebNook is running in a Docker container. In-app self-updating via UI is disabled to maintain container immutability. To update WebNook to the latest release:
+                      <ol style={{ marginLeft: '1.25rem', marginTop: '0.4rem', marginBottom: 0 }}>
+                        <li>Pull the latest Docker image: <code style={{ background: 'rgba(0,0,0,0.4)', padding: '0.15rem 0.4rem', borderRadius: '4px', color: '#facc15' }}>docker pull tylerhats/webnook:latest</code></li>
+                        <li>Restart your container: <code style={{ background: 'rgba(0,0,0,0.4)', padding: '0.15rem 0.4rem', borderRadius: '4px', color: '#facc15' }}>docker compose up -d</code></li>
+                        <li><em>WebNook automatically executes all database schema migrations on startup when the container boots!</em></li>
+                      </ol>
+                    </div>
+                  ) : (
+                    <p style={{ marginTop: '0.3rem' }}>Applying updates via UI pulls latest code and runs database migrations automatically.</p>
+                  )}
                 </div>
               </div>
             )}
@@ -589,19 +601,19 @@ export const AdminDashboardPage: React.FC = () => {
               </button>
               <button
                 onClick={handleApplyUpdate}
-                className={updateInfo?.updateAvailable ? 'btn-primary' : 'btn-secondary'}
-                disabled={isUpdating || !updateInfo?.updateAvailable}
+                className={updateInfo?.updateAvailable && !updateInfo?.is_docker ? 'btn-primary' : 'btn-secondary'}
+                disabled={isUpdating || !updateInfo?.updateAvailable || updateInfo?.is_docker}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.5rem',
                   flexShrink: 0,
-                  opacity: updateInfo?.updateAvailable ? 1 : 0.4,
-                  cursor: updateInfo?.updateAvailable ? 'pointer' : 'not-allowed'
+                  opacity: updateInfo?.updateAvailable && !updateInfo?.is_docker ? 1 : 0.4,
+                  cursor: updateInfo?.updateAvailable && !updateInfo?.is_docker ? 'pointer' : 'not-allowed'
                 }}
               >
                 <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
-                <span>{isUpdating ? 'Updating & Migrating DB...' : updateInfo?.updateAvailable ? 'Apply Update & Pull Code' : 'No Update Available'}</span>
+                <span>{isUpdating ? 'Updating & Migrating DB...' : updateInfo?.is_docker ? 'Self-Update Disabled in Docker' : updateInfo?.updateAvailable ? 'Apply Update & Pull Code' : 'No Update Available'}</span>
               </button>
             </div>
           </div>
@@ -1080,12 +1092,30 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
-                💡 <strong>Spotify Setup Instructions:</strong>
+              <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--accent-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                💡 <strong>Spotify Developer App Setup Instructions:</strong>
                 <ol style={{ marginLeft: '1.25rem', marginTop: '0.4rem' }}>
                   <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>developer.spotify.com/dashboard</a>.</li>
-                  <li>Click <strong>Create App</strong>, set App Name to <em>WebNook Social</em>, and save.</li>
-                  <li>Copy the Client ID and Client Secret into the inputs above and click <strong>Save Settings</strong>.</li>
+                  <li>Click <strong>Create App</strong>, set App Name to <em>WebNook Social</em>.</li>
+                  <li>In App Settings, add this exact Redirect URI to <strong>Redirect URIs</strong>:
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.3rem', marginBottom: '0.3rem' }}>
+                      <code style={{ background: 'rgba(0,0,0,0.4)', padding: '0.3rem 0.6rem', borderRadius: '6px', color: '#22c55e', fontFamily: 'monospace', fontSize: '0.8rem', flex: 1, wordBreak: 'break-all' }}>
+                        {`${window.location.origin}/api/integrations/spotify/callback`}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/api/integrations/spotify/callback`);
+                          showToast('Spotify Callback URI copied to clipboard!', 'info');
+                        }}
+                        className="btn-secondary"
+                        style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', flexShrink: 0 }}
+                      >
+                        Copy URI
+                      </button>
+                    </div>
+                  </li>
+                  <li>Copy the Client ID and Client Secret into the inputs above and click <strong>Save Spotify Credentials</strong>.</li>
                 </ol>
               </div>
 

@@ -18,12 +18,16 @@ interface GuestbookWidgetProps {
   title?: string;
   nookUsername?: string;
   nookOwnerId?: number;
+  nookTheme?: string;
+  themeSoundsEnabled?: boolean;
 }
 
 export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({
   title = 'Guestbook & Comments',
   nookUsername = 'User',
-  nookOwnerId
+  nookOwnerId,
+  nookTheme,
+  themeSoundsEnabled = true
 }) => {
   const { user, token } = useAuth();
   const { showToast } = useToast();
@@ -61,7 +65,9 @@ export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({
 
       const data = await res.json();
       if (res.ok) {
-        playThemeSound('win9x', true, 'guestbook');
+        if (nookTheme) {
+          playThemeSound(nookTheme, themeSoundsEnabled !== false, 'guestbook');
+        }
         showToast('Guestbook comment posted!', 'success');
         setNewComment('');
         loadEntries();

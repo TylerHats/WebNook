@@ -316,7 +316,11 @@ export const NookViewPage: React.FC = () => {
           {/* Full Width Guestbook Widget */}
           {cardVis.guestbook !== false && (
             <div className="nook-full-col">
-              <GuestbookWidget nookUsername={owner.username} />
+              <GuestbookWidget
+                nookUsername={owner.username}
+                nookTheme={nookSettings?.theme}
+                themeSoundsEnabled={nookSettings?.theme_sounds_enabled !== 0 && nookSettings?.theme_sounds_enabled !== false}
+              />
             </div>
           )}
         </div>

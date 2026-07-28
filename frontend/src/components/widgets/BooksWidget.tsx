@@ -20,9 +20,11 @@ interface BooksWidgetProps {
 
 export const BooksWidget: React.FC<BooksWidgetProps> = ({
   title = 'Books & Reading Nook',
-  books = [],
+  books,
   storygraphUsername
 }) => {
+  const bookList = (books || []);
+
   return (
     <div className="nook-panel">
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -54,13 +56,13 @@ export const BooksWidget: React.FC<BooksWidgetProps> = ({
         )}
       </div>
 
-      {books.length === 0 ? (
+      {bookList.length === 0 ? (
         <p style={{ opacity: 0.6, fontSize: '0.85rem', textAlign: 'center', padding: '1rem 0', margin: 0 }}>
           No favorite books added yet 📖
         </p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '1rem', justifyContent: 'start' }}>
-          {books.map((b, idx) => (
+          {bookList.map((b, idx) => (
             <div
               key={b.id || idx}
               style={{

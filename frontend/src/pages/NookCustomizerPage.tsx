@@ -594,28 +594,30 @@ export const NookCustomizerPage: React.FC = () => {
               ))}
             </div>
 
-            {/* Theme Sound & Animation Toggles */}
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={themeSoundsEnabled}
-                  onChange={e => setThemeSoundsEnabled(e.target.checked)}
-                  style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
-                />
-                <span>🔊 Enable Theme Sound Effects (Clicks, Bleeps, Purrs & Chimes)</span>
-              </label>
+            {/* Theme Sound & Animation Toggles - Rendered ONLY for supported themes */}
+            {['win9x', 'win98', 'cat-cafe', 'cloud-dream', 'pixel-arcade', 'magical-girl', 'cyberpunk', 'synthwave'].includes(theme) && (
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={themeSoundsEnabled}
+                    onChange={e => setThemeSoundsEnabled(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                  />
+                  <span>🔊 Enable Theme Sound Effects (Clicks, Bleeps, Purrs & Chimes)</span>
+                </label>
 
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={themeAnimationsEnabled}
-                  onChange={e => setThemeAnimationsEnabled(e.target.checked)}
-                  style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
-                />
-                <span>✨ Enable Theme Micro-Animations (Laser Sweeps, File Transfer & Float)</span>
-              </label>
-            </div>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={themeAnimationsEnabled}
+                    onChange={e => setThemeAnimationsEnabled(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                  />
+                  <span>✨ Enable Theme Micro-Animations (Laser Sweeps, Walking Cat & Cloud Drift)</span>
+                </label>
+              </div>
+            )}
 
             {/* Custom Theme Color Pickers */}
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>

@@ -19,8 +19,10 @@ interface MoviesWidgetProps {
 
 export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
   title = 'Movies & TV Favorites',
-  movies = []
+  movies
 }) => {
+  const movieList = (movies || []);
+
   return (
     <div className="nook-panel">
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -28,16 +30,16 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
           <Clapperboard size={20} color="var(--accent-color)" />
           <span>{title}</span>
         </div>
-        <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>({movies.length})</span>
+        <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>({movieList.length})</span>
       </div>
 
-      {movies.length === 0 ? (
+      {movieList.length === 0 ? (
         <p style={{ opacity: 0.6, fontSize: '0.85rem', textAlign: 'center', padding: '1rem 0', margin: 0 }}>
           No favorite movies or TV shows added yet 🍿
         </p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '1rem', justifyContent: 'start' }}>
-          {movies.map((m, idx) => (
+          {movieList.map((m, idx) => (
             <div
               key={m.id || idx}
               style={{
