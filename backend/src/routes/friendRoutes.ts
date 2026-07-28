@@ -12,13 +12,15 @@ router.get('/list', authenticateToken, async (req: AuthenticatedRequest, res: Re
 
     // Confirmed friends
     const friends = await query<any>(
-      `SELECT f.id as friendship_id, f.is_favorite, f.top_position, f.created_at,
+      `SELECT f.id as friendship_id, f.created_at, f.top_position,
+              (CASE WHEN f.user_id = ? THEN COALESCE(f.user_is_favorite, f.is_favorite, 0) ELSE COALESCE(f.friend_is_favorite, 0) END) as is_favorite,
+              (CASE WHEN f.user_id = ? THEN COALESCE(f.friend_is_favorite, 0) ELSE COALESCE(f.user_is_favorite, f.is_favorite, 0) END) as favorited_you,
               u.id as friend_user_id, u.username, u.display_name, u.avatar_url, u.status_message
        FROM friends f
        JOIN users u ON (f.friend_id = u.id OR f.user_id = u.id) AND u.id != ?
        WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted'
-       ORDER BY f.is_favorite DESC, f.top_position ASC, u.display_name ASC`,
-      [userId, userId, userId]
+       ORDER BY is_favorite DESC, f.top_position ASC, u.display_name ASC`,
+      [userId, userId, userId, userId, userId]
     );
 
     // Pending incoming friend requests
@@ -115,8 +117,13 @@ router.post('/favorites', authenticateToken, async (req: AuthenticatedRequest, r
 
     for (const f of favorites) {
       await execute(
-        'UPDATE friends SET is_favorite = ?, top_position = ? WHERE id = ? AND (user_id = ? OR friend_id = ?)',
-        [f.is_favorite ? 1 : 0, f.top_position || 0, f.friendship_id, userId, userId]
+        `UPDATE friends 
+         SET user_is_favorite = (CASE WHEN user_id = ? THEN ? ELSE user_is_favorite END),
+             friend_is_favorite = (CASE WHEN friend_id = ? THEN ? ELSE friend_is_favorite END),
+             is_favorite = (CASE WHEN user_id = ? THEN ? ELSE is_favorite END),
+             top_position = ?
+         WHERE id = ? AND (user_id = ? OR friend_id = ?)`,
+        [userId, f.is_favorite ? 1 : 0, userId, f.is_favorite ? 1 : 0, userId, f.is_favorite ? 1 : 0, f.top_position || 0, f.friendship_id, userId, userId]
       );
     }
 

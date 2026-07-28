@@ -229,6 +229,14 @@ const migrations: Migration[] = [
         );
       `);
     }
+  },
+  {
+    version: 7,
+    name: 'v1.9.0_unidirectional_friend_favorites',
+    up: async () => {
+      try { await execute('ALTER TABLE friends ADD COLUMN user_is_favorite INTEGER DEFAULT 0'); } catch (e) {}
+      try { await execute('ALTER TABLE friends ADD COLUMN friend_is_favorite INTEGER DEFAULT 0'); } catch (e) {}
+    }
   }
 ];
 

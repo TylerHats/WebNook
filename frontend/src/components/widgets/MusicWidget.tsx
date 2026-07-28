@@ -145,6 +145,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
               {activeTrack.type === 'spotify' && (
                 <div style={{ borderRadius: '12px', overflow: 'hidden' }}>
                   <iframe
+                    key={activeTrack.url}
                     title="Spotify Track"
                     src={getSpotifyEmbedUrl(activeTrack.url)}
                     width="100%"

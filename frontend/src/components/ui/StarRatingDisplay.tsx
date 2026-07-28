@@ -22,10 +22,10 @@ export const StarRatingDisplay: React.FC<StarRatingDisplayProps> = ({
     } else if (diff >= 0.25) {
       // Half Star / Partial Star
       stars.push(
-        <div key={i} style={{ position: 'relative', display: 'inline-block', width: `${size}px`, height: `${size}px` }}>
-          <Star size={size} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', top: 0, left: 0 }} />
-          <div style={{ width: '50%', overflow: 'hidden', position: 'absolute', top: 0, left: 0 }}>
-            <Star size={size} fill="#facc15" color="#facc15" />
+        <div key={i} style={{ position: 'relative', width: `${size}px`, height: `${size}px`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0 }}>
+          <Star size={size} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', top: 0, left: 0, display: 'block' }} />
+          <div style={{ width: '50%', height: `${size}px`, overflow: 'hidden', position: 'absolute', top: 0, left: 0, display: 'block' }}>
+            <Star size={size} fill="#facc15" color="#facc15" style={{ display: 'block' }} />
           </div>
         </div>
       );

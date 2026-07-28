@@ -244,7 +244,14 @@ export const FriendsPage: React.FC = () => {
                     </Link>
                     {f.is_favorite && <Star size={14} fill="#eab308" color="#eab308" />}
                   </div>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>@{f.username}</div>
+                  <div style={{ fontSize: '0.75rem', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <span style={{ opacity: 0.6 }}>@{f.username}</span>
+                    {f.favorited_you ? (
+                      <span style={{ fontSize: '0.68rem', background: 'rgba(234, 179, 8, 0.18)', color: '#facc15', border: '1px solid rgba(234, 179, 8, 0.4)', padding: '0.1rem 0.4rem', borderRadius: '10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }} title="This friend added you to their Top Friends grid!">
+                        <Sparkles size={10} /> Favorited You
+                      </span>
+                    ) : null}
+                  </div>
                   {f.status_message && (
                     <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {f.status_message}

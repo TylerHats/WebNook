@@ -342,20 +342,29 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           transition: 'all 0.2s ease'
         }}>
           {/* User Header Preview */}
-          <div className="nook-panel" style={{ marginBottom: '1.5rem', padding: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <div className="nook-panel" style={{ marginBottom: '1.5rem', position: 'relative', overflow: 'hidden', padding: 0 }}>
+            {user?.banner_url ? (
+              <div style={{ height: '180px', backgroundImage: `url(${user.banner_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+            ) : (
+              <div style={{ height: '180px', background: 'linear-gradient(135deg, var(--accent-color) 0%, #a855f7 100%)' }} />
+            )}
+
+            <div style={{ padding: '1.5rem', marginTop: '-50px', display: 'flex', gap: '1.25rem', alignItems: 'flex-end' }}>
               <img
-                src={user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'}
+                src={user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
                 alt=""
-                style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-color)' }}
+                style={{ width: '110px', height: '110px', borderRadius: '50%', border: '4px solid var(--bg-panel-solid)', objectFit: 'cover', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}
               />
               <div>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, color: 'var(--accent-color)' }}>
                   {user?.display_name || user?.username || 'My WebNook Space'}
                 </h1>
-                <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: '0.2rem 0 0' }}>
-                  {user?.status_message || 'Welcome to my cozy nook! ✨'}
-                </p>
+                <p style={{ opacity: 0.7, fontSize: '0.95rem', margin: '0.2rem 0 0' }}>@{user?.username || 'user'}</p>
+                {user?.status_message && (
+                  <p style={{ fontSize: '0.85rem', marginTop: '0.4rem', fontStyle: 'italic', color: 'var(--accent-color)' }}>
+                    "{user.status_message}"
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -366,7 +375,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
               {cardVisibility.bio !== false && (
                 <div className="nook-panel">
                   <div className="nook-panel-header">{cardTitles.bio || 'About Me & Bio'}</div>
-                  <p style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                     {user?.bio || 'Passionate web builder, gamer, music lover, and cozy space creator.'}
                   </p>
                 </div>
@@ -399,6 +408,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
                 <TopFriendsGrid
                   title={cardTitles.friends || 'Top Friends'}
                   topFriends={nookSettings?.top_friends || []}
+                  ownerUsername={user?.username || 'User'}
                 />
               )}
 
@@ -418,16 +428,18 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
                   storygraphUsername={nookSettings?.storygraph_username}
                 />
               )}
-
-              {/* Guestbook Widget */}
-              {cardVisibility.guestbook !== false && (
-                <GuestbookWidget
-                  title={cardTitles.guestbook || 'Guestbook & Comments'}
-                  nookOwnerId={user?.id || 1}
-                />
-              )}
             </div>
           </div>
+
+          {/* Full Width Bottom Guestbook Card */}
+          {cardVisibility.guestbook !== false && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <GuestbookWidget
+                title={cardTitles.guestbook || 'Guestbook & Comments'}
+                nookUsername={user?.username || 'user'}
+              />
+            </div>
+          )}
         </div>
 
         {/* Layer 2: Above Cards Stickers */}

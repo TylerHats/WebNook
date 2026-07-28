@@ -375,8 +375,14 @@ router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) =>
       await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['installed_commit_sha', String(targetVersion)]);
     }
 
+    // Schedule container process restart to reload Node.js process & migrations
+    setTimeout(() => {
+      console.log('[Self-Updater] Restarting container process to apply update...');
+      process.exit(0);
+    }, 1200);
+
     return res.json({
-      message: `Update applied successfully! System running version ${targetVersion || 'latest'}.`
+      message: `Update applied! WebNook container is restarting now (please refresh your browser in 5 seconds).`
     });
   } catch (err: any) {
     return res.status(500).json({ error: `Failed to apply update: ${err.message}` });
