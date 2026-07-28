@@ -488,7 +488,7 @@ export const NookCustomizerPage: React.FC = () => {
         user={user}
         favoriteMovies={favoriteMovies}
         favoriteBooks={favoriteBooks}
-        topFriends={user?.top_friends || []}
+        topFriends={(user as any)?.top_friends || []}
         nookSettings={{
           steam_id64: steamId64,
           steam_display_mode: steamDisplayMode,
