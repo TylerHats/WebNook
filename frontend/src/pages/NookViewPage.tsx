@@ -5,6 +5,9 @@ import { TopFriendsGrid } from '../components/nook/TopFriendsGrid';
 import { MusicWidget } from '../components/widgets/MusicWidget';
 import { MoviesWidget } from '../components/widgets/MoviesWidget';
 import { BooksWidget } from '../components/widgets/BooksWidget';
+import { SteamWidget } from '../components/widgets/SteamWidget';
+import { GuestbookWidget } from '../components/nook/GuestbookWidget';
+import { StickerCanvas } from '../components/nook/StickerCanvas';
 import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
