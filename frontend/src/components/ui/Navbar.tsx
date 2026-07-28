@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { User, Palette, Settings, Shield, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { User, Palette, Settings, Shield, LogOut, LogIn, UserPlus, Users } from 'lucide-react';
+import { NotificationDropdown } from './NotificationDropdown';
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -48,6 +49,10 @@ export const Navbar: React.FC = () => {
               <User size={18} />
               <span>My Nook</span>
             </Link>
+            <Link to="/friends" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Users size={18} />
+              <span>Friends</span>
+            </Link>
             <Link to="/customize" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Palette size={18} />
               <span>Customizer</span>
@@ -62,6 +67,7 @@ export const Navbar: React.FC = () => {
                 <span>Admin</span>
               </Link>
             )}
+            <NotificationDropdown />
             <button
               onClick={() => { logout(); navigate('/login'); }}
               className="btn-secondary"

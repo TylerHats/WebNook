@@ -166,6 +166,39 @@ const migrations: Migration[] = [
         );
       `);
     }
+  },
+  {
+    version: 4,
+    name: 'v1.2.0_features_and_notifications',
+    up: async () => {
+      await execute(`
+        CREATE TABLE IF NOT EXISTS notifications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL,
+          sender_id INTEGER,
+          title TEXT,
+          message TEXT,
+          link_url TEXT,
+          is_read INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+
+      try { await execute('ALTER TABLE users ADD COLUMN notify_email_guestbook INTEGER DEFAULT 1'); } catch (e) {}
+      try { await execute('ALTER TABLE users ADD COLUMN notify_email_friends INTEGER DEFAULT 1'); } catch (e) {}
+
+      try { await execute('ALTER TABLE nooks ADD COLUMN steam_id64 TEXT DEFAULT ""'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN spotify_track_url TEXT DEFAULT ""'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN apple_music_url TEXT DEFAULT ""'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN card_visibility_json TEXT DEFAULT "{}"'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN card_colors_json TEXT DEFAULT "{}"'); } catch (e) {}
+
+      try { await execute('ALTER TABLE nook_stickers ADD COLUMN layer TEXT DEFAULT "above_cards"'); } catch (e) {}
+
+      try { await execute('ALTER TABLE friends ADD COLUMN is_favorite INTEGER DEFAULT 0'); } catch (e) {}
+    }
   }
 ];
 

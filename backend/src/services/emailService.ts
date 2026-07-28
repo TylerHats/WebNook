@@ -8,6 +8,7 @@ interface EmailOptions {
   bodyHtml: string;
   actionUrl?: string;
   actionText?: string;
+  safetyUrl?: string;
 }
 
 export async function getSmtpSettings() {
@@ -77,10 +78,18 @@ export async function sendStyledEmail(options: EmailOptions): Promise<boolean> {
         <div class="content">
           <div class="title">${options.title}</div>
           ${options.bodyHtml}
-          ${options.actionUrl && options.actionText ? `<div style="text-align: center;"><a href="${options.actionUrl}" class="btn">${options.actionText}</a></div>` : ''}
+          ${options.actionUrl && options.actionText ? `<div style="text-align: center; margin: 24px 0;"><a href="${options.actionUrl}" class="btn">${options.actionText}</a></div>` : ''}
+          ${options.safetyUrl ? `
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+              <p style="font-size: 12px; color: #9ca3af; margin: 0; word-break: break-all;">
+                If the button above does not work, copy and paste this link into your browser:<br>
+                <a href="${options.safetyUrl}" style="color: #6366f1; text-decoration: underline;">${options.safetyUrl}</a>
+              </p>
+            </div>
+          ` : ''}
         </div>
         <div class="footer">
-          &copy; ${new Date().getFullYear()} ${appName} Platform. Automated System Notification.
+          &copy; ${new Date().getFullYear()} ${appName}
         </div>
       </div>
     </body>
@@ -149,15 +158,10 @@ export async function sendEmailVerificationEmail(email: string, username: string
     title: `Welcome to WebNook! Verify Your Email`,
     bodyHtml: `
       <p>Hello @<strong>${username}</strong>,</p>
-      <p>Thank you for joining our platform! Please confirm your email address to unlock full access to customize and launch your Nook.</p>
-      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
-        <p style="font-size: 12px; color: #9ca3af; margin: 0; word-break: break-all;">
-          If the button above does not work, copy and paste this link into your browser:<br>
-          <a href="${verifyUrl}" style="color: #6366f1; text-decoration: underline;">${verifyUrl}</a>
-        </p>
-      </div>
+      <p>Thank you for joining! Please confirm your email address to unlock full access to customize and launch your Nook.</p>
     `,
     actionUrl: verifyUrl,
-    actionText: 'Verify Email Address'
+    actionText: 'Verify Email Address',
+    safetyUrl: verifyUrl
   });
 }

@@ -56,6 +56,9 @@ app.use('/branding', (req, res, next) => {
   next();
 });
 
+import notificationRoutes from './routes/notificationRoutes';
+import friendRoutes from './routes/friendRoutes';
+
 // API Routes
 app.use('/api/setup', setupRoutes);
 app.use('/api/auth', authRoutes);
@@ -64,6 +67,8 @@ app.use('/api/nook', nookRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/friends', friendRoutes);
 
 // Public Branding Configuration Endpoint
 app.get('/api/branding/public', async (req, res) => {

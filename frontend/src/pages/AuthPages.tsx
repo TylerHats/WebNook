@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { KeyRound, ShieldCheck, Mail, Lock, User, Sparkles } from 'lucide-react';
+import { PasswordComplexityIndicator } from '../components/ui/PasswordComplexityIndicator';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -264,6 +265,7 @@ export const RegisterPage: React.FC = () => {
               onChange={e => setPassword(e.target.value)}
               style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
             />
+            <PasswordComplexityIndicator password={password} />
           </div>
 
           <button type="submit" className="btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }} disabled={isLoading}>

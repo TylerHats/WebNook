@@ -159,9 +159,9 @@ export const SetupWizardPage: React.FC = () => {
               </div>
             </div>
 
-            <button onClick={() => setStep(2)} className="btn-primary" style={{ marginTop: '0.5rem', alignSelf: 'flex-end' }}>
+            <button onClick={() => setStep(2)} className="btn-primary" style={{ marginTop: '0.5rem', alignSelf: 'flex-end', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
               <span>Next: Admin Account</span>
-              <ArrowRight size={16} />
+              <ArrowRight size={16} style={{ flexShrink: 0 }} />
             </button>
           </div>
         )}
@@ -170,7 +170,7 @@ export const SetupWizardPage: React.FC = () => {
         {step === 2 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Shield size={20} color="var(--accent-color)" />
+              <Shield size={20} color="var(--accent-color)" style={{ flexShrink: 0 }} />
               <span>Create Initial Administrator Account</span>
             </h3>
 
@@ -223,9 +223,9 @@ export const SetupWizardPage: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
               <button onClick={() => setStep(1)} className="btn-secondary">Back</button>
-              <button onClick={() => setStep(3)} className="btn-primary">
+              <button onClick={() => setStep(3)} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                 <span>Next: Confirmation</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={16} style={{ flexShrink: 0 }} />
               </button>
             </div>
           </div>
@@ -235,7 +235,7 @@ export const SetupWizardPage: React.FC = () => {
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CheckCircle2 size={20} color="#22c55e" />
+              <CheckCircle2 size={20} color="#22c55e" style={{ flexShrink: 0 }} />
               <span>Confirm & Launch Platform</span>
             </h3>
 
@@ -248,8 +248,8 @@ export const SetupWizardPage: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
               <button onClick={() => setStep(2)} className="btn-secondary">Back</button>
-              <button onClick={handleCompleteSetup} className="btn-primary" disabled={isSubmitting}>
-                <CheckCircle2 size={18} />
+              <button onClick={handleCompleteSetup} className="btn-primary" disabled={isSubmitting} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
                 <span>{isSubmitting ? 'Completing Setup...' : 'Complete & Launch Platform'}</span>
               </button>
             </div>

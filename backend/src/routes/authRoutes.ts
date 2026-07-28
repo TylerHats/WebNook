@@ -7,7 +7,58 @@ import { JWT_SECRET, authenticateToken, AuthenticatedRequest } from '../middlewa
 import { authenticator } from 'otplib';
 import { sendEmailVerificationEmail } from '../services/emailService';
 
+import { query } from '../db/connection';
+
 const router = Router();
+
+export async function getPasswordRequirements() {
+  const rows = await query<any>('SELECT key, value FROM system_settings WHERE key LIKE "pwd_%"');
+  const settings: Record<string, string> = {
+    pwd_min_length: '8',
+    pwd_require_uppercase: 'true',
+    pwd_require_lowercase: 'true',
+    pwd_require_number: 'true',
+    pwd_require_special: 'false'
+  };
+  rows.forEach(r => settings[r.key] = r.value);
+  return {
+    minLength: parseInt(settings.pwd_min_length, 10) || 8,
+    requireUppercase: settings.pwd_require_uppercase === 'true',
+    requireLowercase: settings.pwd_require_lowercase === 'true',
+    requireNumber: settings.pwd_require_number === 'true',
+    requireSpecial: settings.pwd_require_special === 'true'
+  };
+}
+
+export async function validatePasswordComplexity(password: string): Promise<string | null> {
+  const rules = await getPasswordRequirements();
+  if (password.length < rules.minLength) {
+    return `Password must be at least ${rules.minLength} characters long`;
+  }
+  if (rules.requireUppercase && !/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter (A-Z)';
+  }
+  if (rules.requireLowercase && !/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter (a-z)';
+  }
+  if (rules.requireNumber && !/[0-9]/.test(password)) {
+    return 'Password must contain at least one number (0-9)';
+  }
+  if (rules.requireSpecial && !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return 'Password must contain at least one special character';
+  }
+  return null;
+}
+
+// Get Password Requirements Endpoint
+router.get('/password-requirements', async (req: Request, res: Response) => {
+  try {
+    const requirements = await getPasswordRequirements();
+    return res.json({ requirements });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch password requirements' });
+  }
+});
 
 // Register new user
 router.post('/register', async (req: Request, res: Response) => {
@@ -16,6 +67,11 @@ router.post('/register', async (req: Request, res: Response) => {
 
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'Username, email, and password are required' });
+    }
+
+    const pwdError = await validatePasswordComplexity(password);
+    if (pwdError) {
+      return res.status(400).json({ error: pwdError });
     }
 
     const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
@@ -217,43 +273,30 @@ router.get('/verify-email', async (req: Request, res: Response) => {
     }
 
     const record = await queryOne<any>(
-      'SELECT * FROM email_verifications WHERE token = ? AND expires_at > ?',
-      [tokenParam, new Date().toISOString()]
+      'SELECT * FROM email_verifications WHERE token = ?',
+      [tokenParam]
     );
 
-    if (!record) {
-      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    if (record) {
+      // Check if user is already verified
+      const user = await queryOne<any>('SELECT is_email_verified FROM users WHERE id = ?', [record.user_id]);
+      if (user && user.is_email_verified) {
+        await execute('DELETE FROM email_verifications WHERE token = ?', [tokenParam]);
+        return res.json({ already_verified: true, message: 'Your email address is already verified! ✨' });
+      }
+
+      // Verify token freshness
+      if (new Date(record.expires_at).getTime() < Date.now()) {
+        return res.status(400).json({ error: 'Verification token has expired. Please request a new verification link.' });
+      }
+
+      await execute('UPDATE users SET is_email_verified = 1 WHERE id = ?', [record.user_id]);
+      await execute('DELETE FROM email_verifications WHERE token = ?', [tokenParam]);
+
+      return res.json({ message: 'Email address verified successfully! You may now complete your Nook setup.' });
     }
 
-    await execute('UPDATE users SET is_email_verified = 1 WHERE id = ?', [record.user_id]);
-    await execute('DELETE FROM email_verifications WHERE token = ?', [tokenParam]);
-
-    return res.json({ message: 'Email address verified successfully! You may now complete your Nook setup.' });
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to verify email' });
-  }
-});
-
-router.post('/verify-email', async (req: Request, res: Response) => {
-  try {
-    const { token } = req.body;
-    if (!token) {
-      return res.status(400).json({ error: 'Verification token is required' });
-    }
-
-    const record = await queryOne<any>(
-      'SELECT * FROM email_verifications WHERE token = ? AND expires_at > ?',
-      [token, new Date().toISOString()]
-    );
-
-    if (!record) {
-      return res.status(400).json({ error: 'Invalid or expired verification token' });
-    }
-
-    await execute('UPDATE users SET is_email_verified = 1 WHERE id = ?', [record.user_id]);
-    await execute('DELETE FROM email_verifications WHERE token = ?', [token]);
-
-    return res.json({ message: 'Email address verified successfully!' });
+    return res.status(400).json({ error: 'Invalid or expired verification link' });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to verify email' });
   }
@@ -328,6 +371,11 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     const { reset_token, new_password } = req.body;
     if (!reset_token || !new_password) {
       return res.status(400).json({ error: 'Reset token and new password are required' });
+    }
+
+    const pwdError = await validatePasswordComplexity(new_password);
+    if (pwdError) {
+      return res.status(400).json({ error: pwdError });
     }
 
     const resetRecord = await queryOne<any>(

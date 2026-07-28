@@ -21,6 +21,10 @@ export async function authenticateToken(req: AuthenticatedRequest, res: Response
     token = req.cookies.token;
   }
 
+  if (!token && req.query.token) {
+    token = String(req.query.token);
+  }
+
   if (!token) {
     return res.status(401).json({ error: 'Authentication required' });
   }

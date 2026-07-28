@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { TopFriendsGrid } from '../components/nook/TopFriendsGrid';
-import { MusicPlayerWidget } from '../components/nook/MusicPlayerWidget';
-import { SpotifyWidget } from '../components/nook/SpotifyWidget';
-import { SteamWidget } from '../components/nook/SteamWidget';
+import { MusicWidget } from '../components/widgets/MusicWidget';
+import { SteamWidget } from '../components/widgets/SteamWidget';
 import { GuestbookWidget } from '../components/nook/GuestbookWidget';
 import { StickerCanvas } from '../components/nook/StickerCanvas';
-import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3 } from 'lucide-react';
+import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 export const NookViewPage: React.FC = () => {
@@ -45,17 +44,15 @@ export const NookViewPage: React.FC = () => {
 
   const handleSendFriendRequest = async () => {
     if (!token) {
-      showToast('Please log in to send a friend request!', 'error');
+      showToast('Please log in to send a friend request.', 'error');
       return;
     }
+
     try {
-      const res = await fetch('/api/social/friends/request', {
+      const res = await fetch('/api/friends/request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ target_username: targetUsername })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ username: targetUsername })
       });
       const data = await res.json();
       if (res.ok) {
@@ -70,19 +67,19 @@ export const NookViewPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '4rem', opacity: 0.7 }}>
-        <Sparkles size={36} className="animate-spin" style={{ margin: '0 auto 1rem' }} />
-        <p>Loading Nook...</p>
+      <div style={{ textAlign: 'center', padding: '5rem', opacity: 0.7 }}>
+        <Sparkles size={36} className="animate-spin" style={{ margin: '0 auto 1rem', color: 'var(--accent-color)' }} />
+        <p>Loading Nook profile...</p>
       </div>
     );
   }
 
   if (!profileData || profileData.error) {
     return (
-      <div style={{ textAlign: 'center', padding: '4rem' }}>
+      <div style={{ textAlign: 'center', padding: '5rem' }}>
         <h2>Nook Not Found</h2>
-        <p style={{ opacity: 0.7, margin: '1rem 0' }}>The nook @{targetUsername} does not exist or has been moved.</p>
-        <Link to="/" className="btn-primary">Return Home</Link>
+        <p>The profile @{targetUsername} could not be found.</p>
+        <Link to="/" className="btn-primary" style={{ display: 'inline-flex', marginTop: '1rem' }}>Return Home</Link>
       </div>
     );
   }
@@ -95,11 +92,11 @@ export const NookViewPage: React.FC = () => {
     return (
       <div className={themeClass} style={{ minHeight: '90vh', padding: '2rem 1rem' }}>
         <div style={{ maxWidth: '550px', margin: '0 auto', textAlign: 'center' }} className="nook-panel">
-          <div style={{ width: '80px', height: '80px', margin: '0 auto 1rem', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ShieldAlert size={40} color="#ef4444" />
+          <div style={{ width: '80px', height: '80px', margin: '0 auto 1rem', borderRadius: '50%', background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-color)' }}>
+            <Sparkles size={40} />
           </div>
-          <h2 style={{ marginBottom: '0.5rem' }}>@{profileData.owner.username}'s Nook is Private</h2>
-          <p style={{ opacity: 0.8, marginBottom: '1.5rem', lineHeight: 1.5 }}>
+          <h2 style={{ marginBottom: '0.5rem' }}>@{profileData.owner.username}'s Cozy Nook</h2>
+          <p style={{ opacity: 0.85, marginBottom: '1.5rem', lineHeight: 1.6, fontSize: '0.95rem' }}>
             {profileData.message}
           </p>
           {user && !isOwner && (
@@ -113,7 +110,18 @@ export const NookViewPage: React.FC = () => {
     );
   }
 
-  const { owner, nookSettings, widgets, stickers, topFriends } = profileData;
+  const { owner, nookSettings, stickers, topFriends } = profileData;
+
+  // Parse card visibility toggles
+  let cardVis: Record<string, boolean> = { bio: true, music: true, friends: true, guestbook: true, steam: true };
+  if (nookSettings?.card_visibility_json) {
+    try {
+      const parsed = typeof nookSettings.card_visibility_json === 'string'
+        ? JSON.parse(nookSettings.card_visibility_json)
+        : nookSettings.card_visibility_json;
+      cardVis = { ...cardVis, ...parsed };
+    } catch (e) {}
+  }
 
   return (
     <div className={themeClass} style={{ minHeight: '100vh', position: 'relative' }}>
@@ -122,10 +130,10 @@ export const NookViewPage: React.FC = () => {
         <style dangerouslySetInnerHTML={{ __html: nookSettings.custom_css }} />
       )}
 
-      {/* Interactive Sticker Overlay */}
-      {stickers && <StickerCanvas stickers={stickers} />}
+      {/* Layer 1: Behind Cards Sticker Overlay */}
+      {stickers && <StickerCanvas stickers={stickers} targetLayer="behind_cards" />}
 
-      <div className="nook-container">
+      <div className="nook-container" style={{ position: 'relative', zIndex: 10 }}>
         {/* Nook Header Banner & User Bio */}
         <div className="nook-panel" style={{ marginBottom: '1.5rem', position: 'relative', overflow: 'hidden', padding: 0 }}>
           {owner.banner_url ? (
@@ -144,7 +152,6 @@ export const NookViewPage: React.FC = () => {
               <div>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   {owner.display_name || owner.username}
-                  {owner.status_emoji && <span>{owner.status_emoji}</span>}
                 </h1>
                 <p style={{ opacity: 0.7, fontSize: '0.95rem' }}>@{owner.username}</p>
                 {owner.status_message && (
@@ -175,36 +182,79 @@ export const NookViewPage: React.FC = () => {
         <div className="nook-grid">
           {/* Left Column Widgets */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {owner.bio && (
+            {cardVis.bio !== false && owner.bio && (
               <div className="nook-panel">
                 <div className="nook-panel-header">
                   <Heart size={20} />
-                  <span>About {owner.display_name}</span>
+                  <span>About {owner.display_name || owner.username}</span>
                 </div>
                 <p style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{owner.bio}</p>
               </div>
             )}
 
-            <MusicPlayerWidget
-              title={nookSettings?.bg_music_title || 'Nook Anthem'}
-              audioUrl={nookSettings?.bg_music_url || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'}
-            />
-
-            <SpotifyWidget />
+            {cardVis.music !== false && (
+              <MusicWidget
+                bgMusicUrl={nookSettings?.bg_music_url}
+                bgMusicTitle={nookSettings?.bg_music_title}
+                spotifyTrackUrl={nookSettings?.spotify_track_url}
+                appleMusicUrl={nookSettings?.apple_music_url}
+              />
+            )}
           </div>
 
           {/* Right Column Widgets */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <TopFriendsGrid friends={topFriends || []} ownerUsername={owner.username} />
-            <SteamWidget />
+            {cardVis.friends !== false && (
+              <div className="nook-panel">
+                <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Users size={20} color="var(--accent-color)" />
+                    <span>Top Friends</span>
+                  </div>
+                  <Link to="/friends" style={{ fontSize: '0.75rem', color: 'var(--accent-color)', textDecoration: 'none' }}>
+                    View All →
+                  </Link>
+                </div>
+
+                {(!topFriends || topFriends.length === 0) ? (
+                  <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center', padding: '1rem 0' }}>
+                    No favorited top friends yet ✨
+                  </p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.75rem' }}>
+                    {topFriends.map((f: any) => (
+                      <Link key={f.id} to={`/nook/${f.username}`} style={{ textDecoration: 'none', color: 'inherit', textAlign: 'center' }}>
+                        <img
+                          src={f.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                          alt={f.username}
+                          style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.3rem' }}
+                        />
+                        <div style={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {f.display_name || f.username}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {cardVis.steam !== false && nookSettings?.steam_id64 && (
+              <SteamWidget steamId64={nookSettings.steam_id64} />
+            )}
           </div>
 
           {/* Full Width Guestbook Widget */}
-          <div className="nook-full-col">
-            <GuestbookWidget nookUsername={owner.username} />
-          </div>
+          {cardVis.guestbook !== false && (
+            <div className="nook-full-col">
+              <GuestbookWidget nookUsername={owner.username} />
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Layer 2: Above Cards Sticker Overlay */}
+      {stickers && <StickerCanvas stickers={stickers} targetLayer="above_cards" />}
     </div>
   );
 };

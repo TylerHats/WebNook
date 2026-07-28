@@ -221,27 +221,15 @@ export const UserOnboardingPage: React.FC = () => {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0.75rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Emoji</label>
-                <input
-                  type="text"
-                  value={statusEmoji}
-                  onChange={e => setStatusEmoji(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', textAlign: 'center', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Status Message</label>
-                <input
-                  type="text"
-                  value={statusMessage}
-                  onChange={e => setStatusMessage(e.target.value)}
-                  placeholder="e.g. Listening to synthwave music..."
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-                />
-              </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Status Message</label>
+              <input
+                type="text"
+                value={statusMessage}
+                onChange={e => setStatusMessage(e.target.value)}
+                placeholder="e.g. Listening to music... ✨"
+                style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+              />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>

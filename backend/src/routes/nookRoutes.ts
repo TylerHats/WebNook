@@ -81,7 +81,7 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
           accent_color: nookSettings.accent_color,
           text_color: nookSettings.text_color
         },
-        message: 'This Nook is private. Request friendship to view standard content.'
+        message: `Shh... @${owner.username}'s Nook is currently private & cozy! Send a friend request to step inside and explore their space ✨`
       });
     }
 
@@ -145,6 +145,8 @@ const uploadMedia = multer({
   limits: { fileSize: 25 * 1024 * 1024 } // 25MB max file size
 });
 
+import { processImageUpload, processAudioUpload } from '../services/mediaService';
+
 // Upload User Avatar Image File
 router.post('/upload/avatar', authenticateToken, uploadMedia.single('avatar'), async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -152,13 +154,14 @@ router.post('/upload/avatar', authenticateToken, uploadMedia.single('avatar'), a
       return res.status(400).json({ error: 'No avatar image file uploaded' });
     }
 
-    const avatarUrl = `/uploads/${req.file.filename}`;
+    const webpFilename = await processImageUpload(req.file.path, uploadsDir, 'avatar');
+    const avatarUrl = `/uploads/${webpFilename}`;
     await execute('UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
       avatarUrl,
       req.user!.id
     ]);
 
-    return res.json({ message: 'Avatar image uploaded successfully', avatar_url: avatarUrl });
+    return res.json({ message: 'Avatar image uploaded & processed successfully', avatar_url: avatarUrl });
   } catch (err: any) {
     console.error('Avatar upload error:', err);
     return res.status(500).json({ error: 'Failed to upload avatar image' });
@@ -172,16 +175,34 @@ router.post('/upload/banner', authenticateToken, uploadMedia.single('banner'), a
       return res.status(400).json({ error: 'No banner image file uploaded' });
     }
 
-    const bannerUrl = `/uploads/${req.file.filename}`;
+    const webpFilename = await processImageUpload(req.file.path, uploadsDir, 'banner');
+    const bannerUrl = `/uploads/${webpFilename}`;
     await execute('UPDATE users SET banner_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
       bannerUrl,
       req.user!.id
     ]);
 
-    return res.json({ message: 'Banner image uploaded successfully', banner_url: bannerUrl });
+    return res.json({ message: 'Banner image uploaded & processed successfully', banner_url: bannerUrl });
   } catch (err: any) {
     console.error('Banner upload error:', err);
     return res.status(500).json({ error: 'Failed to upload banner image' });
+  }
+});
+
+// Upload Custom Sticker Image File
+router.post('/upload/sticker', authenticateToken, uploadMedia.single('sticker'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No sticker image file uploaded' });
+    }
+
+    const webpFilename = await processImageUpload(req.file.path, uploadsDir, 'sticker');
+    const stickerUrl = `/uploads/${webpFilename}`;
+
+    return res.json({ message: 'Custom sticker uploaded successfully', sticker_url: stickerUrl });
+  } catch (err: any) {
+    console.error('Sticker upload error:', err);
+    return res.status(500).json({ error: 'Failed to upload custom sticker' });
   }
 });
 
@@ -192,13 +213,14 @@ router.post('/upload/music', authenticateToken, uploadMedia.single('music'), asy
       return res.status(400).json({ error: 'No audio file uploaded' });
     }
 
-    const musicUrl = `/uploads/${req.file.filename}`;
+    const mp3Filename = await processAudioUpload(req.file.path, uploadsDir, 'music');
+    const musicUrl = `/uploads/${mp3Filename}`;
     await execute('UPDATE nooks SET bg_music_url = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?', [
       musicUrl,
       req.user!.id
     ]);
 
-    return res.json({ message: 'Background music audio file uploaded successfully', bg_music_url: musicUrl });
+    return res.json({ message: 'Background music uploaded & processed to standard MP3', bg_music_url: musicUrl });
   } catch (err: any) {
     console.error('Music upload error:', err);
     return res.status(500).json({ error: 'Failed to upload audio file' });
@@ -245,11 +267,11 @@ router.post('/onboarding/complete', authenticateToken, async (req: Authenticated
   }
 });
 
-// Update Profile Info (Avatar, Banner, Bio, Status)
+// Update Profile Info (Avatar, Banner, Bio, Status, Notification Preferences)
 router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { display_name, bio, avatar_url, banner_url, status_message, status_emoji, privacy_default } = req.body;
+    const { display_name, bio, avatar_url, banner_url, status_message, status_emoji, privacy_default, notify_email_guestbook, notify_email_friends } = req.body;
 
     await execute(
       `UPDATE users SET 
@@ -260,9 +282,22 @@ router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
         status_message = COALESCE(?, status_message), 
         status_emoji = COALESCE(?, status_emoji), 
         privacy_default = COALESCE(?, privacy_default),
+        notify_email_guestbook = COALESCE(?, notify_email_guestbook),
+        notify_email_friends = COALESCE(?, notify_email_friends),
         updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [display_name, bio, avatar_url, banner_url, status_message, status_emoji, privacy_default, userId]
+      [
+        display_name,
+        bio,
+        avatar_url,
+        banner_url,
+        status_message,
+        status_emoji,
+        privacy_default,
+        notify_email_guestbook !== undefined ? (notify_email_guestbook ? 1 : 0) : null,
+        notify_email_friends !== undefined ? (notify_email_friends ? 1 : 0) : null,
+        userId
+      ]
     );
 
     return res.json({ message: 'Profile updated successfully' });
@@ -271,11 +306,27 @@ router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
   }
 });
 
-// Update Nook Customization (Theme, CSS, Colors, Background Music)
+// Update Nook Customization (Theme, CSS, Colors, Music, Steam, Card Visibility & Colors)
 router.put('/customization', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { theme, custom_css, bg_color, text_color, accent_color, bg_music_url, bg_music_title, visibility_nook, visibility_widgets, visibility_guestbook } = req.body;
+    const {
+      theme,
+      custom_css,
+      bg_color,
+      text_color,
+      accent_color,
+      bg_music_url,
+      bg_music_title,
+      visibility_nook,
+      visibility_widgets,
+      visibility_guestbook,
+      steam_id64,
+      spotify_track_url,
+      apple_music_url,
+      card_visibility_json,
+      card_colors_json
+    } = req.body;
 
     await execute(
       `UPDATE nooks SET 
@@ -289,13 +340,36 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         visibility_nook = COALESCE(?, visibility_nook), 
         visibility_widgets = COALESCE(?, visibility_widgets), 
         visibility_guestbook = COALESCE(?, visibility_guestbook), 
+        steam_id64 = COALESCE(?, steam_id64),
+        spotify_track_url = COALESCE(?, spotify_track_url),
+        apple_music_url = COALESCE(?, apple_music_url),
+        card_visibility_json = COALESCE(?, card_visibility_json),
+        card_colors_json = COALESCE(?, card_colors_json),
         updated_at = CURRENT_TIMESTAMP 
        WHERE user_id = ?`,
-      [theme, custom_css, bg_color, text_color, accent_color, bg_music_url, bg_music_title, visibility_nook, visibility_widgets, visibility_guestbook, userId]
+      [
+        theme,
+        custom_css,
+        bg_color,
+        text_color,
+        accent_color,
+        bg_music_url,
+        bg_music_title,
+        visibility_nook,
+        visibility_widgets,
+        visibility_guestbook,
+        steam_id64,
+        spotify_track_url,
+        apple_music_url,
+        typeof card_visibility_json === 'object' ? JSON.stringify(card_visibility_json) : card_visibility_json,
+        typeof card_colors_json === 'object' ? JSON.stringify(card_colors_json) : card_colors_json,
+        userId
+      ]
     );
 
     return res.json({ message: 'Nook customization saved' });
   } catch (err) {
+    console.error('Nook customization error:', err);
     return res.status(500).json({ error: 'Failed to update Nook customization' });
   }
 });
@@ -335,7 +409,7 @@ router.put('/widgets', authenticateToken, async (req: AuthenticatedRequest, res:
   }
 });
 
-// Update Stickers (Add, position, scale, rotate, delete)
+// Update Stickers (Add, position, scale, rotate, layer, delete)
 router.put('/stickers', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -350,8 +424,17 @@ router.put('/stickers', authenticateToken, async (req: AuthenticatedRequest, res
     for (let i = 0; i < stickers.length; i++) {
       const s = stickers[i];
       await execute(
-        'INSERT INTO nook_stickers (user_id, sticker_url, pos_x, pos_y, scale, rotation, z_index) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [userId, s.sticker_url, s.pos_x || 50, s.pos_y || 50, s.scale || 1.0, s.rotation || 0, s.z_index || i + 1]
+        'INSERT INTO nook_stickers (user_id, sticker_url, pos_x, pos_y, scale, rotation, z_index, layer) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          userId,
+          s.sticker_url,
+          s.pos_x || 50,
+          s.pos_y || 50,
+          s.scale || 1.0,
+          s.rotation || 0,
+          s.z_index || i + 1,
+          s.layer || 'above_cards'
+        ]
       );
     }
 

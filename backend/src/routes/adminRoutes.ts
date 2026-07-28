@@ -251,7 +251,12 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
     const channelRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "update_channel"');
     const channel = channelRow?.value || 'stable';
 
-    const currentVersion = '1.0.0';
+    let currentVersion = '1.1.0';
+    try {
+      const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8'));
+      if (rootPkg && rootPkg.version) currentVersion = rootPkg.version;
+    } catch (e) {}
+
     let latestReleaseInfo: any = null;
 
     if (channel === 'stable') {

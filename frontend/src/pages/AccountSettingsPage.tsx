@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { startRegistration } from '@simplewebauthn/browser';
-import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail } from 'lucide-react';
 
 export const AccountSettingsPage: React.FC = () => {
   const { user, token, refreshUser } = useAuth();
@@ -14,6 +14,10 @@ export const AccountSettingsPage: React.FC = () => {
   const [bannerUrl, setBannerUrl] = useState(user?.banner_url || '');
   const [statusMessage, setStatusMessage] = useState(user?.status_message || '');
   const [statusEmoji, setStatusEmoji] = useState(user?.status_emoji || '');
+
+  // Email Notifications Preferences state
+  const [notifyEmailGuestbook, setNotifyEmailGuestbook] = useState((user as any)?.notify_email_guestbook !== 0);
+  const [notifyEmailFriends, setNotifyEmailFriends] = useState((user as any)?.notify_email_friends !== 0);
 
   // TOTP setup state
   const [totpQr, setTotpQr] = useState<string | null>(null);
@@ -28,6 +32,28 @@ export const AccountSettingsPage: React.FC = () => {
       fetchPasskeys();
     }
   }, [token]);
+
+  const handleSaveNotificationPreferences = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/nook/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          notify_email_guestbook: notifyEmailGuestbook,
+          notify_email_friends: notifyEmailFriends
+        })
+      });
+      if (res.ok) {
+        showToast('Email notification preferences saved!', 'success');
+        refreshUser();
+      } else {
+        showToast('Failed to save email preferences', 'error');
+      }
+    } catch (e) {
+      showToast('Error updating notification preferences', 'error');
+    }
+  };
 
   const fetchPasskeys = () => {
     fetch('/api/mfa/passkeys', {
@@ -233,27 +259,15 @@ export const AccountSettingsPage: React.FC = () => {
                   style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <div style={{ width: '80px' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Emoji</label>
-                  <input
-                    type="text"
-                    placeholder="✨"
-                    value={statusEmoji}
-                    onChange={e => setStatusEmoji(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', textAlign: 'center' }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Status Message</label>
-                  <input
-                    type="text"
-                    placeholder="Vibing & listening to music..."
-                    value={statusMessage}
-                    onChange={e => setStatusMessage(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-                  />
-                </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Status Message</label>
+                <input
+                  type="text"
+                  placeholder="Vibing & listening to music..."
+                  value={statusMessage}
+                  onChange={e => setStatusMessage(e.target.value)}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
               </div>
             </div>
 
@@ -376,6 +390,42 @@ export const AccountSettingsPage: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Email Notifications Preferences Card */}
+        <div className="nook-panel">
+          <div className="nook-panel-header">
+            <Mail size={20} />
+            <span>Email Notification Preferences</span>
+          </div>
+          <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
+            Choose which interactions will send styled system emails to your inbox.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.25rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+              <input
+                type="checkbox"
+                checked={notifyEmailGuestbook}
+                onChange={e => setNotifyEmailGuestbook(e.target.checked)}
+              />
+              <span>Send email when someone leaves a guestbook note on my Nook</span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+              <input
+                type="checkbox"
+                checked={notifyEmailFriends}
+                onChange={e => setNotifyEmailFriends(e.target.checked)}
+              />
+              <span>Send email on new friend requests and accepted invitations</span>
+            </label>
+          </div>
+
+          <button onClick={handleSaveNotificationPreferences} className="btn-primary" style={{ alignSelf: 'flex-start' }}>
+            <Save size={16} />
+            <span>Save Email Preferences</span>
+          </button>
         </div>
       </div>
     </div>

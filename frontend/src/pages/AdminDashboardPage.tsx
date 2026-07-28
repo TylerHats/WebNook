@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { PasswordComplexityIndicator } from '../components/ui/PasswordComplexityIndicator';
 import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
@@ -479,19 +480,25 @@ export const AdminDashboardPage: React.FC = () => {
                     <span style={{ background: '#22c55e', color: '#fff', fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '20px', fontWeight: 700 }}>Update Available!</span>
                   )}
                 </div>
-                <p style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                  {updateInfo.latestRelease?.notes}
-                </p>
+                <div style={{ fontSize: '0.85rem', opacity: 0.9, lineHeight: 1.6, fontFamily: 'inherit', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
+                  {updateInfo.latestRelease?.notes ? (
+                    updateInfo.latestRelease.notes.split('\n').map((line: string, idx: number) => {
+                      if (line.startsWith('#')) return <h4 key={idx} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-color)', margin: '0.5rem 0 0.3rem' }}>{line.replace(/^#+\s*/, '')}</h4>;
+                      if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) return <div key={idx} style={{ marginLeft: '0.75rem', marginBottom: '0.25rem' }}>• {line.replace(/^[-•*]\s*/, '')}</div>;
+                      return <p key={idx} style={{ margin: '0 0 0.3rem' }}>{line}</p>;
+                    })
+                  ) : 'You are running the latest version.'}
+                </div>
               </div>
             )}
 
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={checkUpdates} className="btn-secondary">
-                <RefreshCw size={16} />
+              <button onClick={checkUpdates} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                <RefreshCw size={16} style={{ flexShrink: 0 }} />
                 <span>Check GitHub Releases</span>
               </button>
-              <button onClick={handleApplyUpdate} className="btn-primary" disabled={isUpdating}>
-                <CheckCircle2 size={16} />
+              <button onClick={handleApplyUpdate} className="btn-primary" disabled={isUpdating} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
                 <span>{isUpdating ? 'Updating & Migrating DB...' : 'Apply Update & Migrate Database'}</span>
               </button>
             </div>
@@ -722,15 +729,78 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={handleSaveSettings} className="btn-primary">
-                <Save size={16} />
+              <button onClick={handleSaveSettings} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                <Save size={16} style={{ flexShrink: 0 }} />
                 <span>Save SMTP Settings</span>
               </button>
-              <button onClick={handleTestEmail} className="btn-secondary" disabled={isTestingEmail}>
-                <Send size={16} />
+              <button onClick={handleTestEmail} className="btn-secondary" disabled={isTestingEmail} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                <Send size={16} style={{ flexShrink: 0 }} />
                 <span>{isTestingEmail ? 'Sending Test Email...' : 'Send Test Email'}</span>
               </button>
             </div>
+          </div>
+
+          {/* Card 3: Password Complexity Policy Settings */}
+          <div className="nook-panel">
+            <div className="nook-panel-header">
+              <Key size={20} />
+              <span>Password Complexity Policy Settings</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Minimum Length</label>
+                <input
+                  type="number"
+                  min={4}
+                  max={64}
+                  value={settings.pwd_min_length || '8'}
+                  onChange={e => setSettings({ ...settings, pwd_min_length: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.pwd_require_uppercase === 'true'}
+                    onChange={e => setSettings({ ...settings, pwd_require_uppercase: String(e.target.checked) })}
+                  />
+                  <span>Require Uppercase (A-Z)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.pwd_require_lowercase === 'true'}
+                    onChange={e => setSettings({ ...settings, pwd_require_lowercase: String(e.target.checked) })}
+                  />
+                  <span>Require Lowercase (a-z)</span>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.pwd_require_number === 'true'}
+                    onChange={e => setSettings({ ...settings, pwd_require_number: String(e.target.checked) })}
+                  />
+                  <span>Require Number (0-9)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.pwd_require_special === 'true'}
+                    onChange={e => setSettings({ ...settings, pwd_require_special: String(e.target.checked) })}
+                  />
+                  <span>Require Special Character (!@#$)</span>
+                </label>
+              </div>
+            </div>
+            <button onClick={handleSaveSettings} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+              <Save size={16} style={{ flexShrink: 0 }} />
+              <span>Save Password Policy</span>
+            </button>
           </div>
 
           {/* Card 3: Compressed Backup & Schema-Aware Restore Suite */}
@@ -875,15 +945,16 @@ export const AdminDashboardPage: React.FC = () => {
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <input
                     type="password"
-                    placeholder="Enter new password (min 6 chars)"
+                    placeholder="Enter new password"
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     style={{ flex: 1, padding: '0.5rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
                   />
-                  <button onClick={() => handlePasswordResetSubmit(true)} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                  <button onClick={() => handlePasswordResetSubmit(true)} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
                     Set Password
                   </button>
                 </div>
+                <PasswordComplexityIndicator password={newPassword} />
               </div>
 
               {/* Option B: Send Reset Email */}

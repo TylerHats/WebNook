@@ -11,16 +11,26 @@ export const VerifyEmailPage: React.FC = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const [status, setStatus] = useState<'verifying' | 'success' | 'error' | 'notice'>(token ? 'verifying' : 'notice');
+  const [status, setStatus] = useState<'verifying' | 'success' | 'already_verified' | 'error' | 'notice'>(
+    user?.is_email_verified ? 'already_verified' : token ? 'verifying' : 'notice'
+  );
   const [message, setMessage] = useState('');
   const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
+    if (user?.is_email_verified) {
+      setStatus('already_verified');
+      return;
+    }
+
     if (token) {
       fetch(`/api/auth/verify-email?token=${token}`)
         .then(res => res.json())
         .then(data => {
-          if (data.error) {
+          if (data.already_verified) {
+            setStatus('already_verified');
+            setMessage(data.message);
+          } else if (data.error) {
             setStatus('error');
             setMessage(data.error);
           } else {
@@ -33,7 +43,7 @@ export const VerifyEmailPage: React.FC = () => {
           setMessage('Failed to verify email token. Please try again.');
         });
     }
-  }, [token]);
+  }, [token, user]);
 
   const handleResend = async () => {
     if (!authToken) {
@@ -72,6 +82,31 @@ export const VerifyEmailPage: React.FC = () => {
           </div>
         )}
 
+        {status === 'already_verified' && (
+          <div>
+            <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+              <CheckCircle2 size={40} />
+            </div>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.5rem' }}>Already Verified! ✨</h2>
+            <p style={{ opacity: 0.8, fontSize: '0.95rem', marginBottom: '1.75rem', lineHeight: 1.5 }}>
+              {message || 'Your account email address is already verified and confirmed active.'}
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {user ? (
+                <Link to={`/nook/${user.username}`} className="btn-primary" style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}>
+                  <span>Go to My Nook (@{user.username})</span>
+                  <ArrowRight size={18} />
+                </Link>
+              ) : (
+                <Link to="/login" className="btn-primary" style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}>
+                  <span>Sign In to Account</span>
+                  <ArrowRight size={18} />
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+
         {status === 'success' && (
           <div>
             <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
@@ -97,13 +132,7 @@ export const VerifyEmailPage: React.FC = () => {
             <p style={{ opacity: 0.8, fontSize: '0.95rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
               {status === 'error' ? message : `Please check your email inbox${user ? ` (${user.email})` : ''} and click the verification button or link to unlock full Nook features.`}
             </p>
-
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', textAlign: 'left', fontSize: '0.85rem' }}>
-              <p style={{ margin: '0 0 0.5rem', opacity: 0.9 }}>• Styled verification emails are sent with an active action button.</p>
-              <p style={{ margin: 0, opacity: 0.7 }}>• If the button doesn't render in your email client, use the raw link section at the bottom of the email.</p>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '1.5rem' }}>
               <button onClick={handleResend} className="btn-primary" disabled={isResending}>
                 <RefreshCw size={16} />
                 <span>{isResending ? 'Sending...' : 'Resend Verification Email'}</span>

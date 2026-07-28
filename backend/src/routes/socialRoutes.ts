@@ -154,6 +154,8 @@ router.get('/guestbook/:username', async (req: Request, res: Response) => {
   }
 });
 
+import { createNotification } from './notificationRoutes';
+
 // Post Guestbook Entry
 router.post('/guestbook/:username', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -170,6 +172,18 @@ router.post('/guestbook/:username', authenticateToken, async (req: Authenticated
       'INSERT INTO guestbook_entries (nook_user_id, author_user_id, content, status) VALUES (?, ?, ?, ?)',
       [owner.id, authorId, content.trim(), 'approved']
     );
+
+    // Notify Nook owner about the new guestbook note!
+    if (owner.id !== authorId) {
+      await createNotification(
+        owner.id,
+        'guestbook',
+        authorId,
+        'New Guestbook Note 📝',
+        `@${req.user!.username} left a note on your Nook guestbook!`,
+        `/nook/${username}`
+      );
+    }
 
     return res.json({
       message: 'Guestbook entry posted successfully',

@@ -12,6 +12,7 @@ import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { SetupWizardPage } from './pages/SetupWizardPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { UserOnboardingPage } from './pages/UserOnboardingPage';
+import { FriendsPage } from './pages/FriendsPage';
 import { useAuth } from './context/AuthContext';
 import { Sparkles } from 'lucide-react';
 
@@ -63,6 +64,7 @@ const AppRoutes: React.FC = () => {
           <Route path="/onboarding" element={<UserOnboardingPage />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/nook/:username" element={<NookViewPage />} />
+          <Route path="/friends" element={<FriendsPage />} />
           <Route path="/customize" element={<NookCustomizerPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
