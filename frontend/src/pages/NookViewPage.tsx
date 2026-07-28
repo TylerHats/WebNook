@@ -11,6 +11,8 @@ import { StickerCanvas } from '../components/nook/StickerCanvas';
 import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
+import { playThemeSound } from '../utils/themeSoundEngine';
+
 export const NookViewPage: React.FC = () => {
   const { username } = useParams<{ username?: string }>();
   const { user, token } = useAuth();
@@ -43,6 +45,17 @@ export const NookViewPage: React.FC = () => {
   useEffect(() => {
     fetchProfile();
   }, [targetUsername, token]);
+
+  const handleGlobalClick = (e: React.MouseEvent) => {
+    if (profileData?.nookSettings) {
+      const themeId = profileData.nookSettings.theme;
+      const isSoundEnabled = profileData.nookSettings.theme_sounds_enabled !== 0 && profileData.nookSettings.theme_sounds_enabled !== false;
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'BUTTON' || target.tagName === 'A' || target.closest('button') || target.closest('a'))) {
+        playThemeSound(themeId, isSoundEnabled, 'click');
+      }
+    }
+  };
 
   const handleSendFriendRequest = async () => {
     if (!token) {
@@ -160,7 +173,7 @@ export const NookViewPage: React.FC = () => {
   } as React.CSSProperties;
 
   return (
-    <div className={themeClass} style={customStyle}>
+    <div className={themeClass} style={customStyle} onClick={handleGlobalClick}>
       {/* Custom CSS Injection */}
       {nookSettings?.custom_css && (
         <style dangerouslySetInnerHTML={{ __html: nookSettings.custom_css }} />

@@ -91,7 +91,10 @@ input, textarea, select {
 /* ========================================================
    THEME 2: Retro Windows 98 / 95
    ======================================================== */
-.theme-win98 {
+/* ========================================================
+   THEME 2: Retro Windows 9x Classic (Win 95 / 98 / 9X)
+   ======================================================== */
+.theme-win98, .theme-win9x {
   --bg-primary: #008080;
   --bg-panel: #c0c0c0;
   --bg-panel-solid: #c0c0c0;
@@ -107,7 +110,13 @@ input, textarea, select {
   --box-shadow: 2px 2px 0px #000000;
 }
 
-.theme-win98 .nook-panel {
+@keyframes win9xFileFly {
+  0% { transform: translateX(0); opacity: 0.7; }
+  50% { transform: translateX(10px); opacity: 1; }
+  100% { transform: translateX(20px); opacity: 0.7; }
+}
+
+.theme-win98 .nook-panel, .theme-win9x .nook-panel {
   background: var(--bg-panel);
   color: var(--text-main);
   border-top: 2px solid #ffffff !important;
@@ -120,7 +129,7 @@ input, textarea, select {
   margin-bottom: 1rem;
 }
 
-.theme-win98 .nook-panel-header {
+.theme-win98 .nook-panel-header, .theme-win9x .nook-panel-header {
   background: linear-gradient(90deg, var(--accent-color) 0%, #1084d0 100%);
   color: #ffffff !important;
   padding: 4px 8px;
@@ -133,7 +142,7 @@ input, textarea, select {
   border-bottom: none;
 }
 
-.theme-win98 .nook-panel-header::after {
+.theme-win98 .nook-panel-header::after, .theme-win9x .nook-panel-header::after {
   content: 'X';
   background: #c0c0c0;
   color: #000000;
@@ -146,7 +155,8 @@ input, textarea, select {
   font-weight: bold;
 }
 
-.theme-win98 button, .theme-win98 .btn-primary, .theme-win98 .btn-secondary {
+.theme-win98 button, .theme-win98 .btn-primary, .theme-win98 .btn-secondary,
+.theme-win9x button, .theme-win9x .btn-primary, .theme-win9x .btn-secondary {
   background: #c0c0c0 !important;
   color: #000000 !important;
   border-top: 2px solid #ffffff !important;
@@ -159,7 +169,7 @@ input, textarea, select {
   box-shadow: none;
 }
 
-.theme-win98 button:active {
+.theme-win98 button:active, .theme-win9x button:active {
   border-top: 2px solid #000000 !important;
   border-left: 2px solid #000000 !important;
   border-right: 2px solid #ffffff !important;
@@ -378,4 +388,191 @@ input, textarea, select {
 .theme-velvet .nook-panel-header {
   color: var(--accent-color);
   border-bottom: 1px solid var(--border-color);
+}
+
+/* ========================================================
+   THEME 9: 🐾 Cozy Cat Café
+   ======================================================== */
+.theme-cat-cafe {
+  --bg-primary: #fbf4eb;
+  --bg-panel: #fffbf7;
+  --bg-panel-solid: #fffbf7;
+  --text-main: #431407;
+  --text-muted: #9a3412;
+  --accent-color: #f43f5e;
+  --accent-hover: #e11d48;
+  --border-color: #fbcfe8;
+  --border-radius-main: 24px;
+  --border-radius-btn: 18px;
+  --box-shadow: 0 10px 25px rgba(244, 63, 94, 0.12);
+}
+
+@keyframes pawBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.theme-cat-cafe .nook-panel {
+  background: var(--bg-panel);
+  background-image: radial-gradient(#fbcfe8 1px, transparent 1px);
+  background-size: 18px 18px;
+  color: var(--text-main);
+  border: 3px dashed #f472b6 !important;
+  border-radius: 24px !important;
+  box-shadow: var(--box-shadow);
+}
+
+.theme-cat-cafe .nook-panel-header {
+  color: var(--accent-color);
+  border-bottom: 2px dashed #f472b6;
+  font-weight: 800;
+}
+
+.theme-cat-cafe button, .theme-cat-cafe .btn-primary {
+  background: #f43f5e !important;
+  color: #ffffff !important;
+  border-radius: 18px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-cat-cafe button:hover {
+  animation: pawBob 0.6s ease infinite;
+}
+
+/* ========================================================
+   THEME 10: ☁️ Fluffy Cloud Dream
+   ======================================================== */
+.theme-cloud-dream {
+  --bg-primary: #e0f2fe;
+  --bg-panel: rgba(255, 255, 255, 0.9);
+  --bg-panel-solid: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --border-color: #bae6fd;
+  --border-radius-main: 35px 14px 35px 14px;
+  --border-radius-btn: 50px;
+  --box-shadow: 0 12px 30px rgba(186, 230, 253, 0.6), inset 0 2px 5px rgba(255, 255, 255, 0.9);
+}
+
+@keyframes cloudDrift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.theme-cloud-dream .nook-panel {
+  background: var(--bg-panel);
+  border: 2px solid var(--border-color);
+  border-radius: 35px 14px 35px 14px !important;
+  box-shadow: var(--box-shadow);
+  backdrop-filter: blur(10px);
+}
+
+.theme-cloud-dream .nook-panel-header {
+  color: var(--accent-color);
+  border-bottom: 2px solid #e0f2fe;
+  animation: cloudDrift 3.5s ease-in-out infinite;
+}
+
+.theme-cloud-dream button, .theme-cloud-dream .btn-primary {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%) !important;
+  color: #ffffff !important;
+  border-radius: 50px !important;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35) !important;
+}
+
+/* ========================================================
+   THEME 11: 👾 8-Bit Pixel Arcade
+   ======================================================== */
+.theme-pixel-arcade {
+  --bg-primary: #0c051a;
+  --bg-panel: #190a38;
+  --bg-panel-solid: #190a38;
+  --text-main: #00ffcc;
+  --text-muted: #ff007f;
+  --accent-color: #ff007f;
+  --accent-hover: #e0006c;
+  --border-color: #ff007f;
+  --border-radius-main: 0px;
+  --border-radius-btn: 0px;
+  --font-family-main: monospace;
+  --box-shadow: 4px 4px 0px #00ffcc, -2px -2px 0px #ff007f;
+}
+
+.theme-pixel-arcade .nook-panel {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border: 3px solid var(--border-color) !important;
+  border-radius: 0px !important;
+  box-shadow: 4px 4px 0px #00ffcc !important;
+}
+
+.theme-pixel-arcade .nook-panel-header {
+  color: var(--accent-color);
+  border-bottom: 3px solid var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: monospace;
+}
+
+.theme-pixel-arcade button, .theme-pixel-arcade .btn-primary {
+  background: #ff007f !important;
+  color: #ffffff !important;
+  border: 2px solid #00ffcc !important;
+  border-radius: 0px !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.theme-pixel-arcade button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000 !important;
+}
+
+/* ========================================================
+   THEME 12: ✨ Magical Girl Kawaii
+   ======================================================== */
+.theme-magical-girl {
+  --bg-primary: #fff0f6;
+  --bg-panel: #fff8fa;
+  --bg-panel-solid: #fff8fa;
+  --text-main: #831843;
+  --text-muted: #be185d;
+  --accent-color: #ec4899;
+  --accent-hover: #db2777;
+  --border-color: #facc15;
+  --border-radius-main: 20px;
+  --border-radius-btn: 24px;
+  --box-shadow: 0 10px 30px rgba(236, 72, 153, 0.25), 0 0 15px rgba(250, 204, 21, 0.4);
+}
+
+@keyframes magicalSparkle {
+  0% { box-shadow: 0 10px 25px rgba(236, 72, 153, 0.25), 0 0 10px rgba(250, 204, 21, 0.4); }
+  50% { box-shadow: 0 10px 35px rgba(236, 72, 153, 0.4), 0 0 20px rgba(250, 204, 21, 0.8); }
+  100% { box-shadow: 0 10px 25px rgba(236, 72, 153, 0.25), 0 0 10px rgba(250, 204, 21, 0.4); }
+}
+
+.theme-magical-girl .nook-panel {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border: 3px double #f472b6 !important;
+  outline: 2px solid #facc15;
+  border-radius: 20px !important;
+  animation: magicalSparkle 3s ease-in-out infinite;
+}
+
+.theme-magical-girl .nook-panel-header {
+  color: var(--accent-color);
+  border-bottom: 2px dashed #f472b6;
+  font-weight: 800;
+}
+
+.theme-magical-girl button, .theme-magical-girl .btn-primary {
+  background: linear-gradient(135deg, #f472b6 0%, #facc15 100%) !important;
+  color: #ffffff !important;
+  border-radius: 24px !important;
+  box-shadow: 0 4px 15px rgba(244, 114, 182, 0.4) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }

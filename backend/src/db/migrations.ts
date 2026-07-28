@@ -237,6 +237,14 @@ const migrations: Migration[] = [
       try { await execute('ALTER TABLE friends ADD COLUMN user_is_favorite INTEGER DEFAULT 0'); } catch (e) {}
       try { await execute('ALTER TABLE friends ADD COLUMN friend_is_favorite INTEGER DEFAULT 0'); } catch (e) {}
     }
+  },
+  {
+    version: 8,
+    name: 'v2.1.0_theme_sounds_and_animations',
+    up: async () => {
+      try { await execute('ALTER TABLE nooks ADD COLUMN theme_sounds_enabled INTEGER DEFAULT 1'); } catch (e) {}
+      try { await execute('ALTER TABLE nooks ADD COLUMN theme_animations_enabled INTEGER DEFAULT 1'); } catch (e) {}
+    }
   }
 ];
 

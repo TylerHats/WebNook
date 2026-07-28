@@ -84,8 +84,11 @@ export const NookCustomizerPage: React.FC = () => {
 
   const [favoriteMovies, setFavoriteMovies] = useState<any[]>([]);
   const [favoriteBooks, setFavoriteBooks] = useState<any[]>([]);
+  const [topFriends, setTopFriends] = useState<any[]>([]);
   const [storygraphUsername, setStorygraphUsername] = useState('');
   const [spotifyPersonalMode, setSpotifyPersonalMode] = useState('disabled');
+  const [themeSoundsEnabled, setThemeSoundsEnabled] = useState(true);
+  const [themeAnimationsEnabled, setThemeAnimationsEnabled] = useState(true);
 
   // Search popover modals
   const [showSpotifySearch, setShowSpotifySearch] = useState(false);
@@ -126,6 +129,9 @@ export const NookCustomizerPage: React.FC = () => {
             setStorygraphUsername(data.nookSettings.storygraph_username || '');
             setSpotifyPersonalMode(data.nookSettings.spotify_personal_mode || 'disabled');
             setCustomCss(data.nookSettings.custom_css || '');
+            if (Array.isArray(data.topFriends)) setTopFriends(data.topFriends);
+            if (data.nookSettings.theme_sounds_enabled !== undefined) setThemeSoundsEnabled(!!data.nookSettings.theme_sounds_enabled);
+            if (data.nookSettings.theme_animations_enabled !== undefined) setThemeAnimationsEnabled(!!data.nookSettings.theme_animations_enabled);
 
             if (data.nookSettings.music_tracks_json) {
               try {
@@ -349,6 +355,8 @@ export const NookCustomizerPage: React.FC = () => {
           favorite_books_json: cleanedBooks,
           storygraph_username: storygraphUsername,
           spotify_personal_mode: spotifyPersonalMode,
+          theme_sounds_enabled: themeSoundsEnabled,
+          theme_animations_enabled: themeAnimationsEnabled,
           custom_css: customCss
         })
       });
@@ -488,7 +496,7 @@ export const NookCustomizerPage: React.FC = () => {
         user={user}
         favoriteMovies={favoriteMovies}
         favoriteBooks={favoriteBooks}
-        topFriends={(user as any)?.top_friends || []}
+        topFriends={topFriends}
         nookSettings={{
           steam_id64: steamId64,
           steam_display_mode: steamDisplayMode,
@@ -556,10 +564,14 @@ export const NookCustomizerPage: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {[
                 { id: 'glassmorphism', name: 'Modern Glass', desc: 'Frosted glass with dark blurred backdrops', palette: { bg: '#12131C', cardBg: 'rgba(255,255,255,0.06)', accent: '#6366f1', text: '#ffffff', border: 'rgba(255,255,255,0.1)' } },
-                { id: 'win98', name: 'Retro Windows 95/98', desc: 'Classic 90s teal desktop with bevelled 3D grey windows', palette: { bg: '#008080', cardBg: '#c0c0c0', accent: '#000080', text: '#000000', border: '#ffffff' } },
+                { id: 'win9x', name: 'Retro Windows 9x Classic', desc: 'Classic 90s teal desktop with animated file transfers & bevels', palette: { bg: '#008080', cardBg: '#c0c0c0', accent: '#000080', text: '#000000', border: '#ffffff' } },
                 { id: 'frutiger-aero', name: 'Frutiger Aero (Win 7)', desc: 'Glossy Windows 7 glass with aqua blue sky gradients', palette: { bg: '#1c3b6f', cardBg: 'rgba(255, 255, 255, 0.85)', accent: '#0080ff', text: '#0c2340', border: 'rgba(255, 255, 255, 0.9)' } },
+                { id: 'cat-cafe', name: '🐾 Cozy Cat Café', desc: 'Warm peach & cream with dashed pink borders & paw prints', palette: { bg: '#fbf4eb', cardBg: '#fffbf7', accent: '#f43f5e', text: '#431407', border: '#fbcfe8' } },
+                { id: 'cloud-dream', name: '☁️ Fluffy Cloud Dream', desc: 'Organic bubbly cloud corners with sky blue gradient', palette: { bg: '#e0f2fe', cardBg: 'rgba(255, 255, 255, 0.9)', accent: '#3b82f6', text: '#0f172a', border: '#bae6fd' } },
+                { id: 'pixel-arcade', name: '👾 8-Bit Pixel Arcade', desc: 'Blocky 3D offset pixel borders with retro arcade bleeps', palette: { bg: '#0c051a', cardBg: '#190a38', accent: '#ff007f', text: '#00ffcc', border: '#ff007f' } },
+                { id: 'magical-girl', name: '✨ Magical Girl Kawaii', desc: 'Pastel pink & gold scalloped borders with star sparkles', palette: { bg: '#fff0f6', cardBg: '#fff8fa', accent: '#ec4899', text: '#831843', border: '#facc15' } },
                 { id: 'synthwave', name: 'Synthwave Neon', desc: 'Neon magenta glow with synthwave purples', palette: { bg: '#0d0221', cardBg: '#190b34', accent: '#ff007f', text: '#00f5d4', border: '#ff007f' } },
-                { id: 'cyberpunk', name: 'Cyberpunk Y2K', desc: 'High-contrast dark synthwave & neon yellow', palette: { bg: '#050505', cardBg: '#121212', accent: '#facc15', text: '#00ffcc', border: '#facc15' } },
+                { id: 'cyberpunk', name: 'Cyberpunk Y2K', desc: 'Neon laser sweep borders & electric spark pulses', palette: { bg: '#050505', cardBg: '#121212', accent: '#facc15', text: '#00ffcc', border: '#facc15' } },
                 { id: 'pastel', name: 'Y2K Retro Pastel', desc: 'Warm soft pinks and playful pastel accents', palette: { bg: '#fef2f2', cardBg: '#ffffff', accent: '#ec4899', text: '#1f2937', border: '#f472b6' } },
                 { id: 'coffee', name: 'Cozy Coffee', desc: 'Warm amber tones and dark roasts', palette: { bg: '#1c1917', cardBg: '#292524', accent: '#d97706', text: '#f5f5f4', border: '#78350f' } },
                 { id: 'velvet', name: 'Midnight Velvet', desc: 'Deep violet, plum and glowing amethysts', palette: { bg: '#09090b', cardBg: '#18181b', accent: '#a855f7', text: '#fafafa', border: '#3f3f46' } }
@@ -580,6 +592,29 @@ export const NookCustomizerPage: React.FC = () => {
                   <div style={{ fontSize: '0.75rem', opacity: 0.7, lineHeight: 1.4 }}>{t.desc}</div>
                 </div>
               ))}
+            </div>
+
+            {/* Theme Sound & Animation Toggles */}
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={themeSoundsEnabled}
+                  onChange={e => setThemeSoundsEnabled(e.target.checked)}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                />
+                <span>🔊 Enable Theme Sound Effects (Clicks, Bleeps, Purrs & Chimes)</span>
+              </label>
+
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={themeAnimationsEnabled}
+                  onChange={e => setThemeAnimationsEnabled(e.target.checked)}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                />
+                <span>✨ Enable Theme Micro-Animations (Laser Sweeps, File Transfer & Float)</span>
+              </label>
             </div>
 
             {/* Custom Theme Color Pickers */}

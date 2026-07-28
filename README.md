@@ -21,7 +21,7 @@
 
 **WebNook** brings back personal expression, cozy vibes, and privacy to social networking. Designed specifically for friend groups and self-hosters, WebNook lets each user create a cute, highly customized personal page (**"Nook"**) at `website.com/nook/username`. 
 
-Featuring 4 nostalgic themes (**Modern Glass**, **Windows 95 Classic**, **Windows 7 Frutiger Aero**, and **Cyberpunk Y2K**), a real-time **Visual Sticker Studio**, custom MP3 audio playlists, **Movies & TV Showcases**, **Books & StoryGraph Reading Nooks**, **Spotify & Steam integrations**, hardware Passkey / 2FA security, and auto-reloading Docker container self-upgrades.
+Featuring **12 curated themes** (**Cozy Cat Café**, **Fluffy Cloud Dream**, **8-Bit Pixel Arcade**, **Magical Girl Kawaii**, **Windows 9x Classic**, **Frutiger Aero**, **Cyberpunk Y2K**, etc.), toggleable **Web Audio API theme sound effects**, **laser sweep & file transfer micro-animations**, a real-time **Visual Sticker Studio**, custom MP3 audio playlists, **Movies & TV Showcases**, **Books & StoryGraph Reading Nooks**, **Spotify & Steam integrations**, hardware Passkey / 2FA security, and auto-reloading Docker container self-upgrades.
 
 ---
 
@@ -29,6 +29,9 @@ Featuring 4 nostalgic themes (**Modern Glass**, **Windows 95 Classic**, **Window
 
 | Category | Highlights |
 | :--- | :--- |
+| **🎨 12 Whimsical Themes** | 12 curated themes with custom card shapes, 3D pixel borders, paw print backgrounds, and scalloped edges. |
+| **🔊 Theme Sound FX Engine** | Web Audio API sound synthesizer producing retro 95 clicks, 8-bit arcade blips, cat purrs, and magical guestbook chimes (toggleable). |
+| **✨ Micro-Animations** | Windows 9x file transfer animations, Cyberpunk neon laser border sweeps, drifting clouds, and bobbing paws (toggleable). |
 | **🖼️ Visual Sticker Studio** | Live interactive canvas to drag, scale, rotate, and layer cute preset or custom stickers anywhere over your profile! |
 | **🎬 Movies & TV Showcase** | Search film & series databases (TMDB/OMDb) to display poster art, release years, and personal star ratings. |
 | **📚 Books & Reading Nook** | Search books (Open Library) or import your reading lists directly from StoryGraph CSV files with 1 click. |

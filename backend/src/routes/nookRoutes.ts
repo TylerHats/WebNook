@@ -334,7 +334,9 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
       favorite_movies_json,
       favorite_books_json,
       storygraph_username,
-      spotify_personal_mode
+      spotify_personal_mode,
+      theme_sounds_enabled,
+      theme_animations_enabled
     } = req.body;
 
     const cardVisString = typeof card_visibility_json === 'object' ? JSON.stringify(card_visibility_json) : card_visibility_json;
@@ -370,6 +372,8 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         favorite_books_json = COALESCE(?, favorite_books_json),
         storygraph_username = COALESCE(?, storygraph_username),
         spotify_personal_mode = COALESCE(?, spotify_personal_mode),
+        theme_sounds_enabled = COALESCE(?, theme_sounds_enabled),
+        theme_animations_enabled = COALESCE(?, theme_animations_enabled),
         updated_at = CURRENT_TIMESTAMP 
        WHERE user_id = ?`,
       [
@@ -396,6 +400,8 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         favBooksString,
         storygraph_username,
         spotify_personal_mode,
+        theme_sounds_enabled !== undefined ? (theme_sounds_enabled ? 1 : 0) : null,
+        theme_animations_enabled !== undefined ? (theme_animations_enabled ? 1 : 0) : null,
         userId
       ]
     );

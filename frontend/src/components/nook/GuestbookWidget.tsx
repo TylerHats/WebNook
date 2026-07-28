@@ -3,6 +3,8 @@ import { MessageSquare, Send, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
+import { playThemeSound } from '../../utils/themeSoundEngine';
+
 interface GuestbookEntry {
   id: number;
   content: string;
@@ -59,6 +61,7 @@ export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({
 
       const data = await res.json();
       if (res.ok) {
+        playThemeSound('win9x', true, 'guestbook');
         showToast('Guestbook comment posted!', 'success');
         setNewComment('');
         loadEntries();

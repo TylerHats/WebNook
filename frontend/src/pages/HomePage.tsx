@@ -76,6 +76,16 @@ export const HomePage: React.FC = () => {
         </div>
 
         <div className="nook-panel">
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(244, 63, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#f43f5e' }}>
+            <Sparkles size={26} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>12 Unique Themes & Sound FX</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
+            Pick from 12 unique themes (Cozy Cat Café, Cloud Dream, Pixel Arcade, Windows 9x) with toggleable audio clicks & laser sweep animations!
+          </p>
+        </div>
+
+        <div className="nook-panel">
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#22c55e' }}>
             <Music size={26} />
           </div>
