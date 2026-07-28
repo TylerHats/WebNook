@@ -477,7 +477,7 @@ export const NookCustomizerPage: React.FC = () => {
         stickers={stickers}
         onSaveStickers={(updatedStickers) => {
           setStickers(updatedStickers);
-          handleSaveCustomization();
+          handleSave();
         }}
         theme={theme}
         bgColor={bgColor}
@@ -488,7 +488,7 @@ export const NookCustomizerPage: React.FC = () => {
         user={user}
         favoriteMovies={favoriteMovies}
         favoriteBooks={favoriteBooks}
-        topFriends={nookSettings?.top_friends || []}
+        topFriends={user?.top_friends || []}
         nookSettings={{
           steam_id64: steamId64,
           steam_display_mode: steamDisplayMode,
@@ -1167,7 +1167,7 @@ export const NookCustomizerPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  handleSaveCustomization();
+                  handleSave();
                   setShowStickerStudio(true);
                 }}
                 className="btn-primary"
