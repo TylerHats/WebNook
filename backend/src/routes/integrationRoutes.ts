@@ -207,6 +207,10 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
         { appid: 1145360, name: 'Hades II', playtime_forever: 45 }
       ]
     });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch Steam data' });
+  }
+});
 // ----------------------------------------------------
 // Spotify Catalog Track Search (Client Credentials)
 // ----------------------------------------------------
