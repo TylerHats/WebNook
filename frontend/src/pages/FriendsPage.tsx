@@ -238,11 +238,10 @@ export const FriendsPage: React.FC = () => {
                 />
 
                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>
                     <Link to={`/nook/${f.username}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                       {f.display_name || f.username}
                     </Link>
-                    {f.is_favorite && <Star size={14} fill="#eab308" color="#eab308" />}
                   </div>
                   <div style={{ fontSize: '0.75rem', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                     <span style={{ opacity: 0.6 }}>@{f.username}</span>

@@ -475,7 +475,10 @@ export const NookCustomizerPage: React.FC = () => {
         isOpen={showStickerStudio}
         onClose={() => setShowStickerStudio(false)}
         stickers={stickers}
-        onSaveStickers={setStickers}
+        onSaveStickers={(updatedStickers) => {
+          setStickers(updatedStickers);
+          handleSaveCustomization();
+        }}
         theme={theme}
         bgColor={bgColor}
         cardBgColor={cardBgColor}
@@ -483,6 +486,9 @@ export const NookCustomizerPage: React.FC = () => {
         textColor={textColor}
         borderColor={borderColor}
         user={user}
+        favoriteMovies={favoriteMovies}
+        favoriteBooks={favoriteBooks}
+        topFriends={nookSettings?.top_friends || []}
         nookSettings={{
           steam_id64: steamId64,
           steam_display_mode: steamDisplayMode,
@@ -490,7 +496,9 @@ export const NookCustomizerPage: React.FC = () => {
           bg_music_title: bgMusicTitle,
           spotify_track_url: spotifyTrackUrl,
           apple_music_url: appleMusicUrl,
-          music_tracks_json: musicTracks
+          music_tracks_json: musicTracks,
+          card_visibility_json: cardVisibility,
+          card_titles_json: cardTitles
         }}
       />
 
@@ -1158,7 +1166,10 @@ export const NookCustomizerPage: React.FC = () => {
               </div>
               <button
                 type="button"
-                onClick={() => setShowStickerStudio(true)}
+                onClick={() => {
+                  handleSaveCustomization();
+                  setShowStickerStudio(true);
+                }}
                 className="btn-primary"
                 style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
               >

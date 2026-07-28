@@ -22,6 +22,9 @@ interface VisualStickerStudioModalProps {
   borderColor: string;
   user?: any;
   nookSettings?: any;
+  favoriteMovies?: any[];
+  favoriteBooks?: any[];
+  topFriends?: any[];
 }
 
 export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> = ({
@@ -36,7 +39,10 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
   textColor,
   borderColor,
   user,
-  nookSettings
+  nookSettings,
+  favoriteMovies,
+  favoriteBooks,
+  topFriends
 }) => {
   if (!isOpen) return null;
 
@@ -397,7 +403,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
               {cardVisibility.movies !== false && (
                 <MoviesWidget
                   title={cardTitles.movies || 'Movies & TV Favorites'}
-                  movies={nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : []}
+                  movies={favoriteMovies && favoriteMovies.length > 0 ? favoriteMovies : (nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : [])}
                 />
               )}
             </div>
@@ -407,7 +413,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
               {cardVisibility.friends !== false && (
                 <TopFriendsGrid
                   title={cardTitles.friends || 'Top Friends'}
-                  topFriends={nookSettings?.top_friends || []}
+                  topFriends={topFriends && topFriends.length > 0 ? topFriends : (nookSettings?.top_friends || [])}
                   ownerUsername={user?.username || 'User'}
                 />
               )}
@@ -424,7 +430,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
               {cardVisibility.books !== false && (
                 <BooksWidget
                   title={cardTitles.books || 'Books & Reading Nook'}
-                  books={nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : []}
+                  books={favoriteBooks && favoriteBooks.length > 0 ? favoriteBooks : (nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : [])}
                   storygraphUsername={nookSettings?.storygraph_username}
                 />
               )}
