@@ -3,6 +3,7 @@ import { execute, query, queryOne } from '../db/connection';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../middleware/authMiddleware';
+import os from 'os';
 
 const router = Router();
 
