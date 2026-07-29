@@ -6,7 +6,7 @@ import {
   MessageSquare, Plus, Bell, BellOff, Send, Users, User, 
   Bold, Italic, Code, Link as LinkIcon, List, Eye, Search, X, Bot, 
   Lock, Settings, LogOut, UserPlus, Image as ImageIcon, Upload,
-  Bug, Reply, Smile, ShieldAlert
+  Bug, Reply, Smile, ShieldAlert, ArrowLeft
 } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 
@@ -95,6 +95,18 @@ export const MessagesPage: React.FC = () => {
   const [isSystemChat, setIsSystemChat] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'direct' | 'group' | 'system'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Mobile responsiveness states
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth <= 768;
   
   // Message composing & reply state
   const [messageText, setMessageText] = useState('');
@@ -199,6 +211,9 @@ export const MessagesPage: React.FC = () => {
       const targetId = Number(convParam);
       if (!isNaN(targetId)) {
         setActiveConvId(targetId);
+        if (windowWidth <= 768) {
+          setMobileShowChat(true);
+        }
       }
     }
   }, [location.search]);
@@ -234,6 +249,12 @@ export const MessagesPage: React.FC = () => {
       setEditGroupAvatarUrl(activeConv.avatar_url || '');
     }
   }, [activeConv]);
+
+  const handleSelectConv = (convId: number) => {
+    setActiveConvId(convId);
+    setMobileShowChat(true);
+    navigate(`/messages?conv=${convId}`, { replace: true });
+  };
 
   // Handle File selection for crop
   const handleAvatarFileSelected = (e: React.ChangeEvent<HTMLInputElement>, source: 'new_group' | 'edit_group') => {
@@ -475,7 +496,7 @@ export const MessagesPage: React.FC = () => {
         setNewDmModalOpen(false);
         setSelectedFriendForDm('');
         await fetchConversations();
-        setActiveConvId(data.conversation_id);
+        handleSelectConv(data.conversation_id);
       } else {
         showToast(data.error || 'Failed to start direct message', 'error');
       }
@@ -511,7 +532,7 @@ export const MessagesPage: React.FC = () => {
         setNewGroupAvatarUrl('');
         setSelectedGroupMemberIds([]);
         await fetchConversations();
-        setActiveConvId(data.conversation_id);
+        handleSelectConv(data.conversation_id);
       } else {
         showToast(data.error || 'Failed to create group chat', 'error');
       }
@@ -543,7 +564,7 @@ export const MessagesPage: React.FC = () => {
     : ['👍', '❤️', '😂', '🔥', '😮', '🎉'];
 
   return (
-    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
+    <div style={{ paddingTop: '2rem', paddingBottom: '2rem', paddingLeft: '1.5rem', paddingRight: '1.5rem', maxWidth: '1280px', margin: '0 auto', boxSizing: 'border-box' }}>
       {/* Header Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -566,540 +587,562 @@ export const MessagesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Split Messaging Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 320px) 1fr', gap: '1.5rem', minHeight: '650px' }}>
+      {/* Main Split / Mobile Collapsible Messaging Layout */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : 'minmax(260px, 320px) 1fr',
+        gap: '1.5rem',
+        minHeight: '650px'
+      }}>
         
-        {/* Left Sidebar: Conversations List */}
-        <div className="nook-panel" style={{ display: 'flex', flexDirection: 'column', padding: '0.85rem' }}>
-          
-          {/* Search Input */}
-          <div style={{ position: 'relative', marginBottom: '0.85rem' }}>
-            <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
-            <input
-              type="text"
-              placeholder="Search chats..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem 0.5rem 2.2rem',
-                borderRadius: '8px',
-                background: 'rgba(0,0,0,0.2)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-main)',
-                fontSize: '0.85rem',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          {/* Category Filter Tabs */}
-          <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-            {(['all', 'direct', 'group', 'system'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveFilter(tab)}
+        {/* Left Sidebar: Conversations List (Hidden on mobile if viewing active chat) */}
+        {(!isMobile || !mobileShowChat) && (
+          <div className="nook-panel" style={{ display: 'flex', flexDirection: 'column', padding: '0.85rem' }}>
+            
+            {/* Search Input */}
+            <div style={{ position: 'relative', marginBottom: '0.85rem' }}>
+              <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+              <input
+                type="text"
+                placeholder="Search chats..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
                 style={{
-                  flex: 1,
-                  padding: '0.35rem 0.2rem',
-                  fontSize: '0.75rem',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: activeFilter === tab ? 'var(--accent-color)' : 'transparent',
-                  color: activeFilter === tab ? '#fff' : 'var(--text-main)',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textTransform: 'capitalize'
+                  width: '100%',
+                  padding: '0.5rem 0.75rem 0.5rem 2.2rem',
+                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.2)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.85rem',
+                  boxSizing: 'border-box'
                 }}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+              />
+            </div>
 
-          {/* Conversations Items Stream */}
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            {filteredConversations.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 0.5rem', opacity: 0.6, fontSize: '0.85rem' }}>
-                No chats found
-              </div>
-            ) : (
-              filteredConversations.map(conv => {
-                const isActive = conv.id === activeConvId;
-                const title = getConvTitle(conv);
+            {/* Category Filter Tabs */}
+            <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+              {(['all', 'direct', 'group', 'system'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveFilter(tab)}
+                  style={{
+                    flex: 1,
+                    padding: '0.35rem 0.2rem',
+                    fontSize: '0.75rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: activeFilter === tab ? 'var(--accent-color)' : 'transparent',
+                    color: activeFilter === tab ? '#fff' : 'var(--text-main)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textTransform: 'capitalize'
+                  }}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-                return (
-                  <div
-                    key={conv.id}
-                    onClick={() => { setActiveConvId(conv.id); navigate(`/messages?conv=${conv.id}`, { replace: true }); }}
-                    style={{
-                      padding: '0.65rem 0.75rem',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      background: isActive ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.03)',
-                      borderLeft: isActive ? '3px solid var(--accent-color)' : '3px solid transparent',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {getConvAvatar(conv)}
-                      </div>
-                      {conv.unread_count > 0 && (
-                        <span style={{
-                          position: 'absolute', top: '-4px', right: '-4px',
-                          background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800,
-                          borderRadius: '10px', padding: '0.1rem 0.4rem', minWidth: '16px', textAlign: 'center'
-                        }}>
-                          {conv.unread_count}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <span>{title}</span>
-                          {conv.is_locked && <span title="Locked" style={{ display: 'inline-flex', alignItems: 'center' }}><Lock size={12} color="#ef4444" /></span>}
-                        </span>
-                        {conv.is_muted && <BellOff size={13} style={{ opacity: 0.5, flexShrink: 0 }} />}
-                      </div>
-
-                      {conv.last_message && (
-                        <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {conv.last_message.is_system_notice ? (
-                            <em style={{ opacity: 0.85 }}>✨ {conv.last_message.content}</em>
-                          ) : (
-                            <>
-                              <strong style={{ opacity: 0.9 }}>@{conv.last_message.sender_username}: </strong>
-                              {conv.last_message.content}
-                            </>
-                          )}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right Chat Area */}
-        <div
-          className="nook-panel"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            padding: 0,
-            overflow: 'hidden',
-            border: isBugReportsChat ? '1px solid rgba(239, 68, 68, 0.4)' : undefined
-          }}
-        >
-          {activeConv ? (
-            <>
-              {/* Chat Window Header */}
-              <div style={{
-                padding: '0.85rem 1.25rem',
-                borderBottom: '1px solid var(--border-color)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: isBugReportsChat ? 'rgba(239, 68, 68, 0.12)' : 'rgba(0,0,0,0.15)',
-                flexWrap: 'wrap',
-                gap: '0.5rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {getConvAvatar(activeConv)}
-                  </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span>{getConvTitle(activeConv)}</span>
-                      {isConvLocked && <Lock size={14} color="#ef4444" />}
-                    </h3>
-                    <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.6 }}>
-                      {activeConv.type === 'group' ? `${(activeConv.members || []).length} Members` : (isBugReportsChat ? 'Direct Support Channel' : 'Direct Message')}
-                    </p>
-                  </div>
+            {/* Conversations Items Stream */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {filteredConversations.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem 0.5rem', opacity: 0.6, fontSize: '0.85rem' }}>
+                  No chats found
                 </div>
+              ) : (
+                filteredConversations.map(conv => {
+                  const isActive = conv.id === activeConvId;
+                  const title = getConvTitle(conv);
 
-                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                  {activeConv.type === 'group' && (
-                    <>
-                      <button
-                        onClick={() => setAddMemberModalOpen(true)}
-                        className="btn-secondary"
-                        style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                        title="Add Friend to Group"
-                      >
-                        <UserPlus size={16} />
-                        <span>Add Member</span>
-                      </button>
+                  return (
+                    <div
+                      key={conv.id}
+                      onClick={() => handleSelectConv(conv.id)}
+                      style={{
+                        padding: '0.65rem 0.75rem',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        background: isActive ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.03)',
+                        borderLeft: isActive ? '3px solid var(--accent-color)' : '3px solid transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {getConvAvatar(conv)}
+                        </div>
+                        {conv.unread_count > 0 && (
+                          <span style={{
+                            position: 'absolute', top: '-4px', right: '-4px',
+                            background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800,
+                            borderRadius: '10px', padding: '0.1rem 0.4rem', minWidth: '16px', textAlign: 'center'
+                          }}>
+                            {conv.unread_count}
+                          </span>
+                        )}
+                      </div>
 
-                      <button
-                        onClick={() => setGroupSettingsModalOpen(true)}
-                        className="btn-secondary"
-                        style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                        title="Group Settings"
-                      >
-                        <Settings size={16} />
-                        <span>Settings</span>
-                      </button>
-                    </>
-                  )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <span>{title}</span>
+                            {conv.is_locked && <span title="Locked" style={{ display: 'inline-flex', alignItems: 'center' }}><Lock size={12} color="#ef4444" /></span>}
+                          </span>
+                          {conv.is_muted && <BellOff size={13} style={{ opacity: 0.5, flexShrink: 0 }} />}
+                        </div>
 
-                  <button
-                    onClick={handleToggleMute}
-                    className="btn-secondary"
-                    style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                    title={activeConv.is_muted ? 'Unmute Notifications' : 'Mute Notifications'}
-                  >
-                    {activeConv.is_muted ? <BellOff size={16} color="#ef4444" /> : <Bell size={16} />}
-                    <span>{activeConv.is_muted ? 'Muted' : 'Mute'}</span>
-                  </button>
-                </div>
-              </div>
+                        {conv.last_message && (
+                          <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {conv.last_message.is_system_notice ? (
+                              <em style={{ opacity: 0.85 }}>✨ {conv.last_message.content}</em>
+                            ) : (
+                              <>
+                                <strong style={{ opacity: 0.9 }}>@{conv.last_message.sender_username}: </strong>
+                                {conv.last_message.content}
+                              </>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
 
-              {/* Bug Reports Privacy Tooltip Header Banner */}
-              {isBugReportsChat && (
+        {/* Right Chat Area (Hidden on mobile if NOT viewing active chat) */}
+        {(!isMobile || mobileShowChat) && (
+          <div
+            className="nook-panel"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              overflow: 'hidden',
+              border: isBugReportsChat ? '1px solid rgba(239, 68, 68, 0.4)' : undefined
+            }}
+          >
+            {activeConv ? (
+              <>
+                {/* Chat Window Header */}
                 <div style={{
-                  padding: '0.65rem 1rem',
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#fca5a5',
-                  fontSize: '0.82rem',
+                  padding: '0.85rem 1.25rem',
+                  borderBottom: '1px solid var(--border-color)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  fontWeight: 600
+                  justifyContent: 'space-between',
+                  background: isBugReportsChat ? 'rgba(239, 68, 68, 0.12)' : 'rgba(0,0,0,0.15)',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem'
                 }}>
-                  <ShieldAlert size={16} color="#ef4444" style={{ flexShrink: 0 }} />
-                  <span>Anything sent here will be sent directly to WebNook Administrators for review. 🛡️</span>
-                </div>
-              )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {isMobile && (
+                      <button
+                        type="button"
+                        onClick={() => setMobileShowChat(false)}
+                        className="btn-secondary"
+                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        title="Back to Conversations List"
+                      >
+                        <ArrowLeft size={18} />
+                        <span>Chats</span>
+                      </button>
+                    )}
 
-              {/* Message Stream */}
-              <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                {messages.length === 0 ? (
-                  <div style={{ textAlign: 'center', margin: 'auto', opacity: 0.5, fontSize: '0.9rem' }}>
-                    {isBugReportsChat
-                      ? 'Submit a bug report or feedback here to notify site administrators! 🐛'
-                      : 'No messages yet. Send a message to start the conversation! ✨'}
+                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {getConvAvatar(activeConv)}
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span>{getConvTitle(activeConv)}</span>
+                        {isConvLocked && <Lock size={14} color="#ef4444" />}
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.6 }}>
+                        {activeConv.type === 'group' ? `${(activeConv.members || []).length} Members` : (isBugReportsChat ? 'Direct Support Channel' : 'Direct Message')}
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  messages.map(msg => {
-                    // Check if message is a centered faint inline system notice
-                    if (msg.is_system_notice) {
+
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    {activeConv.type === 'group' && (
+                      <>
+                        <button
+                          onClick={() => setAddMemberModalOpen(true)}
+                          className="btn-secondary"
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                          title="Add Friend to Group"
+                        >
+                          <UserPlus size={16} />
+                          <span>Add Member</span>
+                        </button>
+
+                        <button
+                          onClick={() => setGroupSettingsModalOpen(true)}
+                          className="btn-secondary"
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                          title="Group Settings"
+                        >
+                          <Settings size={16} />
+                          <span>Settings</span>
+                        </button>
+                      </>
+                    )}
+
+                    <button
+                      onClick={handleToggleMute}
+                      className="btn-secondary"
+                      style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                      title={activeConv.is_muted ? 'Unmute Notifications' : 'Mute Notifications'}
+                    >
+                      {activeConv.is_muted ? <BellOff size={16} color="#ef4444" /> : <Bell size={16} />}
+                      <span>{activeConv.is_muted ? 'Muted' : 'Mute'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bug Reports Privacy Tooltip Header Banner */}
+                {isBugReportsChat && (
+                  <div style={{
+                    padding: '0.65rem 1rem',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#fca5a5',
+                    fontSize: '0.82rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontWeight: 600
+                  }}>
+                    <ShieldAlert size={16} color="#ef4444" style={{ flexShrink: 0 }} />
+                    <span>Anything sent here will be sent directly to WebNook Administrators for review. 🛡️</span>
+                  </div>
+                )}
+
+                {/* Message Stream */}
+                <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  {messages.length === 0 ? (
+                    <div style={{ textAlign: 'center', margin: 'auto', opacity: 0.5, fontSize: '0.9rem' }}>
+                      {isBugReportsChat
+                        ? 'Submit a bug report or feedback here to notify site administrators! 🐛'
+                        : 'No messages yet. Send a message to start the conversation! ✨'}
+                    </div>
+                  ) : (
+                    messages.map(msg => {
+                      // Check if message is a centered faint inline system notice
+                      if (msg.is_system_notice) {
+                        return (
+                          <div
+                            key={msg.id}
+                            style={{
+                              textAlign: 'center',
+                              opacity: 0.6,
+                              fontSize: '0.78rem',
+                              fontStyle: 'italic',
+                              margin: '0.5rem auto',
+                              padding: '0.2rem 0.8rem',
+                              background: 'rgba(255,255,255,0.04)',
+                              borderRadius: '12px',
+                              border: '1px dashed rgba(255,255,255,0.1)',
+                              maxWidth: '90%'
+                            }}
+                          >
+                            ✨ {msg.content} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        );
+                      }
+
+                      const isSelf = msg.sender_id === user?.id;
+                      const isSystem = msg.sender_role === 'system' || msg.sender_username === 'system' || msg.sender_username === 'bug_reports';
+
+                      const bubbleBg = isSystem 
+                        ? (msg.sender_username === 'bug_reports' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(99, 102, 241, 0.25)')
+                        : (msg.sender_bg_color || (isSelf ? 'var(--accent-color)' : 'rgba(255, 255, 255, 0.08)'));
+                      
+                      const borderAccent = msg.sender_accent_color || (msg.sender_username === 'bug_reports' ? '#ef4444' : 'var(--accent-color)');
+                      const textColor = msg.sender_text_color || '#ffffff';
+
                       return (
                         <div
                           key={msg.id}
+                          onDoubleClick={() => !isSystemChat && handleDoubleTapMessage(msg.id)}
                           style={{
-                            textAlign: 'center',
-                            opacity: 0.6,
-                            fontSize: '0.78rem',
-                            fontStyle: 'italic',
-                            margin: '0.5rem auto',
-                            padding: '0.2rem 0.8rem',
-                            background: 'rgba(255,255,255,0.04)',
-                            borderRadius: '12px',
-                            border: '1px dashed rgba(255,255,255,0.1)',
-                            maxWidth: '90%'
-                          }}
-                        >
-                          ✨ {msg.content} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      );
-                    }
-
-                    const isSelf = msg.sender_id === user?.id;
-                    const isSystem = msg.sender_role === 'system' || msg.sender_username === 'system' || msg.sender_username === 'bug_reports';
-
-                    const bubbleBg = isSystem 
-                      ? (msg.sender_username === 'bug_reports' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(99, 102, 241, 0.25)')
-                      : (msg.sender_bg_color || (isSelf ? 'var(--accent-color)' : 'rgba(255, 255, 255, 0.08)'));
-                    
-                    const borderAccent = msg.sender_accent_color || (msg.sender_username === 'bug_reports' ? '#ef4444' : 'var(--accent-color)');
-                    const textColor = msg.sender_text_color || '#ffffff';
-
-                    return (
-                      <div
-                        key={msg.id}
-                        onDoubleClick={() => !isSystemChat && handleDoubleTapMessage(msg.id)}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: isSelf ? 'flex-end' : 'flex-start',
-                          maxWidth: '82%',
-                          alignSelf: isSelf ? 'flex-end' : 'flex-start',
-                          position: 'relative'
-                        }}
-                      >
-                        {/* Sender info */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem', fontSize: '0.75rem', opacity: 0.7 }}>
-                          {!isSelf && msg.sender_avatar_url && (
-                            <img src={msg.sender_avatar_url} alt={msg.sender_username} style={{ width: '16px', height: '16px', borderRadius: '50%' }} />
-                          )}
-                          <span style={{ fontWeight: 700 }}>@{msg.sender_username}</span>
-                          {msg.sender_theme && (
-                            <span style={{ fontSize: '0.65rem', padding: '0.05rem 0.3rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', textTransform: 'capitalize' }}>
-                              {msg.sender_theme}
-                            </span>
-                          )}
-                          <span>•</span>
-                          <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-
-                        {/* Per-User Theme Bubble */}
-                        <div
-                          style={{
-                            padding: '0.75rem 1rem',
-                            borderRadius: isSelf ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
-                            background: bubbleBg,
-                            borderLeft: !isSelf ? `4px solid ${borderAccent}` : 'none',
-                            borderRight: isSelf ? `4px solid ${borderAccent}` : 'none',
-                            color: textColor,
-                            boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-                            backdropFilter: 'blur(8px)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: isSelf ? 'flex-end' : 'flex-start',
+                            maxWidth: '82%',
+                            alignSelf: isSelf ? 'flex-end' : 'flex-start',
                             position: 'relative'
                           }}
                         >
-                          {/* Inline Quoted Reply Snippet */}
-                          {msg.reply_to && (
-                            <div style={{
-                              fontSize: '0.75rem',
-                              opacity: 0.85,
-                              background: 'rgba(0,0,0,0.25)',
-                              padding: '0.35rem 0.6rem',
-                              borderRadius: '6px',
-                              borderLeft: '3px solid var(--accent-color)',
-                              marginBottom: '0.4rem'
-                            }}>
-                              <strong style={{ opacity: 0.9 }}>@{msg.reply_to.sender_username}: </strong>
-                              <span>"{msg.reply_to.content.length > 55 ? msg.reply_to.content.substring(0, 52) + '...' : msg.reply_to.content}"</span>
+                          {/* Sender info */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem', fontSize: '0.75rem', opacity: 0.7 }}>
+                            {!isSelf && msg.sender_avatar_url && (
+                              <img src={msg.sender_avatar_url} alt={msg.sender_username} style={{ width: '16px', height: '16px', borderRadius: '50%' }} />
+                            )}
+                            <span style={{ fontWeight: 700 }}>@{msg.sender_username}</span>
+                            {msg.sender_theme && (
+                              <span style={{ fontSize: '0.65rem', padding: '0.05rem 0.3rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', textTransform: 'capitalize' }}>
+                                {msg.sender_theme}
+                              </span>
+                            )}
+                            <span>•</span>
+                            <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+
+                          {/* Per-User Theme Bubble */}
+                          <div
+                            style={{
+                              padding: '0.75rem 1rem',
+                              borderRadius: isSelf ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
+                              background: bubbleBg,
+                              borderLeft: !isSelf ? `4px solid ${borderAccent}` : 'none',
+                              borderRight: isSelf ? `4px solid ${borderAccent}` : 'none',
+                              color: textColor,
+                              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                              backdropFilter: 'blur(8px)',
+                              position: 'relative'
+                            }}
+                          >
+                            {/* Inline Quoted Reply Snippet */}
+                            {msg.reply_to && (
+                              <div style={{
+                                fontSize: '0.75rem',
+                                opacity: 0.85,
+                                background: 'rgba(0,0,0,0.25)',
+                                padding: '0.35rem 0.6rem',
+                                borderRadius: '6px',
+                                borderLeft: '3px solid var(--accent-color)',
+                                marginBottom: '0.4rem'
+                              }}>
+                                <strong style={{ opacity: 0.9 }}>@{msg.reply_to.sender_username}: </strong>
+                                <span>"{msg.reply_to.content.length > 55 ? msg.reply_to.content.substring(0, 52) + '...' : msg.reply_to.content}"</span>
+                              </div>
+                            )}
+
+                            {renderMessageMarkdown(msg.content)}
+                          </div>
+
+                          {/* Message Action Buttons (Reply & Reactions) */}
+                          {!msg.is_system_notice && !isSystemChat && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.25rem', position: 'relative' }}>
+                              <button
+                                type="button"
+                                onClick={() => setReplyingToMessage({ id: msg.id, sender_username: msg.sender_username, content: msg.content })}
+                                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.6, padding: '2px', display: 'inline-flex', alignItems: 'center' }}
+                                title="Reply"
+                              >
+                                <Reply size={13} />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setActiveReactionPickerMsgId(activeReactionPickerMsgId === msg.id ? null : msg.id)}
+                                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.6, padding: '2px', display: 'inline-flex', alignItems: 'center' }}
+                                title="Add Reaction"
+                              >
+                                <Smile size={13} />
+                              </button>
+
+                              {/* Quick Reaction Picker Popover */}
+                              {activeReactionPickerMsgId === msg.id && (
+                                <div style={{
+                                  position: 'absolute',
+                                  bottom: '100%',
+                                  zIndex: 999,
+                                  background: '#1e293b',
+                                  border: '1px solid var(--border-color)',
+                                  borderRadius: '20px',
+                                  padding: '0.3rem 0.5rem',
+                                  display: 'flex',
+                                  gap: '0.3rem',
+                                  boxShadow: '0 4px 15px rgba(0,0,0,0.4)'
+                                }}>
+                                  {reactionOptions.map((emoji: string) => (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      onClick={() => handleToggleReaction(msg.id, emoji)}
+                                      style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '2px' }}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
 
-                          {renderMessageMarkdown(msg.content)}
+                          {/* Reaction Badges */}
+                          {msg.reactions && msg.reactions.length > 0 && (
+                            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                              {msg.reactions.map((r: any) => (
+                                <span
+                                  key={r.emoji}
+                                  onClick={() => !isSystemChat && handleToggleReaction(msg.id, r.emoji)}
+                                  style={{
+                                    fontSize: '0.75rem',
+                                    padding: '0.1rem 0.4rem',
+                                    borderRadius: '10px',
+                                    background: r.user_reacted ? 'rgba(99, 102, 241, 0.3)' : 'rgba(0,0,0,0.25)',
+                                    border: r.user_reacted ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.2rem',
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  <span>{r.emoji}</span>
+                                  <span>{r.count}</span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
 
-                        {/* Message Action Buttons (Reply & Reactions) */}
-                        {!msg.is_system_notice && !isSystemChat && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.25rem', position: 'relative' }}>
-                            <button
-                              type="button"
-                              onClick={() => setReplyingToMessage({ id: msg.id, sender_username: msg.sender_username, content: msg.content })}
-                              style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.6, padding: '2px', display: 'inline-flex', alignItems: 'center' }}
-                              title="Reply"
-                            >
-                              <Reply size={13} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setActiveReactionPickerMsgId(activeReactionPickerMsgId === msg.id ? null : msg.id)}
-                              style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.6, padding: '2px', display: 'inline-flex', alignItems: 'center' }}
-                              title="Add Reaction"
-                            >
-                              <Smile size={13} />
-                            </button>
-
-                            {/* Quick Reaction Picker Popover */}
-                            {activeReactionPickerMsgId === msg.id && (
-                              <div style={{
-                                position: 'absolute',
-                                bottom: '100%',
-                                zIndex: 999,
-                                background: '#1e293b',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '20px',
-                                padding: '0.3rem 0.5rem',
-                                display: 'flex',
-                                gap: '0.3rem',
-                                boxShadow: '0 4px 15px rgba(0,0,0,0.4)'
-                              }}>
-                                {reactionOptions.map((emoji: string) => (
-                                  <button
-                                    key={emoji}
-                                    type="button"
-                                    onClick={() => handleToggleReaction(msg.id, emoji)}
-                                    style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '2px' }}
-                                  >
-                                    {emoji}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Reaction Badges */}
-                        {msg.reactions && msg.reactions.length > 0 && (
-                          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
-                            {msg.reactions.map((r: any) => (
-                              <span
-                                key={r.emoji}
-                                onClick={() => !isSystemChat && handleToggleReaction(msg.id, r.emoji)}
-                                style={{
-                                  fontSize: '0.75rem',
-                                  padding: '0.1rem 0.4rem',
-                                  borderRadius: '10px',
-                                  background: r.user_reacted ? 'rgba(99, 102, 241, 0.3)' : 'rgba(0,0,0,0.25)',
-                                  border: r.user_reacted ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.2rem',
-                                  fontWeight: 600
-                                }}
-                              >
-                                <span>{r.emoji}</span>
-                                <span>{r.count}</span>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Formatting Toolbar & Message Composing Area (OR Locked Channel Banner) */}
-              <div style={{ padding: '0.85rem', borderTop: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.2)' }}>
-                {isConvLocked ? (
-                  <div style={{
-                    padding: '1rem',
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    color: '#fca5a5',
-                    fontSize: '0.85rem'
-                  }}>
-                    <Lock size={20} style={{ margin: '0 auto 0.4rem', display: 'block' }} />
-                    <strong>Channel Locked 🔒</strong>
-                    <p style={{ margin: '0.2rem 0 0', opacity: 0.9 }}>
-                      {lockedReason || 'Posting to this channel is locked.'}
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Active Replying Preview Banner */}
-                    {replyingToMessage && (
-                      <div style={{
-                        padding: '0.5rem 0.85rem',
-                        background: 'rgba(99, 102, 241, 0.15)',
-                        borderLeft: '4px solid var(--accent-color)',
-                        borderRadius: '6px',
-                        marginBottom: '0.5rem',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: '0.8rem'
-                      }}>
-                        <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                          <strong style={{ color: 'var(--accent-color)' }}>Replying to @{replyingToMessage.sender_username}: </strong>
-                          <span style={{ opacity: 0.85 }}>"{replyingToMessage.content.length > 50 ? replyingToMessage.content.substring(0, 47) + '...' : replyingToMessage.content}"</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setReplyingToMessage(null)}
-                          style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.7, padding: '2px' }}
-                          title="Cancel Reply"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Toolbar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-                      <button type="button" onClick={() => insertFormat('**', '**')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="Bold">
-                        <Bold size={14} />
-                      </button>
-                      <button type="button" onClick={() => insertFormat('*', '*')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="Italic">
-                        <Italic size={14} />
-                      </button>
-                      <button type="button" onClick={() => insertFormat('`', '`')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="Code">
-                        <Code size={14} />
-                      </button>
-                      <button type="button" onClick={() => insertFormat('[', '](url)')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="Link">
-                        <LinkIcon size={14} />
-                      </button>
-                      <button type="button" onClick={() => insertFormat('\n- ', '')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="List">
-                        <List size={14} />
-                      </button>
-                      <div style={{ flex: 1 }} />
-                      <button
-                        type="button"
-                        onClick={() => setIsPreviewMode(!isPreviewMode)}
-                        className="btn-secondary"
-                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', color: isPreviewMode ? 'var(--accent-color)' : 'inherit' }}
-                      >
-                        <Eye size={14} />
-                        <span>{isPreviewMode ? 'Edit' : 'Preview'}</span>
-                      </button>
+                {/* Formatting Toolbar & Message Composing Area (OR Locked Channel Banner) */}
+                <div style={{ padding: '0.85rem', borderTop: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.2)' }}>
+                  {isConvLocked ? (
+                    <div style={{
+                      padding: '1rem',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '8px',
+                      textAlign: 'center',
+                      color: '#fca5a5',
+                      fontSize: '0.85rem'
+                    }}>
+                      <Lock size={20} style={{ margin: '0 auto 0.4rem', display: 'block' }} />
+                      <strong>Channel Locked 🔒</strong>
+                      <p style={{ margin: '0.2rem 0 0', opacity: 0.9 }}>
+                        {lockedReason || 'Posting to this channel is locked.'}
+                      </p>
                     </div>
-
-                    {/* Input or Preview Mode */}
-                    <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
-                      {isPreviewMode ? (
-                        <div style={{ flex: 1, minHeight: '60px', padding: '0.65rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)' }}>
-                          {renderMessageMarkdown(messageText || '*Nothing to preview*')}
+                  ) : (
+                    <>
+                      {/* Active Replying Preview Banner */}
+                      {replyingToMessage && (
+                        <div style={{
+                          padding: '0.5rem 0.85rem',
+                          background: 'rgba(99, 102, 241, 0.15)',
+                          borderLeft: '4px solid var(--accent-color)',
+                          borderRadius: '6px',
+                          marginBottom: '0.5rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.8rem'
+                        }}>
+                          <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                            <strong style={{ color: 'var(--accent-color)' }}>Replying to @{replyingToMessage.sender_username}: </strong>
+                            <span style={{ opacity: 0.85 }}>"{replyingToMessage.content.length > 50 ? replyingToMessage.content.substring(0, 47) + '...' : replyingToMessage.content}"</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setReplyingToMessage(null)}
+                            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.7, padding: '2px' }}
+                            title="Cancel Reply"
+                          >
+                            <X size={16} />
+                          </button>
                         </div>
-                      ) : (
-                        <textarea
-                          ref={textareaRef}
-                          rows={2}
-                          placeholder={isBugReportsChat ? "Describe the bug or feedback for admins..." : "Type a message (supports Markdown formatting)..."}
-                          value={messageText}
-                          onChange={e => setMessageText(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSendMessage();
-                            }
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: '0.65rem',
-                            borderRadius: '8px',
-                            background: 'rgba(0,0,0,0.25)',
-                            border: '1px solid var(--border-color)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.9rem',
-                            boxSizing: 'border-box',
-                            resize: 'none'
-                          }}
-                        />
                       )}
 
-                      <button
-                        type="submit"
-                        className="btn-primary"
-                        disabled={isSending || !messageText.trim()}
-                        style={{ padding: '0.65rem 1rem', height: '100%', alignSelf: 'stretch', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <Send size={18} />
-                      </button>
-                    </form>
-                  </>
-                )}
+                      {/* Toolbar */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                        <button type="button" onClick={() => insertFormat('**', '**')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="Bold">
+                          <Bold size={14} />
+                        </button>
+                        <button type="button" onClick={() => insertFormat('*', '*')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="Italic">
+                          <Italic size={14} />
+                        </button>
+                        <button type="button" onClick={() => insertFormat('`', '`')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="Code">
+                          <Code size={14} />
+                        </button>
+                        <button type="button" onClick={() => insertFormat('[', '](url)')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="Link">
+                          <LinkIcon size={14} />
+                        </button>
+                        <button type="button" onClick={() => insertFormat('\n- ', '')} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} title="List">
+                          <List size={14} />
+                        </button>
+                        <div style={{ flex: 1 }} />
+                        <button
+                          type="button"
+                          onClick={() => setIsPreviewMode(!isPreviewMode)}
+                          className="btn-secondary"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', color: isPreviewMode ? 'var(--accent-color)' : 'inherit' }}
+                        >
+                          <Eye size={14} />
+                          <span>{isPreviewMode ? 'Edit' : 'Preview'}</span>
+                        </button>
+                      </div>
+
+                      {/* Input or Preview Mode */}
+                      <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
+                        {isPreviewMode ? (
+                          <div style={{ flex: 1, minHeight: '60px', padding: '0.65rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)' }}>
+                            {renderMessageMarkdown(messageText || '*Nothing to preview*')}
+                          </div>
+                        ) : (
+                          <textarea
+                            ref={textareaRef}
+                            rows={2}
+                            placeholder={isBugReportsChat ? "Describe the bug or feedback for admins..." : "Type a message (supports Markdown formatting)..."}
+                            value={messageText}
+                            onChange={e => setMessageText(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage();
+                              }
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '0.65rem',
+                              borderRadius: '8px',
+                              background: 'rgba(0,0,0,0.25)',
+                              border: '1px solid var(--border-color)',
+                              color: 'var(--text-main)',
+                              fontSize: '0.9rem',
+                              boxSizing: 'border-box',
+                              resize: 'none'
+                            }}
+                          />
+                        )}
+
+                        <button
+                          type="submit"
+                          className="btn-primary"
+                          disabled={isSending || !messageText.trim()}
+                          style={{ padding: '0.65rem 1rem', height: '100%', alignSelf: 'stretch', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Send size={18} />
+                        </button>
+                      </form>
+                    </>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', margin: 'auto', opacity: 0.6, padding: '3rem' }}>
+                <MessageSquare size={48} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
+                <h3>Select a conversation or start a new chat!</h3>
+                <p style={{ fontSize: '0.85rem' }}>You can only send DMs to accepted friends.</p>
               </div>
-            </>
-          ) : (
-            <div style={{ textAlign: 'center', margin: 'auto', opacity: 0.6, padding: '3rem' }}>
-              <MessageSquare size={48} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
-              <h3>Select a conversation or start a new chat!</h3>
-              <p style={{ fontSize: '0.85rem' }}>You can only send DMs to accepted friends.</p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* New DM Modal */}

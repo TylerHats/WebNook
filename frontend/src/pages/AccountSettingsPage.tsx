@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { startRegistration } from '@simplewebauthn/browser';
-import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail, Smile } from 'lucide-react';
+import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail, Smile, Upload } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 
 export const AccountSettingsPage: React.FC = () => {
@@ -13,6 +13,8 @@ export const AccountSettingsPage: React.FC = () => {
   const [bio, setBio] = useState(user?.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
   const [bannerUrl, setBannerUrl] = useState(user?.banner_url || '');
+  const [avatarFileName, setAvatarFileName] = useState('');
+  const [bannerFileName, setBannerFileName] = useState('');
   const [statusMessage, setStatusMessage] = useState(user?.status_message || '');
   const [statusEmoji, setStatusEmoji] = useState(user?.status_emoji || '');
 
@@ -342,15 +344,22 @@ export const AccountSettingsPage: React.FC = () => {
                   onChange={e => setAvatarUrl(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}
                 />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => {
-                    const f = e.target.files?.[0];
-                    if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar' });
-                  }}
-                  style={{ fontSize: '0.8rem' }}
-                />
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                  <Upload size={15} />
+                  <span>{avatarFileName || 'Choose Avatar Image...'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setAvatarFileName(f.name);
+                        setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar' });
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Header Banner URL or Direct File Upload</label>
@@ -361,15 +370,22 @@ export const AccountSettingsPage: React.FC = () => {
                   onChange={e => setBannerUrl(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}
                 />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => {
-                    const f = e.target.files?.[0];
-                    if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
-                  }}
-                  style={{ fontSize: '0.8rem' }}
-                />
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                  <Upload size={15} />
+                  <span>{bannerFileName || 'Choose Banner Image...'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setBannerFileName(f.name);
+                        setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
               </div>
             </div>
 
@@ -525,25 +541,44 @@ export const AccountSettingsPage: React.FC = () => {
 
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Default Double-Tap Reaction Emoji</label>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              {reactionEmojis.map(emoji => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => setDefaultReaction(emoji)}
-                  style={{
-                    fontSize: '1.3rem',
-                    padding: '0.4rem 0.6rem',
-                    borderRadius: '8px',
-                    border: defaultReaction === emoji ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
-                    background: defaultReaction === emoji ? 'rgba(99, 102, 241, 0.2)' : 'rgba(0,0,0,0.2)',
-                    cursor: 'pointer'
-                  }}
-                  title={defaultReaction === emoji ? 'Current Default Double-Tap Emoji' : `Set ${emoji} as Default`}
-                >
-                  {emoji}
-                </button>
-              ))}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="Type or paste any emoji (e.g. ❤️, 🔥, 🎉)"
+                value={defaultReaction}
+                onChange={e => setDefaultReaction(e.target.value)}
+                style={{
+                  width: '100px',
+                  fontSize: '1.3rem',
+                  textAlign: 'center',
+                  padding: '0.35rem 0.5rem',
+                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '2px solid var(--accent-color)',
+                  color: 'var(--text-main)'
+                }}
+              />
+              <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Or pick from quick reactions:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                {reactionEmojis.map(emoji => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setDefaultReaction(emoji)}
+                    style={{
+                      fontSize: '1.2rem',
+                      padding: '0.3rem 0.5rem',
+                      borderRadius: '8px',
+                      border: defaultReaction === emoji ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                      background: defaultReaction === emoji ? 'rgba(99, 102, 241, 0.25)' : 'rgba(0,0,0,0.2)',
+                      cursor: 'pointer'
+                    }}
+                    title={`Set ${emoji} as Default`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

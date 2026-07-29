@@ -150,12 +150,16 @@ export const SetupWizardPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => handleLogoFileChange(e.target.files?.[0] || null)}
-                  style={{ fontSize: '0.85rem' }}
-                />
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                  <Upload size={15} />
+                  <span>{logoFile ? logoFile.name : 'Choose Custom Logo Image...'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => handleLogoFileChange(e.target.files?.[0] || null)}
+                    style={{ display: 'none' }}
+                  />
+                </label>
               </div>
             </div>
 

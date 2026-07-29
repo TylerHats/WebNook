@@ -910,13 +910,17 @@ export const AdminDashboardPage: React.FC = () => {
 
               <form onSubmit={handleLogoUpload} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.04)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Upload New Logo Image (PNG / JPG / SVG)</label>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => setLogoFile(e.target.files?.[0] || null)}
-                    style={{ fontSize: '0.85rem' }}
-                  />
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                    <Image size={15} />
+                    <span>{logoFile ? logoFile.name : 'Choose Logo Image...'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => setLogoFile(e.target.files?.[0] || null)}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
                   <button type="submit" className="btn-primary" disabled={!logoFile || isUploadingLogo}>
                     <Upload size={16} />
                     <span>{isUploadingLogo ? 'Uploading...' : 'Upload Logo'}</span>
@@ -1205,13 +1209,17 @@ export const AdminDashboardPage: React.FC = () => {
             {/* Restore File Uploader */}
             <div style={{ background: 'rgba(255,255,255,0.04)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem' }}>Restore Backup File (Automatic Schema Migration)</h4>
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                <input
-                  type="file"
-                  accept=".tar.gz,.db"
-                  onChange={e => setRestoreFile(e.target.files?.[0] || null)}
-                  style={{ fontSize: '0.85rem' }}
-                />
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                  <HardDrive size={15} />
+                  <span>{restoreFile ? restoreFile.name : 'Choose Backup Archive (.tar.gz)...'}</span>
+                  <input
+                    type="file"
+                    accept=".tar.gz,.db"
+                    onChange={e => setRestoreFile(e.target.files?.[0] || null)}
+                    style={{ display: 'none' }}
+                  />
+                </label>
                 <button onClick={() => handleRestoreSubmit()} className="btn-primary" disabled={!restoreFile || isRestoring}>
                   <Upload size={16} />
                   <span>{isRestoring ? 'Restoring & Migrating DB...' : 'Upload & Restore'}</span>

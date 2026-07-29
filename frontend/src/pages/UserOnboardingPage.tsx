@@ -158,13 +158,17 @@ export const UserOnboardingPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '10px' }}>
                 <img src={avatarPreview} alt="Avatar" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
                 <div style={{ flex: 1 }}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => handleAvatarChange(e.target.files?.[0] || null)}
-                    style={{ fontSize: '0.85rem' }}
-                  />
-                  <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.2rem' }}>PNG, JPG, SVG, GIF (Max 25MB)</div>
+                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem', marginBottom: '0.3rem' }}>
+                    <Upload size={15} />
+                    <span>{avatarFile ? avatarFile.name : 'Choose Avatar Image...'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => handleAvatarChange(e.target.files?.[0] || null)}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                  <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>PNG, JPG, SVG, GIF (Max 25MB)</div>
                 </div>
               </div>
             </div>
@@ -175,12 +179,16 @@ export const UserOnboardingPage: React.FC = () => {
                 <div style={{ height: '80px', backgroundImage: `url(${bannerPreview})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '8px', marginBottom: '0.5rem' }} />
               )}
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '10px' }}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => handleBannerChange(e.target.files?.[0] || null)}
-                  style={{ fontSize: '0.85rem' }}
-                />
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                  <Upload size={15} />
+                  <span>{bannerFile ? bannerFile.name : 'Choose Banner Image...'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => handleBannerChange(e.target.files?.[0] || null)}
+                    style={{ display: 'none' }}
+                  />
+                </label>
               </div>
             </div>
 
@@ -264,13 +272,17 @@ export const UserOnboardingPage: React.FC = () => {
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Upload Audio File (MP3 / WAV / OGG)</label>
               <div style={{ background: 'rgba(0,0,0,0.25)', padding: '1rem', borderRadius: '10px', border: '1px dashed var(--border-color)' }}>
-                <input
-                  type="file"
-                  accept="audio/*"
-                  onChange={e => setMusicFile(e.target.files?.[0] || null)}
-                  style={{ fontSize: '0.85rem' }}
-                />
-                <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.4rem' }}>
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem', marginBottom: '0.4rem' }}>
+                  <Upload size={15} />
+                  <span>{musicFile ? musicFile.name : 'Choose Audio File (MP3/WAV)...'}</span>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={e => setMusicFile(e.target.files?.[0] || null)}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>
                   Upload an audio file to auto-play on your Nook profile!
                 </div>
               </div>

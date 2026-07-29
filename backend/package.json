@@ -1,6 +1,6 @@
 {
   "name": "webnook-backend",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "Backend API server for WebNook",
   "main": "dist/server.js",
   "scripts": {

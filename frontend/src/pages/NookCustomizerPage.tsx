@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare, Volume2 } from 'lucide-react';
+import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare, Volume2, Upload, FileText } from 'lucide-react';
 import { StickerCanvas, Sticker } from '../components/nook/StickerCanvas';
 import { PRESET_STICKERS } from '../constants/presetStickers';
 
@@ -50,6 +50,13 @@ export const NookCustomizerPage: React.FC = () => {
   const [newTrackTitle, setNewTrackTitle] = useState('');
   const [newTrackUrl, setNewTrackUrl] = useState('');
   const [showStickerStudio, setShowStickerStudio] = useState(false);
+
+  // Custom file upload label states
+  const [avatarFileName, setAvatarFileName] = useState('');
+  const [bannerFileName, setBannerFileName] = useState('');
+  const [audioFileName, setAudioFileName] = useState('');
+  const [csvFileName, setCsvFileName] = useState('');
+  const [stickerFileName, setStickerFileName] = useState('');
 
   const handleAddTrack = () => {
     if (!newTrackUrl && newTrackType !== 'audio') return;
@@ -556,28 +563,42 @@ export const NookCustomizerPage: React.FC = () => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Avatar Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => {
-                    const f = e.target.files?.[0];
-                    if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar' });
-                  }}
-                  style={{ fontSize: '0.85rem' }}
-                />
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>Upload Avatar Image</label>
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
+                  <Upload size={16} />
+                  <span>{avatarFileName || 'Choose Avatar Image...'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setAvatarFileName(f.name);
+                        setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar' });
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Banner Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => {
-                    const f = e.target.files?.[0];
-                    if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
-                  }}
-                  style={{ fontSize: '0.85rem' }}
-                />
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>Upload Banner Image</label>
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
+                  <Upload size={16} />
+                  <span>{bannerFileName || 'Choose Banner Image...'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setBannerFileName(f.name);
+                        setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
               </div>
             </div>
           </div>
@@ -859,12 +880,22 @@ export const NookCustomizerPage: React.FC = () => {
                     onChange={e => setBgMusicTitle(e.target.value)}
                     style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
                   />
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    onChange={e => handleMusicFileUpload(e.target.files?.[0] || null)}
-                    style={{ fontSize: '0.85rem' }}
-                  />
+                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
+                    <Upload size={16} />
+                    <span>{audioFileName || 'Choose Audio File (MP3/WAV)...'}</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          setAudioFileName(f.name);
+                          handleMusicFileUpload(f);
+                        }
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
                 </div>
               </div>
 
@@ -1204,12 +1235,22 @@ export const NookCustomizerPage: React.FC = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Import StoryGraph Library CSV</label>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={e => handleStoryGraphCsvUpload(e.target.files?.[0] || null)}
-                  style={{ fontSize: '0.82rem' }}
-                />
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                  <FileText size={15} />
+                  <span>{csvFileName || 'Choose StoryGraph CSV File...'}</span>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setCsvFileName(f.name);
+                        handleStoryGraphCsvUpload(f);
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
               </div>
             </div>
 
@@ -1345,15 +1386,22 @@ export const NookCustomizerPage: React.FC = () => {
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.2rem' }}>Upload Custom Sticker Image (PNG / GIF / SVG / WebP)</label>
                 <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>Uploaded custom stickers appear automatically in your Visual Sticker Studio.</span>
               </div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={e => {
-                  const f = e.target.files?.[0];
-                  if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Custom Sticker Image', aspectRatio: 1, target: 'sticker' });
-                }}
-                style={{ fontSize: '0.85rem' }}
-              />
+              <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem', alignSelf: 'flex-start' }}>
+                <Upload size={16} />
+                <span>{stickerFileName || 'Choose Custom Sticker Image...'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      setStickerFileName(f.name);
+                      setCropModal({ isOpen: true, file: f, title: 'Crop Custom Sticker Image', aspectRatio: 1, target: 'sticker' });
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+              </label>
             </div>
 
             {/* Preset Sticker Pickers */}
@@ -1361,27 +1409,34 @@ export const NookCustomizerPage: React.FC = () => {
               Preset Stickers Library:
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-              {PRESET_STICKERS.map((st) => (
-                <button
-                  key={st.id}
-                  type="button"
-                  onClick={() => handleAddSticker(st.url)}
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '10px',
-                    padding: '0.5rem 0.75rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    color: 'var(--text-main)'
-                  }}
-                >
-                  <img src={st.url} alt={st.name} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{st.name}</span>
-                </button>
-              ))}
+              {PRESET_STICKERS.map((st) => {
+                const isEmoji = !st.url.startsWith('/') && !st.url.startsWith('http') && !st.url.startsWith('data:');
+                return (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => handleAddSticker(st.url)}
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '0.5rem 0.75rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: 'var(--text-main)'
+                    }}
+                  >
+                    {isEmoji ? (
+                      <span style={{ fontSize: '1.4rem', display: 'inline-flex', alignItems: 'center' }}>{st.url}</span>
+                    ) : (
+                      <img src={st.url} alt={st.name} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                    )}
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{st.name}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Active Canvas Stickers List */}
@@ -1389,15 +1444,21 @@ export const NookCustomizerPage: React.FC = () => {
               <div>
                 <h4 style={{ fontSize: '0.9rem', marginBottom: '0.75rem' }}>Active Canvas Stickers ({stickers.length}):</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {stickers.map((st: Sticker, idx: number) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.25)', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <img src={st.sticker_url} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Sticker #{idx + 1}</span>
-                        <span style={{ fontSize: '0.75rem', opacity: 0.6, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
-                          Layer: {st.layer === 'behind_cards' ? 'Behind Cards' : 'Above Cards'}
-                        </span>
-                      </div>
+                  {stickers.map((st: Sticker, idx: number) => {
+                    const isEmoji = !st.sticker_url.startsWith('/') && !st.sticker_url.startsWith('http') && !st.sticker_url.startsWith('data:');
+                    return (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.25)', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          {isEmoji ? (
+                            <span style={{ fontSize: '1.4rem', display: 'inline-flex', alignItems: 'center' }}>{st.sticker_url}</span>
+                          ) : (
+                            <img src={st.sticker_url} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                          )}
+                          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Sticker #{idx + 1}</span>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.6, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
+                            Layer: {st.layer === 'behind_cards' ? 'Behind Cards' : 'Above Cards'}
+                          </span>
+                        </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <button
