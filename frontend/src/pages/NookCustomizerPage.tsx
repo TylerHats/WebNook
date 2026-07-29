@@ -1460,19 +1460,20 @@ export const NookCustomizerPage: React.FC = () => {
                           </span>
                         </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStickerLayer(idx)}
-                          className="btn-secondary"
-                          style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
-                        >
-                          Toggle Layer
-                        </button>
-                        <Trash2 size={16} style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => handleRemoveSticker(idx)} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStickerLayer(idx)}
+                            className="btn-secondary"
+                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                          >
+                            Toggle Layer
+                          </button>
+                          <Trash2 size={16} style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => handleRemoveSticker(idx)} />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
