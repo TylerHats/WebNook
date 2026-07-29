@@ -118,9 +118,9 @@ input, textarea, select {
   100% { left: 95%; opacity: 0.3; transform: translateY(-50%) rotate(0deg); }
 }
 
-@keyframes win9xTitleBarPulse {
-  0%, 100% { background: linear-gradient(90deg, #000080 0%, #1084d0 100%); }
-  50% { background: linear-gradient(90deg, #1084d0 0%, #000080 100%); }
+@keyframes win9xTitleBarRoll {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
 }
 
 .theme-win98 .nook-panel, .theme-win9x .nook-panel {
@@ -139,8 +139,9 @@ input, textarea, select {
 .theme-win98 .nook-panel-header, .theme-win9x .nook-panel-header {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(90deg, var(--accent-color) 0%, #1084d0 100%);
-  animation: win9xTitleBarPulse 4s ease-in-out infinite;
+  background: linear-gradient(90deg, #000080 0%, #1084d0 50%, #000080 100%);
+  background-size: 200% 100%;
+  animation: win9xTitleBarRoll 4s linear infinite;
   color: #ffffff !important;
   padding: 4px 8px;
   font-weight: bold;
@@ -160,6 +161,37 @@ input, textarea, select {
   animation: win9xFileFly 3.5s ease-in-out infinite;
   pointer-events: none;
   z-index: 2;
+}
+
+/* Staggered out-of-sync animation delays for cards and flying files */
+.theme-win98 .nook-panel:nth-child(2n) .nook-panel-header,
+.theme-win9x .nook-panel:nth-child(2n) .nook-panel-header {
+  animation-delay: -1.3s;
+}
+
+.theme-win98 .nook-panel:nth-child(3n) .nook-panel-header,
+.theme-win9x .nook-panel:nth-child(3n) .nook-panel-header {
+  animation-delay: -2.7s;
+}
+
+.theme-win98 .nook-panel:nth-child(4n) .nook-panel-header,
+.theme-win9x .nook-panel:nth-child(4n) .nook-panel-header {
+  animation-delay: -0.8s;
+}
+
+.theme-win98 .nook-panel:nth-child(2n) .nook-panel-header::before,
+.theme-win9x .nook-panel:nth-child(2n) .nook-panel-header::before {
+  animation-delay: -1.6s;
+}
+
+.theme-win98 .nook-panel:nth-child(3n) .nook-panel-header::before,
+.theme-win9x .nook-panel:nth-child(3n) .nook-panel-header::before {
+  animation-delay: -2.9s;
+}
+
+.theme-win98 .nook-panel:nth-child(4n) .nook-panel-header::before,
+.theme-win9x .nook-panel:nth-child(4n) .nook-panel-header::before {
+  animation-delay: -1.1s;
 }
 
 .theme-win98 .nook-panel-header::after, .theme-win9x .nook-panel-header::after {
