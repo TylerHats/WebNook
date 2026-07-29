@@ -25,8 +25,15 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
 
+# Install git for in-container self-updating
+RUN apk add --no-cache git
+
 COPY package*.json ./
 COPY backend/package*.json ./backend/
+COPY frontend/package*.json ./frontend/
+
+# Copy git repository metadata for self-updater
+COPY .git ./.git
 
 # Install production dependencies only
 RUN cd backend && npm install --only=production

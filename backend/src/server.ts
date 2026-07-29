@@ -166,6 +166,17 @@ async function startServer() {
     console.log('Initializing WebNook database migrations...');
     await runMigrations();
 
+    // Auto-sync DB installed_version with current package.json version on container boot
+    try {
+      const rootPkgPath = path.join(__dirname, '../../package.json');
+      if (fs.existsSync(rootPkgPath)) {
+        const rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, 'utf8'));
+        if (rootPkg && rootPkg.version) {
+          await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['installed_version', `v${rootPkg.version}`]);
+        }
+      }
+    } catch (e) {}
+
     const certPath = process.env.SSL_CERT || path.join(dataDir, 'cert.pem');
     const keyPath = process.env.SSL_KEY || path.join(dataDir, 'key.pem');
 

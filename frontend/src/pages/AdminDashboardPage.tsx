@@ -576,20 +576,11 @@ export const AdminDashboardPage: React.FC = () => {
                   {renderMarkdown(updateInfo.latestRelease?.notes)}
                 </div>
 
-                <div style={{ background: updateInfo.is_docker ? 'rgba(234, 179, 8, 0.15)' : 'rgba(59, 130, 246, 0.12)', padding: '1rem', borderRadius: '10px', border: updateInfo.is_docker ? '1px solid #eab308' : '1px solid #3b82f6', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '1rem' }}>
-                  🐳 <strong>{updateInfo.is_docker ? 'Docker Environment Detected (UI Self-Update Disabled)' : 'Git Host Installation Environment'}</strong>
-                  {updateInfo.is_docker ? (
-                    <div style={{ marginTop: '0.4rem' }}>
-                      WebNook is running in a Docker container. In-app self-updating via UI is disabled to maintain container immutability. To update WebNook to the latest release:
-                      <ol style={{ marginLeft: '1.25rem', marginTop: '0.4rem', marginBottom: 0 }}>
-                        <li>Pull the latest Docker image: <code style={{ background: 'rgba(0,0,0,0.4)', padding: '0.15rem 0.4rem', borderRadius: '4px', color: '#facc15' }}>docker pull tylerhats/webnook:latest</code></li>
-                        <li>Restart your container: <code style={{ background: 'rgba(0,0,0,0.4)', padding: '0.15rem 0.4rem', borderRadius: '4px', color: '#facc15' }}>docker compose up -d</code></li>
-                        <li><em>WebNook automatically executes all database schema migrations on startup when the container boots!</em></li>
-                      </ol>
-                    </div>
-                  ) : (
-                    <p style={{ marginTop: '0.3rem' }}>Applying updates via UI pulls latest code and runs database migrations automatically.</p>
-                  )}
+                <div style={{ background: 'rgba(59, 130, 246, 0.12)', padding: '1rem', borderRadius: '10px', border: '1px solid #3b82f6', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '1rem' }}>
+                  ⚡ <strong>Automated Self-Update & Schema Migration:</strong>
+                  <p style={{ marginTop: '0.3rem' }}>
+                    Clicking <strong>Apply Update & Pull Code</strong> fetches the latest release from Git, compiles static assets, executes all database schema migrations, and restarts WebNook seamlessly!
+                  </p>
                 </div>
               </div>
             )}
@@ -601,19 +592,19 @@ export const AdminDashboardPage: React.FC = () => {
               </button>
               <button
                 onClick={handleApplyUpdate}
-                className={updateInfo?.updateAvailable && !updateInfo?.is_docker ? 'btn-primary' : 'btn-secondary'}
-                disabled={isUpdating || !updateInfo?.updateAvailable || updateInfo?.is_docker}
+                className={updateInfo?.updateAvailable ? 'btn-primary' : 'btn-secondary'}
+                disabled={isUpdating || !updateInfo?.updateAvailable}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.5rem',
                   flexShrink: 0,
-                  opacity: updateInfo?.updateAvailable && !updateInfo?.is_docker ? 1 : 0.4,
-                  cursor: updateInfo?.updateAvailable && !updateInfo?.is_docker ? 'pointer' : 'not-allowed'
+                  opacity: updateInfo?.updateAvailable ? 1 : 0.4,
+                  cursor: updateInfo?.updateAvailable ? 'pointer' : 'not-allowed'
                 }}
               >
                 <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
-                <span>{isUpdating ? 'Updating & Migrating DB...' : updateInfo?.is_docker ? 'Self-Update Disabled in Docker' : updateInfo?.updateAvailable ? 'Apply Update & Pull Code' : 'No Update Available'}</span>
+                <span>{isUpdating ? 'Updating & Migrating DB...' : updateInfo?.updateAvailable ? 'Apply Update & Pull Code' : 'No Update Available'}</span>
               </button>
             </div>
           </div>

@@ -362,10 +362,15 @@ router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) =>
     let gitPulled = false;
 
     try {
-      execSync('git fetch origin && git pull origin main', { cwd: repoPath, timeout: 30000 });
+      execSync('git fetch origin && git pull origin main', { cwd: repoPath, timeout: 45000 });
       gitPulled = true;
+      try {
+        execSync('npm run build', { cwd: repoPath, timeout: 120000 });
+      } catch (buildErr: any) {
+        console.warn('[Self-Updater Warning] npm run build skipped or failed:', buildErr.message);
+      }
     } catch (gitErr: any) {
-      console.warn('[Self-Updater Warning] Git pull unavailable or skipped in container environment:', gitErr.message);
+      console.warn('[Self-Updater Warning] Git pull skipped or failed:', gitErr.message);
     }
 
     await runMigrations();
