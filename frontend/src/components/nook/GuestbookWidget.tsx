@@ -132,10 +132,10 @@ export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {entries.length === 0 ? (
+        {(entries || []).length === 0 ? (
           <p style={{ opacity: 0.6, fontSize: '0.85rem' }}>No guestbook entries yet. Be the first to comment!</p>
         ) : (
-          entries.map(entry => (
+          (entries || []).map(entry => (
             <div key={entry.id} style={{ display: 'flex', gap: '0.75rem', background: 'rgba(255,255,255,0.04)', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
               <img
                 src={entry.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}

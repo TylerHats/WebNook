@@ -184,12 +184,12 @@ export const NotificationDropdown: React.FC = () => {
           {/* Tab 1: Notices Content */}
           {activeTab === 'notices' && (
             <div style={{ overflowY: 'auto', flex: 1, padding: '0.5rem' }}>
-              {notifications.length === 0 ? (
+              {(notifications || []).length === 0 ? (
                 <div style={{ padding: '2rem 1rem', textAlign: 'center', opacity: 0.6, fontSize: '0.85rem' }}>
                   No notifications yet ✨
                 </div>
               ) : (
-                notifications.map(n => (
+                (notifications || []).map(n => (
                   <div
                     key={n.id}
                     style={{
@@ -224,12 +224,12 @@ export const NotificationDropdown: React.FC = () => {
           {/* Tab 2: Friend Requests Content */}
           {activeTab === 'friends' && (
             <div style={{ overflowY: 'auto', flex: 1, padding: '0.5rem' }}>
-              {pendingRequests.length === 0 ? (
+              {(pendingRequests || []).length === 0 ? (
                 <div style={{ padding: '2rem 1rem', textAlign: 'center', opacity: 0.6, fontSize: '0.85rem' }}>
                   No pending friend requests
                 </div>
               ) : (
-                pendingRequests.map(r => (
+                (pendingRequests || []).map(r => (
                   <div
                     key={r.request_id}
                     style={{
