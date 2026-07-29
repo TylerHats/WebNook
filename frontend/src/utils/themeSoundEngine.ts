@@ -90,6 +90,33 @@ export function playCatCafeClick() {
 }
 
 /**
+ * Cute Cat Meow Pitch-Bend Synthesizer
+ */
+export function playCatCafeMeow() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'triangle';
+
+  const t = ctx.currentTime;
+  osc.frequency.setValueAtTime(550, t);
+  osc.frequency.linearRampToValueAtTime(880, t + 0.12);
+  osc.frequency.exponentialRampToValueAtTime(380, t + 0.38);
+
+  gain.gain.setValueAtTime(0.01, t);
+  gain.gain.linearRampToValueAtTime(0.18, t + 0.08);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(t);
+  osc.stop(t + 0.4);
+}
+
+/**
  * Cozy Cat Cafe Warm Purr Tone
  */
 export function playCatCafePurr() {
@@ -245,7 +272,10 @@ export function playThemeSound(themeId: string, isSoundEnabled: boolean = true, 
     else playWin9xClick();
   } else if (t === 'cat-cafe') {
     if (action === 'guestbook') playCatCafePurr();
-    else playCatCafeClick();
+    else {
+      if (Math.random() < 0.25) playCatCafeMeow();
+      else playCatCafeClick();
+    }
   } else if (t === 'pixel-arcade') {
     if (action === 'guestbook') playPixelCoin();
     else playPixelArcadeClick();

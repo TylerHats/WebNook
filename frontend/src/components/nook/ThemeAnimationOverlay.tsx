@@ -1,13 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface ThemeAnimationOverlayProps {
   theme: string;
 }
 
 export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ theme }) => {
-  if (!theme) return null;
+  const [clickPaws, setClickPaws] = useState<{ id: number; x: number; y: number }[]>([]);
 
-  const normalizedTheme = theme.toLowerCase().trim();
+  const normalizedTheme = theme ? theme.toLowerCase().trim() : '';
+
+  useEffect(() => {
+    if (normalizedTheme !== 'cat-cafe' && normalizedTheme !== 'theme-cat-cafe') return;
+
+    const handleWindowClick = (e: MouseEvent) => {
+      const newPaw = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY };
+      setClickPaws(prev => [...prev.slice(-15), newPaw]);
+
+      setTimeout(() => {
+        setClickPaws(prev => prev.filter(p => p.id !== newPaw.id));
+      }, 1800);
+    };
+
+    window.addEventListener('click', handleWindowClick);
+    return () => window.removeEventListener('click', handleWindowClick);
+  }, [normalizedTheme]);
+
+  if (!theme) return null;
 
   if (normalizedTheme === 'win98' || normalizedTheme === 'win95' || normalizedTheme === 'win9x' || normalizedTheme === 'theme-win98' || normalizedTheme === 'theme-win9x') {
     return (
@@ -33,7 +51,25 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
 
   if (normalizedTheme === 'cat-cafe' || normalizedTheme === 'theme-cat-cafe') {
     return (
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999, overflow: 'hidden' }}>
+        {/* Floating click pawprints */}
+        {clickPaws.map(paw => (
+          <div
+            key={paw.id}
+            style={{
+              position: 'fixed',
+              left: paw.x - 14,
+              top: paw.y - 14,
+              fontSize: '1.6rem',
+              pointerEvents: 'none',
+              animation: 'pawDropFade 1.8s ease-out forwards'
+            }}
+          >
+            🐾
+          </div>
+        ))}
+
+        {/* Ambient rising background elements */}
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
