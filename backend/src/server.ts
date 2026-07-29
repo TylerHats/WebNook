@@ -58,37 +58,57 @@ if (!fs.existsSync(uploadsDir)) {
 // Privacy-Aware Media Handler for User Uploads (/uploads/:filename)
 app.get('/uploads/:filename', async (req, res) => {
   try {
-    const filename = path.basename(req.params.filename);
+    const rawFilename = path.basename(req.params.filename);
+    const filename = rawFilename.split('?')[0];
     const filePath = path.join(uploadsDir, filename);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('File not found');
     }
 
-    const fileUrl = `/uploads/${filename}`;
+    const cookies = parseCookies(req.headers.cookie);
+    let token = req.headers.authorization?.split(' ')[1] || cookies.token || (req.query.token as string);
+    let requestingUser: any = null;
 
-    // 1. Check if file belongs to a User Nook Profile (avatar, banner, bg_music, sticker, guestbook)
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        requestingUser = await queryOne('SELECT id, username, role FROM users WHERE id = ?', [decoded.id]);
+      } catch (e) {}
+    }
+
+    // 1. Group Chat Icon Handling (/uploads/group_*)
+    if (filename.startsWith('group_')) {
+      if (!requestingUser) {
+        return res.status(403).send('Access denied: Group chat media requires authentication');
+      }
+      const groupConv = await queryOne<any>(
+        `SELECT id FROM conversations WHERE type = 'group' AND avatar_url LIKE ?`,
+        [`%${filename}%`]
+      );
+      if (groupConv) {
+        const member = await queryOne(
+          `SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?`,
+          [groupConv.id, requestingUser.id]
+        );
+        if (!member && requestingUser.role !== 'admin') {
+          return res.status(403).send('Access denied: You are not a member of this group chat');
+        }
+      }
+      return res.sendFile(filePath);
+    }
+
+    // 2. Check if file belongs to a User Nook Profile (avatar, banner, bg_music, sticker, guestbook)
     const ownerUser = await queryOne<any>(
       `SELECT u.id, u.username, u.role, n.visibility_nook 
        FROM users u 
        LEFT JOIN nooks n ON n.user_id = u.id 
-       WHERE u.avatar_url = ? OR u.banner_url = ? OR u.avatar_url LIKE ? OR u.banner_url LIKE ?`,
-      [fileUrl, fileUrl, `%${filename}`, `%${filename}`]
+       WHERE u.avatar_url LIKE ? OR u.banner_url LIKE ?`,
+      [`%${filename}%`, `%${filename}%`]
     );
 
     // If file belongs to a user whose Nook is private
     if (ownerUser && ownerUser.visibility_nook === 'private') {
-      const cookies = parseCookies(req.headers.cookie);
-      let token = req.headers.authorization?.split(' ')[1] || cookies.token || (req.query.token as string);
-      let requestingUser: any = null;
-
-      if (token) {
-        try {
-          const decoded = jwt.verify(token, JWT_SECRET) as any;
-          requestingUser = await queryOne('SELECT id, username, role FROM users WHERE id = ?', [decoded.id]);
-        } catch (e) {}
-      }
-
       if (!requestingUser) {
         return res.status(403).send('Access denied: This file belongs to a private Nook');
       }
@@ -96,55 +116,25 @@ app.get('/uploads/:filename', async (req, res) => {
       const isOwner = requestingUser.id === ownerUser.id;
       const isAdmin = requestingUser.role === 'admin';
 
-      let isFriend = false;
-      if (!isOwner && !isAdmin) {
+      // Avatars are viewable by any authenticated user or friend
+      const isAvatar = filename.startsWith('avatar_') || ownerUser.avatar_url?.includes(filename);
+
+      if (!isOwner && !isAdmin && !isAvatar) {
+        // Check for accepted OR pending friend relationship (both requestor & requestee)
         const friendRow = await queryOne(
           `SELECT id FROM friends 
-           WHERE status = 'accepted' 
+           WHERE status IN ('accepted', 'pending') 
            AND ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))`,
           [requestingUser.id, ownerUser.id, ownerUser.id, requestingUser.id]
         );
-        if (friendRow) isFriend = true;
-      }
 
-      if (!isOwner && !isAdmin && !isFriend) {
-        return res.status(403).send('Access denied: This file belongs to a private Nook');
-      }
-    }
-
-    // 2. Check if file belongs to a Group Chat Icon
-    const groupConv = await queryOne<any>(
-      `SELECT id FROM conversations WHERE type = 'group' AND avatar_url LIKE ?`,
-      [`%${filename}`]
-    );
-
-    if (groupConv) {
-      const cookies = parseCookies(req.headers.cookie);
-      let token = req.headers.authorization?.split(' ')[1] || cookies.token || (req.query.token as string);
-      let requestingUser: any = null;
-
-      if (token) {
-        try {
-          const decoded = jwt.verify(token, JWT_SECRET) as any;
-          requestingUser = await queryOne('SELECT id, username, role FROM users WHERE id = ?', [decoded.id]);
-        } catch (e) {}
-      }
-
-      if (!requestingUser) {
-        return res.status(403).send('Access denied: Group chat media requires authentication');
-      }
-
-      const member = await queryOne(
-        `SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?`,
-        [groupConv.id, requestingUser.id]
-      );
-
-      if (!member && requestingUser.role !== 'admin') {
-        return res.status(403).send('Access denied: You are not a member of this group chat');
+        if (!friendRow) {
+          return res.status(403).send('Access denied: This file belongs to a private Nook');
+        }
       }
     }
 
-    // Serve file if authorized or public
+    // Fallback: serve authorized or public file
     return res.sendFile(filePath);
   } catch (err) {
     return res.status(500).send('Error serving media file');

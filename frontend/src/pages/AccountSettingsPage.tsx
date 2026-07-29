@@ -339,14 +339,14 @@ export const AccountSettingsPage: React.FC = () => {
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Profile Avatar Image (URL or Direct Upload)</label>
                 <input
                   type="text"
-                  placeholder="https://example.com/avatar.jpg"
-                  value={avatarUrl}
+                  placeholder={avatarUrl.startsWith('/uploads/') ? 'Uploaded Avatar active (or paste external URL...)' : 'https://example.com/avatar.jpg'}
+                  value={avatarUrl.startsWith('/uploads/') ? '' : avatarUrl}
                   onChange={e => setAvatarUrl(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}
                 />
                 <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
                   <Upload size={15} />
-                  <span>{avatarFileName || 'Choose Avatar Image...'}</span>
+                  <span>{avatarFileName || (avatarUrl.startsWith('/uploads/') ? 'Uploaded Avatar (Click to change)' : 'Choose Avatar Image...')}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -365,14 +365,14 @@ export const AccountSettingsPage: React.FC = () => {
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Header Banner Image (URL or Direct Upload)</label>
                 <input
                   type="text"
-                  placeholder="https://example.com/banner.jpg"
-                  value={bannerUrl}
+                  placeholder={bannerUrl.startsWith('/uploads/') ? 'Uploaded Banner active (or paste external URL...)' : 'https://example.com/banner.jpg'}
+                  value={bannerUrl.startsWith('/uploads/') ? '' : bannerUrl}
                   onChange={e => setBannerUrl(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}
                 />
                 <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
                   <Upload size={15} />
-                  <span>{bannerFileName || 'Choose Banner Image...'}</span>
+                  <span>{bannerFileName || (bannerUrl.startsWith('/uploads/') ? 'Uploaded Banner (Click to change)' : 'Choose Banner Image...')}</span>
                   <input
                     type="file"
                     accept="image/*"

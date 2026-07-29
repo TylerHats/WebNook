@@ -43,10 +43,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshUser = async () => {
     const savedToken = localStorage.getItem('webnook_token');
     if (!savedToken) {
+      document.cookie = "token=; path=/; max-age=0;";
       setUser(null);
       setIsLoading(false);
       return;
     }
+
+    // Automatically sync token to browser cookie for media image requests
+    document.cookie = `token=${savedToken}; path=/; max-age=604800; SameSite=Lax`;
 
     try {
       const res = await fetch('/api/auth/me', {
@@ -57,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(data.user);
       } else {
         localStorage.removeItem('webnook_token');
+        document.cookie = "token=; path=/; max-age=0;";
         setToken(null);
         setUser(null);
       }
@@ -73,12 +78,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (newToken: string, newUser: User) => {
     localStorage.setItem('webnook_token', newToken);
+    document.cookie = `token=${newToken}; path=/; max-age=604800; SameSite=Lax`;
     setToken(newToken);
     setUser(newUser);
   };
 
   const logout = () => {
     localStorage.removeItem('webnook_token');
+    document.cookie = "token=; path=/; max-age=0;";
     setToken(null);
     setUser(null);
   };
