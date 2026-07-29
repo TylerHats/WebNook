@@ -11,6 +11,7 @@ export interface MovieItem {
   overview?: string;
   rating?: number | string;
   inProgress?: boolean;
+  onMyList?: boolean;
 }
 
 interface MoviesWidgetProps {
@@ -72,6 +73,10 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
                   {m.inProgress ? (
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.15rem 0.45rem', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                       Watching... 🍿
+                    </span>
+                  ) : m.onMyList ? (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '0.15rem 0.45rem', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      On My List 📌
                     </span>
                   ) : (
                     <StarRatingDisplay rating={m.rating ?? 5} size={12} />

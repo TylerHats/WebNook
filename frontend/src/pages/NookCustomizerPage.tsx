@@ -1031,24 +1031,35 @@ export const NookCustomizerPage: React.FC = () => {
                     <img src={m.posterUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
                     <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{m.type} • {m.year}</div>
-                    <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
                         <input
                           type="checkbox"
                           checked={!!m.inProgress}
                           onChange={e => {
                             const checked = e.target.checked;
-                            setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, inProgress: checked } : item));
+                            setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, inProgress: checked, onMyList: checked ? false : item.onMyList } : item));
                           }}
                         />
                         <span>In Progress 🍿</span>
                       </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: m.inProgress ? 0.4 : 1 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!m.onMyList}
+                          onChange={e => {
+                            const checked = e.target.checked;
+                            setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, onMyList: checked, inProgress: checked ? false : item.inProgress } : item));
+                          }}
+                        />
+                        <span>On My List 📌</span>
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: (m.inProgress || m.onMyList) ? 0.4 : 1, marginTop: '0.1rem' }}>
                         <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
                         <input
                           type="text"
                           placeholder="5.0"
-                          disabled={!!m.inProgress}
+                          disabled={!!m.inProgress || !!m.onMyList}
                           value={m.rating !== undefined && m.rating !== null ? m.rating : ''}
                           onChange={e => {
                             const val = e.target.value;
@@ -1161,24 +1172,35 @@ export const NookCustomizerPage: React.FC = () => {
                     <img src={b.coverUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
                     <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{b.author}</div>
-                    <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
                         <input
                           type="checkbox"
                           checked={!!b.inProgress}
                           onChange={e => {
                             const checked = e.target.checked;
-                            setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, inProgress: checked } : item));
+                            setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, inProgress: checked, onMyList: checked ? false : item.onMyList } : item));
                           }}
                         />
                         <span>In Progress 📖</span>
                       </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: b.inProgress ? 0.4 : 1 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!b.onMyList}
+                          onChange={e => {
+                            const checked = e.target.checked;
+                            setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, onMyList: checked, inProgress: checked ? false : item.inProgress } : item));
+                          }}
+                        />
+                        <span>On My List 📌</span>
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: (b.inProgress || b.onMyList) ? 0.4 : 1, marginTop: '0.1rem' }}>
                         <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
                         <input
                           type="text"
                           placeholder="5.0"
-                          disabled={!!b.inProgress}
+                          disabled={!!b.inProgress || !!b.onMyList}
                           value={b.rating !== undefined && b.rating !== null ? b.rating : ''}
                           onChange={e => {
                             const val = e.target.value;

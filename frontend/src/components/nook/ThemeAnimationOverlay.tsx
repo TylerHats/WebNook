@@ -68,6 +68,19 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
   }
 
   if (normalizedTheme === 'cat-cafe' || normalizedTheme === 'theme-cat-cafe') {
+    const risingCats = [
+      { icon: '🐾', left: '8%', size: '1.4rem', speed: '7s', delay: '-1s' },
+      { icon: '🐱', left: '22%', size: '1.8rem', speed: '9.5s', delay: '-4.2s' },
+      { icon: '☕', left: '37%', size: '1.3rem', speed: '6.8s', delay: '-2.5s' },
+      { icon: '🧁', left: '52%', size: '1.5rem', speed: '8.2s', delay: '-5.8s' },
+      { icon: '🐈', left: '66%', size: '1.7rem', speed: '10.5s', delay: '-1.8s' },
+      { icon: '🐾', left: '81%', size: '1.4rem', speed: '7.5s', delay: '-3.6s' },
+      { icon: '🎀', left: '93%', size: '1.3rem', speed: '9s', delay: '-6.5s' },
+      { icon: '🐱', left: '14%', size: '1.6rem', speed: '11s', delay: '-8s' },
+      { icon: '☕', left: '46%', size: '1.5rem', speed: '8.6s', delay: '-0.5s' },
+      { icon: '🐾', left: '74%', size: '1.8rem', speed: '7.8s', delay: '-4.8s' }
+    ];
+
     return (
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999, overflow: 'hidden' }}>
         {/* Floating click pawprints */}
@@ -87,21 +100,21 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
           </div>
         ))}
 
-        {/* Ambient rising background elements */}
-        {[...Array(6)].map((_, i) => (
+        {/* Ambient randomized rising background elements */}
+        {risingCats.map((cat, i) => (
           <div
             key={i}
             style={{
               position: 'absolute',
               bottom: '-10%',
-              left: `${15 + i * 15}%`,
-              fontSize: i % 2 === 0 ? '1.4rem' : '1.8rem',
-              opacity: 0.35,
-              animation: `floatUpDrift ${6 + (i % 4) * 2}s linear infinite`,
-              animationDelay: `${i * 1.2}s`
+              left: cat.left,
+              fontSize: cat.size,
+              opacity: 0.38,
+              animation: `floatUpDrift ${cat.speed} linear infinite`,
+              animationDelay: cat.delay
             }}
           >
-            {i % 3 === 0 ? '🐾' : i % 3 === 1 ? '🐱' : '☕'}
+            {cat.icon}
           </div>
         ))}
       </div>
@@ -212,22 +225,41 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
   }
 
   if (normalizedTheme === 'magical-girl' || normalizedTheme === 'theme-magical-girl') {
+    const magicalItems = [
+      { icon: '✨', top: '7%', left: '4%', opacity: 0.6, delay: '0s', scale: '1.3rem' },
+      { icon: '🌙', top: '15%', left: '88%', opacity: 0.55, delay: '1.2s', scale: '1.7rem' },
+      { icon: '🪄', top: '32%', left: '5%', opacity: 0.5, delay: '0.5s', scale: '1.5rem' },
+      { icon: '🌸', top: '55%', left: '92%', opacity: 0.45, delay: '1.8s', scale: '1.4rem' },
+      { icon: '💖', top: '74%', left: '3%', opacity: 0.5, delay: '0.8s', scale: '1.5rem' },
+      { icon: '👑', top: '86%', left: '87%', opacity: 0.55, delay: '2.1s', scale: '1.6rem' },
+      { icon: '🎀', top: '18%', left: '76%', opacity: 0.45, delay: '1.4s', scale: '1.4rem' },
+      { icon: '🔮', top: '48%', left: '6%', opacity: 0.5, delay: '0.3s', scale: '1.5rem' },
+      { icon: '⭐️', top: '82%', left: '12%', opacity: 0.6, delay: '1.6s', scale: '1.3rem' },
+      { icon: '✨', top: '27%', left: '93%', opacity: 0.55, delay: '0.9s', scale: '1.4rem' },
+      { icon: '🌸', top: '64%', left: '86%', opacity: 0.45, delay: '2.4s', scale: '1.5rem' },
+      { icon: '💖', top: '42%', left: '91%', opacity: 0.5, delay: '1.1s', scale: '1.3rem' },
+      { icon: '🌙', top: '92%', left: '72%', opacity: 0.55, delay: '0.2s', scale: '1.6rem' },
+      { icon: '🪄', top: '6%', left: '22%', opacity: 0.5, delay: '1.7s', scale: '1.4rem' },
+      { icon: '🎀', top: '94%', left: '38%', opacity: 0.45, delay: '0.6s', scale: '1.5rem' },
+      { icon: '✨', top: '4%', left: '83%', opacity: 0.6, delay: '1.3s', scale: '1.4rem' }
+    ];
+
     return (
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
-        {[...Array(8)].map((_, i) => (
+        {magicalItems.map((item, i) => (
           <div
             key={i}
             style={{
               position: 'absolute',
-              top: `${8 + i * 11}%`,
-              left: `${8 + (i * 12) % 85}%`,
-              fontSize: '1.3rem',
-              opacity: 0.5,
-              animation: `sparkleShimmer 2.5s ease-in-out infinite alternate`,
-              animationDelay: `${i * 0.3}s`
+              top: item.top,
+              left: item.left,
+              fontSize: item.scale,
+              opacity: item.opacity,
+              animation: `sparkleShimmer 2.8s ease-in-out infinite alternate`,
+              animationDelay: item.delay
             }}
           >
-            {i % 3 === 0 ? '✨' : i % 3 === 1 ? '🌙' : '🪄'}
+            {item.icon}
           </div>
         ))}
       </div>
