@@ -69,11 +69,12 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
 
   const getSpotifyEmbedUrl = (url: string) => {
     if (!url) return '';
-    const match = url.match(/track\/([a-zA-Z0-9]+)/);
-    if (match && match[1]) {
-      return `https://open.spotify.com/embed/track/${match[1]}?utm_source=generator&theme=0`;
+    if (url.includes('spotify.com/embed/')) return url;
+    const match = url.match(/(track|album|playlist)\/([a-zA-Z0-9]+)/);
+    if (match && match[1] && match[2]) {
+      return `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator&theme=0`;
     }
-    return '';
+    return url;
   };
 
   const getAppleMusicEmbedUrl = (url: string) => {

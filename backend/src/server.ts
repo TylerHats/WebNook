@@ -149,10 +149,13 @@ app.get('/api/health', (req, res) => {
 // Serve Frontend Static Files in production if built
 const frontendDist = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendDist)) {
+  app.use('/assets', express.static(path.join(frontendDist, 'assets'), { immutable: true, maxAge: '1y' }));
   app.use(express.static(frontendDist));
   app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads') && !req.path.startsWith('/branding')) {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads') && !req.path.startsWith('/branding') && !req.path.startsWith('/assets')) {
       res.sendFile(path.join(frontendDist, 'index.html'));
+    } else {
+      res.status(404).send('Asset not found');
     }
   });
 }

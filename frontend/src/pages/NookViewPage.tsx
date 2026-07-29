@@ -46,14 +46,11 @@ export const NookViewPage: React.FC = () => {
     fetchProfile();
   }, [targetUsername, token]);
 
-  const handleGlobalClick = (e: React.MouseEvent) => {
+  const handleGlobalClick = () => {
     if (profileData?.nookSettings) {
       const themeId = profileData.nookSettings.theme;
       const isSoundEnabled = profileData.nookSettings.theme_sounds_enabled !== 0 && profileData.nookSettings.theme_sounds_enabled !== false;
-      const target = e.target as HTMLElement;
-      if (target && (target.tagName === 'BUTTON' || target.tagName === 'A' || target.closest('button') || target.closest('a'))) {
-        playThemeSound(themeId, isSoundEnabled, 'click');
-      }
+      playThemeSound(themeId, isSoundEnabled, 'click');
     }
   };
 
@@ -263,38 +260,11 @@ export const NookViewPage: React.FC = () => {
           {/* Right Column Widgets */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {cardVis.friends !== false && (
-              <div className="nook-panel">
-                <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Users size={20} color="var(--accent-color)" />
-                    <span>{cardTitles.friends || 'Top Friends'}</span>
-                  </div>
-                  <Link to="/friends" style={{ fontSize: '0.75rem', color: 'var(--accent-color)', textDecoration: 'none' }}>
-                    View All →
-                  </Link>
-                </div>
-
-                {(!topFriends || topFriends.length === 0) ? (
-                  <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center', padding: '1rem 0' }}>
-                    No favorited top friends yet ✨
-                  </p>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.75rem' }}>
-                    {topFriends.map((f: any) => (
-                      <Link key={f.id} to={`/nook/${f.username}`} style={{ textDecoration: 'none', color: 'inherit', textAlign: 'center' }}>
-                        <img
-                          src={f.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                          alt={f.username}
-                          style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.3rem' }}
-                        />
-                        <div style={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {f.display_name || f.username}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <TopFriendsGrid
+                title={cardTitles.friends || 'Top Friends'}
+                topFriends={topFriends}
+                ownerUsername={owner.display_name || owner.username}
+              />
             )}
 
             {cardVis.books !== false && (
