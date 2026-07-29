@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { playCyberpunkSpark } from '../../utils/themeSoundEngine';
 
 interface ThemeAnimationOverlayProps {
   theme: string;
@@ -7,6 +8,7 @@ interface ThemeAnimationOverlayProps {
 export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ theme }) => {
   const [clickPaws, setClickPaws] = useState<{ id: number; x: number; y: number }[]>([]);
   const [clickCoins, setClickCoins] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [cyberSparks, setCyberSparks] = useState<{ id: number; top: string; left: string; particles: { dx: number; dy: number; size: number; color: string }[] }[]>([]);
 
   const normalizedTheme = theme ? theme.toLowerCase().trim() : '';
 
@@ -43,6 +45,53 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
     };
   }, [normalizedTheme]);
 
+  useEffect(() => {
+    if (normalizedTheme !== 'cyberpunk' && normalizedTheme !== 'theme-cyberpunk') return;
+
+    const triggerSparkShower = () => {
+        const corners = [
+          { top: '12%', left: '8%' },
+          { top: '16%', left: '48%' },
+          { top: '20%', left: '92%' },
+          { top: '48%', left: '6%' },
+          { top: '52%', left: '52%' },
+          { top: '58%', left: '94%' },
+          { top: '82%', left: '10%' },
+          { top: '85%', left: '88%' }
+        ];
+        const chosen = corners[Math.floor(Math.random() * corners.length)];
+        const colors = ['#00f3ff', '#ff007f', '#ffe600', '#ffffff'];
+
+        const particles = Array.from({ length: 12 }, () => {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 30 + Math.random() * 65;
+          return {
+            dx: Math.cos(angle) * dist,
+            dy: Math.sin(angle) * dist,
+            size: 3 + Math.random() * 5,
+            color: colors[Math.floor(Math.random() * colors.length)]
+          };
+        });
+
+        const newSpark = { id: Date.now() + Math.random(), ...chosen, particles };
+        setCyberSparks(prev => [...prev.slice(-4), newSpark]);
+
+        playCyberpunkSpark();
+
+        setTimeout(() => {
+          setCyberSparks(prev => prev.filter(s => s.id !== newSpark.id));
+        }, 850);
+      };
+
+      const interval = setInterval(triggerSparkShower, 4500);
+      const initTimer = setTimeout(triggerSparkShower, 1200);
+
+      return () => {
+        clearInterval(interval);
+        clearTimeout(initTimer);
+      };
+  }, [normalizedTheme]);
+
   if (!theme) return null;
 
   if (normalizedTheme === 'win98' || normalizedTheme === 'win95' || normalizedTheme === 'win9x' || normalizedTheme === 'theme-win98' || normalizedTheme === 'theme-win9x') {
@@ -59,10 +108,50 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
 
   if (normalizedTheme === 'cyberpunk' || normalizedTheme === 'theme-cyberpunk') {
     return (
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '20%', left: '10%', width: '2px', height: '40px', background: '#ff007f', boxShadow: '0 0 10px #ff007f', animation: 'cyberSpark 2s ease-in-out infinite' }} />
-        <div style={{ position: 'absolute', top: '60%', right: '12%', width: '2px', height: '60px', background: '#00f3ff', boxShadow: '0 0 10px #00f3ff', animation: 'cyberSpark 3s ease-in-out infinite 1s' }} />
-        <div style={{ position: 'absolute', bottom: '15%', left: '30%', width: '3px', height: '30px', background: '#ffe600', boxShadow: '0 0 12px #ffe600', animation: 'cyberSpark 2.5s ease-in-out infinite 1.5s' }} />
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999, overflow: 'hidden' }}>
+        {cyberSparks.map(spark => (
+          <div
+            key={spark.id}
+            style={{
+              position: 'absolute',
+              top: spark.top,
+              left: spark.left,
+              pointerEvents: 'none'
+            }}
+          >
+            {/* Flash point core */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                background: '#ffffff',
+                boxShadow: '0 0 16px #00f3ff, 0 0 30px #ff007f',
+                transform: 'translate(-50%, -50%)',
+                animation: 'pawDropFade 0.4s ease-out forwards'
+              }}
+            />
+            {/* Bursting spark particles */}
+            {spark.particles.map((p, pIdx) => (
+              <div
+                key={pIdx}
+                style={{
+                  position: 'absolute',
+                  width: `${p.size}px`,
+                  height: `${p.size}px`,
+                  borderRadius: '50%',
+                  backgroundColor: p.color,
+                  boxShadow: `0 0 8px ${p.color}`,
+                  transform: 'translate(-50%, -50%)',
+                  '--dx': `${p.dx}px`,
+                  '--dy': `${p.dy}px`,
+                  animation: 'sparkBurstFly 0.75s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
+                } as React.CSSProperties}
+              />
+            ))}
+          </div>
+        ))}
       </div>
     );
   }

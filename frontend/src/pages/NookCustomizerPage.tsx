@@ -508,15 +508,15 @@ export const NookCustomizerPage: React.FC = () => {
       />
 
       <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 280px' }}>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Palette size={28} style={{ flexShrink: 0 }} />
               <span>Nook Visual Studio & Customizer</span>
             </h1>
-            <p style={{ opacity: 0.7 }}>Design your dream page with cute themes, audio, stickers, and custom CSS.</p>
+            <p style={{ opacity: 0.7, marginTop: '0.25rem' }}>Design your dream page with cute themes, audio, stickers, and custom CSS.</p>
           </div>
-          <button onClick={handleSave} className="btn-primary" disabled={isSaving} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+          <button onClick={handleSave} className="btn-primary" disabled={isSaving} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0, marginTop: '0.25rem' }}>
             <Save size={18} style={{ flexShrink: 0 }} />
             <span>{isSaving ? 'Saving...' : 'Save Nook'}</span>
           </button>

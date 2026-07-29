@@ -260,26 +260,54 @@ export function playMagicalChime() {
 }
 
 /**
- * Cyberpunk Electric Zap Pulse
+ * Synthesize Crisp Cyberpunk Electrical Spark Crackle
  */
 export function playCyberpunkSpark() {
   const ctx = getAudioContext();
   if (!ctx) return;
-  const osc = ctx.createOscillator();
+  const t = ctx.currentTime;
+
+  // Highpass electrical crackle noise burst
+  const bufferSize = Math.floor(ctx.sampleRate * 0.12);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.2));
+  }
+
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.setValueAtTime(2400, t);
+  filter.frequency.exponentialRampToValueAtTime(6500, t + 0.1);
+
   const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.18, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
 
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(800, ctx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.05);
+  // Electrical pitch zap
+  const zapOsc = ctx.createOscillator();
+  const zapGain = ctx.createGain();
+  zapOsc.type = 'sawtooth';
+  zapOsc.frequency.setValueAtTime(2800, t);
+  zapOsc.frequency.exponentialRampToValueAtTime(350, t + 0.07);
 
-  gain.gain.setValueAtTime(0.1, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+  zapGain.gain.setValueAtTime(0.12, t);
+  zapGain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
 
-  osc.connect(gain);
+  noise.connect(filter);
+  filter.connect(gain);
   gain.connect(ctx.destination);
 
-  osc.start();
-  osc.stop(ctx.currentTime + 0.05);
+  zapOsc.connect(zapGain);
+  zapGain.connect(ctx.destination);
+
+  noise.start(t);
+  zapOsc.start(t);
+  noise.stop(t + 0.12);
+  zapOsc.stop(t + 0.08);
 }
 
 /**
