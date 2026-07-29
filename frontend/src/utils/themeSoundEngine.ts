@@ -90,69 +90,51 @@ export function playCatCafeClick() {
 }
 
 /**
- * Realistic Vocal Formant Cat Meow Synthesizer
+ * Cute & Soft Kitten Meow Synthesizer
  */
 export function playCatCafeMeow() {
   const ctx = getAudioContext();
   if (!ctx) return;
   const t = ctx.currentTime;
 
-  // Primary vocal cord oscillator (sawtooth for rich harmonic spectrum)
   const osc1 = ctx.createOscillator();
-  // Secondary harmonic overtone oscillator (sine at 1.5x formant freq)
   const osc2 = ctx.createOscillator();
-  // Vibrato sub-oscillator (6.5 Hz waver)
-  const lfo = ctx.createOscillator();
-  const lfoGain = ctx.createGain();
-
-  // Resonant vocal tract BiquadFilter (peaking filter for vocal formant)
   const filter = ctx.createBiquadFilter();
-  const mainGain = ctx.createGain();
+  const gain = ctx.createGain();
 
-  osc1.type = 'sawtooth';
-  osc2.type = 'sine';
-  lfo.type = 'sine';
+  osc1.type = 'sine';
+  osc2.type = 'triangle';
 
-  // LFO vibrato setup (6.5 Hz modulation)
-  lfo.frequency.setValueAtTime(6.5, t);
-  lfoGain.gain.setValueAtTime(14, t);
-  lfo.connect(osc1.frequency);
-  lfo.connect(osc2.frequency);
+  // High-pitched cute kitten frequency sweep ("m-e-o-w~")
+  // Starts ~680Hz ("m"), glides up to ~1120Hz ("meee"), gently drops to ~600Hz ("ow~")
+  osc1.frequency.setValueAtTime(680, t);
+  osc1.frequency.linearRampToValueAtTime(1120, t + 0.12);
+  osc1.frequency.exponentialRampToValueAtTime(600, t + 0.36);
 
-  // Vowel pitch envelope ("m-e-o-w")
-  osc1.frequency.setValueAtTime(360, t);
-  osc1.frequency.linearRampToValueAtTime(740, t + 0.14);
-  osc1.frequency.exponentialRampToValueAtTime(390, t + 0.42);
+  osc2.frequency.setValueAtTime(684, t);
+  osc2.frequency.linearRampToValueAtTime(1126, t + 0.12);
+  osc2.frequency.exponentialRampToValueAtTime(604, t + 0.36);
 
-  osc2.frequency.setValueAtTime(540, t);
-  osc2.frequency.linearRampToValueAtTime(1110, t + 0.14);
-  osc2.frequency.exponentialRampToValueAtTime(585, t + 0.42);
+  // Soft low-pass filter to smooth out all harshness
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(1600, t);
+  filter.frequency.linearRampToValueAtTime(2200, t + 0.12);
+  filter.frequency.exponentialRampToValueAtTime(1200, t + 0.36);
 
-  // Formant Filter sweep (mimics opening cat mouth "m" -> "me-o" -> "w")
-  filter.type = 'peaking';
-  filter.Q.setValueAtTime(3.5, t);
-  filter.gain.setValueAtTime(8, t);
-  filter.frequency.setValueAtTime(500, t);
-  filter.frequency.linearRampToValueAtTime(1200, t + 0.14);
-  filter.frequency.exponentialRampToValueAtTime(450, t + 0.42);
-
-  // Dynamic vocal volume envelope
-  mainGain.gain.setValueAtTime(0.001, t);
-  mainGain.gain.linearRampToValueAtTime(0.18, t + 0.06);
-  mainGain.gain.linearRampToValueAtTime(0.15, t + 0.22);
-  mainGain.gain.exponentialRampToValueAtTime(0.001, t + 0.44);
+  // Soft, gentle volume envelope
+  gain.gain.setValueAtTime(0.001, t);
+  gain.gain.linearRampToValueAtTime(0.12, t + 0.05);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
 
   osc1.connect(filter);
   osc2.connect(filter);
-  filter.connect(mainGain);
-  mainGain.connect(ctx.destination);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
 
-  lfo.start(t);
   osc1.start(t);
   osc2.start(t);
 
-  const stopTime = t + 0.45;
-  lfo.stop(stopTime);
+  const stopTime = t + 0.39;
   osc1.stop(stopTime);
   osc2.stop(stopTime);
 }
