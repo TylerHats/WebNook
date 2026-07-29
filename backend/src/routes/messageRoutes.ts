@@ -41,14 +41,14 @@ export async function getBugReportsBotUser() {
 // Helper to ensure System Announcement DM conversation exists for a user
 async function ensureSystemDM(userId: number) {
   const sys = await getSystemBotUser();
-  if (!sys) return null;
+  if (!sys || sys.id === userId) return null;
 
   const existing = await queryOne<any>(`
     SELECT c.id 
     FROM conversations c
     JOIN conversation_members cm1 ON c.id = cm1.conversation_id
     JOIN conversation_members cm2 ON c.id = cm2.conversation_id
-    WHERE c.type = 'direct' AND cm1.user_id = ? AND cm2.user_id = ?
+    WHERE c.type = 'direct' AND cm1.user_id = ? AND cm2.user_id = ? AND cm1.id != cm2.id
   `, [userId, sys.id]);
 
   if (existing) return existing.id;
@@ -70,14 +70,14 @@ async function ensureSystemDM(userId: number) {
 // Helper to ensure Bug Reports DM conversation exists for a user
 async function ensureBugReportsDM(userId: number) {
   const bug = await getBugReportsBotUser();
-  if (!bug) return null;
+  if (!bug || bug.id === userId) return null;
 
   const existing = await queryOne<any>(`
     SELECT c.id 
     FROM conversations c
     JOIN conversation_members cm1 ON c.id = cm1.conversation_id
     JOIN conversation_members cm2 ON c.id = cm2.conversation_id
-    WHERE c.type = 'direct' AND cm1.user_id = ? AND cm2.user_id = ?
+    WHERE c.type = 'direct' AND cm1.user_id = ? AND cm2.user_id = ? AND cm1.id != cm2.id
   `, [userId, bug.id]);
 
   if (existing) return existing.id;
@@ -87,6 +87,14 @@ async function ensureBugReportsDM(userId: number) {
 
   await execute('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, userId]);
   await execute('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, bug.id]);
+
+  // Add site administrators to conversation_members so admins can view and reply to user bug report threads
+  const admins = await query<any>('SELECT id FROM users WHERE role = "admin" AND is_disabled = 0');
+  for (const a of admins) {
+    if (a.id !== userId && a.id !== bug.id) {
+      await execute('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, a.id]);
+    }
+  }
 
   await execute(
     'INSERT INTO messages (conversation_id, sender_id, content, is_system_notice) VALUES (?, ?, ?, 0)',
@@ -149,6 +157,7 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
     `, [userId]);
 
     const conversations = [];
+    const seenSystemUserIds = new Set<number>();
 
     for (const c of convRows) {
       // Unread count
@@ -168,13 +177,19 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
         WHERE cm.conversation_id = ?
       `, [c.id]);
 
-      // Check if 1-on-1 DM is locked due to unfriending
       let isLocked = false;
-      let otherMember = null;
+      let otherMember = members.find((m: any) => m.id !== userId);
 
-      if (c.type === 'direct') {
-        otherMember = members.find((m: any) => m.id !== userId);
-        if (otherMember && otherMember.role !== 'system' && otherMember.username !== 'system') {
+      // Deduplicate direct system bot conversations if duplicate rows exist
+      if (c.type === 'direct' && otherMember) {
+        if (otherMember.role === 'system' || otherMember.username === 'system' || otherMember.username === 'bug_reports') {
+          if (seenSystemUserIds.has(otherMember.id)) {
+            continue; // Skip duplicate conversation
+          }
+          seenSystemUserIds.add(otherMember.id);
+        }
+
+        if (otherMember.role !== 'system' && otherMember.username !== 'system' && otherMember.username !== 'bug_reports') {
           const isFriend = await areAcceptedFriends(userId, otherMember.id);
           if (!isFriend) {
             isLocked = true;
@@ -182,34 +197,20 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
         }
       }
 
-      // Latest message preview
-      const lastMsg = await queryOne<any>(`
-        SELECT m.content, m.created_at, m.sender_id, m.is_system_notice, u.username as sender_username, u.display_name as sender_display_name
-        FROM messages m
-        JOIN users u ON m.sender_id = u.id
-        WHERE m.conversation_id = ?
-        ORDER BY m.created_at DESC LIMIT 1
+      // Latest message
+      const lastMessage = await queryOne<any>(`
+        SELECT id, sender_id, content, created_at
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY created_at DESC LIMIT 1
       `, [c.id]);
 
       conversations.push({
-        id: c.id,
-        type: c.type,
-        name: c.name,
-        avatar_url: c.avatar_url,
-        creator_user_id: c.creator_user_id,
-        is_muted: !!c.is_muted,
-        is_locked: isLocked,
-        last_read_at: c.last_read_at,
+        ...c,
         unread_count: unreadRow?.count || 0,
+        is_locked: isLocked,
         members,
-        last_message: lastMsg ? {
-          content: lastMsg.content,
-          created_at: lastMsg.created_at,
-          sender_id: lastMsg.sender_id,
-          sender_username: lastMsg.sender_username,
-          sender_display_name: lastMsg.sender_display_name,
-          is_system_notice: !!lastMsg.is_system_notice
-        } : null
+        last_message: lastMessage || null
       });
     }
 
@@ -224,10 +225,14 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
 router.post('/conversations/direct', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const target_user_id = req.body.target_user_id || req.body.friend_user_id || req.body.user_id;
+    const target_user_id = Number(req.body.target_user_id || req.body.friend_user_id || req.body.user_id);
 
-    if (!target_user_id) {
+    if (!target_user_id || isNaN(target_user_id)) {
       return res.status(400).json({ error: 'Target user ID is required' });
+    }
+
+    if (userId === target_user_id) {
+      return res.status(400).json({ error: 'You cannot direct message yourself' });
     }
 
     const targetUser = await queryOne<any>('SELECT id, username, display_name, role FROM users WHERE id = ?', [target_user_id]);
@@ -237,7 +242,7 @@ router.post('/conversations/direct', authenticateToken, async (req: Authenticate
 
     const isSystemBot = targetUser.role === 'system' || targetUser.username === 'system' || targetUser.username === 'bug_reports';
 
-    if (!isSystemBot && !(await areAcceptedFriends(userId, Number(target_user_id)))) {
+    if (!isSystemBot && !(await areAcceptedFriends(userId, target_user_id))) {
       return res.status(403).json({ error: `You can only direct message accepted friends. You are not friends with @${targetUser.username}.` });
     }
 
@@ -246,7 +251,7 @@ router.post('/conversations/direct', authenticateToken, async (req: Authenticate
       FROM conversations c
       JOIN conversation_members cm1 ON c.id = cm1.conversation_id
       JOIN conversation_members cm2 ON c.id = cm2.conversation_id
-      WHERE c.type = 'direct' AND cm1.user_id = ? AND cm2.user_id = ?
+      WHERE c.type = 'direct' AND cm1.user_id = ? AND cm2.user_id = ? AND cm1.id != cm2.id
     `, [userId, target_user_id]);
 
     if (existing) {
@@ -256,8 +261,10 @@ router.post('/conversations/direct', authenticateToken, async (req: Authenticate
     const resInsert = await execute('INSERT INTO conversations (type, name, creator_user_id) VALUES ("direct", "", ?)', [userId]);
     const convId = resInsert.lastID;
 
-    await execute('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, userId]);
-    await execute('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, target_user_id]);
+    const uniqueMemberIds = Array.from(new Set([userId, target_user_id]));
+    for (const mId of uniqueMemberIds) {
+      await execute('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, mId]);
+    }
 
     return res.json({ conversation_id: convId });
   } catch (err) {
@@ -497,6 +504,20 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: Authen
       'SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?',
       [convId, systemBot.id]
     ));
+
+    const bugBot = await getBugReportsBotUser();
+    const isBugReportsChat = bugBot && (await queryOne<any>(
+      'SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?',
+      [convId, bugBot.id]
+    ));
+
+    if (isBugReportsChat) {
+      // Ensure all active site admins are members of this bug reports conversation so they can read and reply
+      const admins = await query<any>('SELECT id FROM users WHERE role = "admin" AND is_disabled = 0');
+      for (const a of admins) {
+        await execute('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, a.id]);
+      }
+    }
 
     const isAdmin = req.user!.role === 'admin';
     if (isSystemChat && !isAdmin) {

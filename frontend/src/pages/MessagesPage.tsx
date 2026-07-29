@@ -9,6 +9,7 @@ import {
   Bug, Reply, Smile, ShieldAlert, ArrowLeft
 } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
+import { CustomSelect, CustomSelectOption } from '../components/ui/CustomSelect';
 
 // Markdown parser helper for standard chat messages
 const renderMessageMarkdown = (text: string) => {
@@ -1165,16 +1166,19 @@ export const MessagesPage: React.FC = () => {
             {acceptedFriends.length === 0 ? (
               <p style={{ fontSize: '0.85rem', color: '#eab308' }}>You don't have any accepted friends yet! Add friends from the Friends page first.</p>
             ) : (
-              <select
-                value={selectedFriendForDm}
-                onChange={e => setSelectedFriendForDm(e.target.value)}
-                style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '1.25rem' }}
-              >
-                <option value="">-- Select Friend --</option>
-                {acceptedFriends.map(f => (
-                  <option key={f.id} value={f.id}>@{f.username} ({f.display_name || 'No Name'})</option>
-                ))}
-              </select>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <CustomSelect
+                  options={acceptedFriends.map(f => ({
+                    value: f.id,
+                    label: `@${f.username} (${f.display_name || 'No Name'})`,
+                    avatar_url: f.avatar_url,
+                    username: f.username
+                  }))}
+                  value={selectedFriendForDm}
+                  onChange={val => setSelectedFriendForDm(String(val))}
+                  placeholder="-- Select Friend to DM --"
+                />
+              </div>
             )}
 
             <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
@@ -1369,18 +1373,21 @@ export const MessagesPage: React.FC = () => {
             {acceptedFriends.filter(f => !(activeConv.members || []).some((m: any) => m.id === f.id)).length === 0 ? (
               <p style={{ fontSize: '0.85rem', color: '#eab308' }}>No available friends to add (either all your friends are already in this group or you haven't added friends yet).</p>
             ) : (
-              <select
-                value={selectedAddMemberId}
-                onChange={e => setSelectedAddMemberId(e.target.value)}
-                style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '1.25rem' }}
-              >
-                <option value="">-- Select Friend --</option>
-                {acceptedFriends
-                  .filter(f => !(activeConv.members || []).some((m: any) => m.id === f.id))
-                  .map(f => (
-                    <option key={f.id} value={f.id}>@{f.username} ({f.display_name || 'No Name'})</option>
-                  ))}
-              </select>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <CustomSelect
+                  options={acceptedFriends
+                    .filter(f => !(activeConv.members || []).some((m: any) => m.id === f.id))
+                    .map(f => ({
+                      value: f.id,
+                      label: `@${f.username} (${f.display_name || 'No Name'})`,
+                      avatar_url: f.avatar_url,
+                      username: f.username
+                    }))}
+                  value={selectedAddMemberId}
+                  onChange={val => setSelectedAddMemberId(String(val))}
+                  placeholder="-- Select Friend to Add --"
+                />
+              </div>
             )}
 
             <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
