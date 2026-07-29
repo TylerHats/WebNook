@@ -206,15 +206,35 @@ export const NotificationDropdown: React.FC = () => {
                       <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <p style={{ margin: 0, opacity: 0.85, lineHeight: 1.4, fontSize: '0.8rem' }}>{n.message}</p>
-                    {n.link_url && (
-                      <Link
-                        to={n.link_url}
-                        onClick={() => setIsOpen(false)}
-                        style={{ display: 'inline-block', marginTop: '0.4rem', color: 'var(--accent-color)', fontWeight: 600, fontSize: '0.75rem' }}
-                      >
-                        {n.link_title ? `${n.link_title} →` : 'View →'}
-                      </Link>
-                    )}
+                    {n.link_url && (() => {
+                      const rawUrl = n.link_url.trim();
+                      const isExternal = rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('//') || (!rawUrl.startsWith('/') && rawUrl.includes('.'));
+                      const finalUrl = isExternal && !rawUrl.startsWith('http://') && !rawUrl.startsWith('https://') && !rawUrl.startsWith('//') ? `https://${rawUrl}` : rawUrl;
+
+                      if (isExternal) {
+                        return (
+                          <a
+                            href={finalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => setIsOpen(false)}
+                            style={{ display: 'inline-block', marginTop: '0.4rem', color: 'var(--accent-color)', fontWeight: 600, fontSize: '0.75rem' }}
+                          >
+                            {n.link_title ? `${n.link_title} ↗` : 'Open Link ↗'}
+                          </a>
+                        );
+                      }
+
+                      return (
+                        <Link
+                          to={finalUrl}
+                          onClick={() => setIsOpen(false)}
+                          style={{ display: 'inline-block', marginTop: '0.4rem', color: 'var(--accent-color)', fontWeight: 600, fontSize: '0.75rem' }}
+                        >
+                          {n.link_title ? `${n.link_title} →` : 'View →'}
+                        </Link>
+                      );
+                    })()}
                   </div>
                 ))
               )}

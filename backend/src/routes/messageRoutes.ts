@@ -224,7 +224,7 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
 router.post('/conversations/direct', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { target_user_id } = req.body;
+    const target_user_id = req.body.target_user_id || req.body.friend_user_id || req.body.user_id;
 
     if (!target_user_id) {
       return res.status(400).json({ error: 'Target user ID is required' });

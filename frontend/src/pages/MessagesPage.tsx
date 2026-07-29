@@ -167,7 +167,11 @@ export const MessagesPage: React.FC = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        setAcceptedFriends(data.friends || []);
+        const normalized = (data.friends || []).map((f: any) => ({
+          ...f,
+          id: f.friend_user_id || f.id
+        }));
+        setAcceptedFriends(normalized);
       }
     } catch (err) {
       console.error('Failed to fetch friends:', err);
