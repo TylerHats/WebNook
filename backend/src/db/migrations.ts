@@ -339,6 +339,15 @@ const migrations: Migration[] = [
         } catch (e) {}
       }
     }
+  },
+  {
+    version: 11,
+    name: 'v2.5.6_pinned_chats',
+    up: async () => {
+      try {
+        await execute('ALTER TABLE conversation_members ADD COLUMN is_pinned INTEGER DEFAULT 0');
+      } catch (e) {}
+    }
   }
 ];
 

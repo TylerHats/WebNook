@@ -109,7 +109,7 @@ async function areAcceptedFriends(userA: number, userB: number): Promise<boolean
   if (userA === userB) return true;
   const friendRow = await queryOne<any>(`
     SELECT id FROM friends 
-    WHERE ((user_id = ? AND friend_user_id = ?) OR (user_id = ? AND friend_user_id = ?))
+    WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
       AND status = 'accepted'
   `, [userA, userB, userB, userA]);
 
@@ -149,11 +149,11 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
     const convRows = await query<any>(`
       SELECT 
         c.id, c.type, c.name, c.avatar_url, c.creator_user_id, c.created_at, c.updated_at,
-        cm.is_muted, cm.last_read_at
+        cm.is_muted, COALESCE(cm.is_pinned, 0) as is_pinned, cm.last_read_at
       FROM conversations c
       JOIN conversation_members cm ON c.id = cm.conversation_id
       WHERE cm.user_id = ?
-      ORDER BY c.updated_at DESC
+      ORDER BY COALESCE(cm.is_pinned, 0) DESC, c.updated_at DESC
     `, [userId]);
 
     const conversations = [];
@@ -829,11 +829,31 @@ router.put('/conversations/:id/mute', authenticateToken, async (req: Authenticat
     const { is_muted } = req.body;
 
     const isMutedVal = is_muted ? 1 : 0;
-    await execute('UPDATE conversation_members SET is_muted = ? WHERE conversation_id = ? AND user_id = ?', [isMutedVal, convId, userId]);
+    await execute('UPDATE conversation_members SET is_muted = ? WHERE conversation_id = ? AND user_id = ?', [is_muted ? 1 : 0, convId, userId]);
 
-    return res.json({ message: is_muted ? 'Conversation muted' : 'Notifications unmuted' });
+    return res.json({ message: is_muted ? 'Conversation muted' : 'Conversation unmuted' });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to update mute status' });
+    return res.status(500).json({ error: 'Failed to update mute settings' });
+  }
+});
+
+// 13. Toggle Pin/Unpin Conversation
+router.post('/conversations/:id/pin', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const convId = req.params.id;
+
+    const member = await queryOne<any>('SELECT is_pinned FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [convId, userId]);
+    if (!member) {
+      return res.status(403).json({ error: 'You are not a member of this conversation' });
+    }
+
+    const newPinnedStatus = member.is_pinned ? 0 : 1;
+    await execute('UPDATE conversation_members SET is_pinned = ? WHERE conversation_id = ? AND user_id = ?', [newPinnedStatus, convId, userId]);
+
+    return res.json({ is_pinned: !!newPinnedStatus, message: newPinnedStatus ? 'Conversation pinned' : 'Conversation unpinned' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to toggle pin state' });
   }
 });
 

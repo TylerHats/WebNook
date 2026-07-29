@@ -6,7 +6,7 @@ import {
   MessageSquare, Plus, Bell, BellOff, Send, Users, User, 
   Bold, Italic, Code, Link as LinkIcon, List, Eye, Search, X, Bot, 
   Lock, Settings, LogOut, UserPlus, Image as ImageIcon, Upload,
-  Bug, Reply, Smile, ShieldAlert, ArrowLeft
+  Bug, Reply, Smile, ShieldAlert, ArrowLeft, Pin
 } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 import { CustomSelect, CustomSelectOption } from '../components/ui/CustomSelect';
@@ -484,6 +484,24 @@ export const MessagesPage: React.FC = () => {
     }
   };
 
+  // Toggle Pin Conversation handler
+  const handleTogglePin = async (convId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const res = await fetch(`/api/messages/conversations/${convId}/pin`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showToast(data.message, 'success');
+        fetchConversations();
+      }
+    } catch (err) {
+      showToast('Failed to pin conversation', 'error');
+    }
+  };
+
   // Start new Direct Message
   const handleStartDirectMessage = async () => {
     if (!selectedFriendForDm) {
@@ -680,7 +698,7 @@ export const MessagesPage: React.FC = () => {
                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {getConvAvatar(conv)}
                         </div>
-                        {conv.unread_count > 0 && (
+                        {Boolean(conv.unread_count && Number(conv.unread_count) > 0) && (
                           <span style={{
                             position: 'absolute', top: '-4px', right: '-4px',
                             background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800,
@@ -695,9 +713,19 @@ export const MessagesPage: React.FC = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>{title}</span>
+                            {conv.is_pinned && <span title="Pinned Chat" style={{ display: 'inline-flex', alignItems: 'center' }}><Pin size={12} color="var(--accent-color)" /></span>}
                             {conv.is_locked && <span title="Locked" style={{ display: 'inline-flex', alignItems: 'center' }}><Lock size={12} color="#ef4444" /></span>}
                           </span>
-                          {conv.is_muted && <BellOff size={13} style={{ opacity: 0.5, flexShrink: 0 }} />}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                            {conv.is_muted && <BellOff size={13} style={{ opacity: 0.5 }} />}
+                            <button
+                              onClick={(e) => handleTogglePin(conv.id, e)}
+                              title={conv.is_pinned ? "Unpin Chat" : "Pin Chat"}
+                              style={{ background: 'none', border: 'none', color: conv.is_pinned ? 'var(--accent-color)' : 'inherit', opacity: conv.is_pinned ? 1 : 0.4, cursor: 'pointer', padding: '2px' }}
+                            >
+                              <Pin size={13} />
+                            </button>
+                          </div>
                         </div>
 
                         {conv.last_message && (
@@ -775,6 +803,15 @@ export const MessagesPage: React.FC = () => {
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <button
+                      onClick={() => handleTogglePin(activeConv.id)}
+                      className={activeConv.is_pinned ? "btn-primary" : "btn-secondary"}
+                      style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                      title={activeConv.is_pinned ? "Unpin Conversation" : "Pin Conversation"}
+                    >
+                      <Pin size={16} />
+                      <span>{activeConv.is_pinned ? "Pinned" : "Pin"}</span>
+                    </button>
                     {activeConv.type === 'group' && (
                       <>
                         <button
