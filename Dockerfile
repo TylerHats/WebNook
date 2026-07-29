@@ -35,8 +35,8 @@ COPY frontend/package*.json ./frontend/
 # Copy git repository metadata for self-updater
 COPY .git ./.git
 
-# Install production dependencies only
-RUN cd backend && npm install --only=production
+# Install setup dependencies so in-container git pull and npm run build can compile TypeScript & Vite assets
+RUN npm run setup
 
 # Copy compiled dist files
 COPY --from=builder /app/backend/dist ./backend/dist
