@@ -86,7 +86,6 @@ export const NookCustomizerPage: React.FC = () => {
   const [favoriteBooks, setFavoriteBooks] = useState<any[]>([]);
   const [topFriends, setTopFriends] = useState<any[]>([]);
   const [storygraphUsername, setStorygraphUsername] = useState('');
-  const [spotifyPersonalMode, setSpotifyPersonalMode] = useState('disabled');
   const [themeSoundsEnabled, setThemeSoundsEnabled] = useState(true);
   const [themeAnimationsEnabled, setThemeAnimationsEnabled] = useState(true);
 
@@ -127,7 +126,6 @@ export const NookCustomizerPage: React.FC = () => {
             setSpotifyTrackUrl(data.nookSettings.spotify_track_url || '');
             setAppleMusicUrl(data.nookSettings.apple_music_url || '');
             setStorygraphUsername(data.nookSettings.storygraph_username || '');
-            setSpotifyPersonalMode(data.nookSettings.spotify_personal_mode || 'disabled');
             setCustomCss(data.nookSettings.custom_css || '');
             if (Array.isArray(data.topFriends)) setTopFriends(data.topFriends);
             if (data.nookSettings.theme_sounds_enabled !== undefined) setThemeSoundsEnabled(!!data.nookSettings.theme_sounds_enabled);
@@ -354,7 +352,6 @@ export const NookCustomizerPage: React.FC = () => {
           favorite_movies_json: cleanedMovies,
           favorite_books_json: cleanedBooks,
           storygraph_username: storygraphUsername,
-          spotify_personal_mode: spotifyPersonalMode,
           theme_sounds_enabled: themeSoundsEnabled,
           theme_animations_enabled: themeAnimationsEnabled,
           custom_css: customCss
@@ -952,29 +949,6 @@ export const NookCustomizerPage: React.FC = () => {
                   </div>
                 </div>
               )}
-
-              {/* Spotify Personal Songs Mode */}
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Connect Spotify Account for Personal Top/Recent Songs</label>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <select
-                    value={spotifyPersonalMode}
-                    onChange={e => setSpotifyPersonalMode(e.target.value)}
-                    style={{ flex: 1, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
-                  >
-                    <option value="disabled">Disabled (Manual Playlist Only)</option>
-                    <option value="top_tracks">Show My Personal Top 5 Songs on Spotify</option>
-                    <option value="recent_tracks">Show My 5 Recently Played Songs on Spotify</option>
-                  </select>
-                  <a
-                    href="/api/integrations/spotify/login"
-                    className="btn-secondary"
-                    style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                  >
-                    <span>Connect Spotify Account 🎵</span>
-                  </a>
-                </div>
-              </div>
 
               {/* Spotify Playback Explanation Box */}
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
