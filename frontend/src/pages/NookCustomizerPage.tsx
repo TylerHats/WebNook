@@ -529,7 +529,7 @@ export const NookCustomizerPage: React.FC = () => {
               <Image size={20} />
               <span>Upload Profile Avatar & Banner Images</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Avatar Image</label>
                 <input
@@ -619,7 +619,7 @@ export const NookCustomizerPage: React.FC = () => {
             {/* Custom Theme Color Pickers */}
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Theme Color Overrides:</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Base Background</label>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -779,7 +779,7 @@ export const NookCustomizerPage: React.FC = () => {
               {/* Form: Add New Streaming Track (Spotify / Apple Music) */}
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
                 <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Add Streaming Track (Spotify or Apple Music):</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1.5fr auto', gap: '0.75rem', alignItems: 'center' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', alignItems: 'center' }}>
                   <select
                     value={newTrackType}
                     onChange={e => setNewTrackType(e.target.value as any)}
@@ -820,7 +820,7 @@ export const NookCustomizerPage: React.FC = () => {
               {/* Upload Custom MP3 Track */}
               <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '10px', border: '1px dashed var(--border-color)' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Audio File to Playlist (MP3 / WAV / OGG)</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', alignItems: 'center' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', alignItems: 'center' }}>
                   <input
                     type="text"
                     placeholder="Audio Track Title"
@@ -891,7 +891,7 @@ export const NookCustomizerPage: React.FC = () => {
               )}
 
               {/* Search Spotify Catalog Popover Trigger */}
-              <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--accent-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--accent-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>Search Spotify Track Catalog 🔍</div>
                   <div style={{ fontSize: '0.78rem', opacity: 0.8 }}>Find any track on Spotify and add it to your playlist automatically!</div>
@@ -916,7 +916,7 @@ export const NookCustomizerPage: React.FC = () => {
                       value={spotifySearchQ}
                       onChange={e => setSpotifySearchQ(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleSearchSpotify()}
-                      style={{ flex: 1, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                      style={{ flex: 1, minWidth: 0, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
                     />
                     <button type="button" onClick={handleSearchSpotify} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
                       Search
@@ -962,7 +962,7 @@ export const NookCustomizerPage: React.FC = () => {
 
           {/* Movies & TV Showcase Panel */}
           <div className="nook-panel">
-            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>🎬 Movies & TV Showcase Manager ({favoriteMovies.length} items)</span>
               </div>
@@ -986,7 +986,7 @@ export const NookCustomizerPage: React.FC = () => {
                     value={moviesSearchQ}
                     onChange={e => setMoviesSearchQ(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearchMovies()}
-                    style={{ flex: 1, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                    style={{ flex: 1, minWidth: 0, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
                   />
                   <button type="button" onClick={handleSearchMovies} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
                     Search
@@ -1079,7 +1079,7 @@ export const NookCustomizerPage: React.FC = () => {
 
           {/* Books Showcase & Reading Nook Manager */}
           <div className="nook-panel">
-            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>📖 Reading Nook & Favorite Books ({favoriteBooks.length} books)</span>
               </div>
@@ -1094,7 +1094,7 @@ export const NookCustomizerPage: React.FC = () => {
             </div>
 
             {/* StoryGraph Profile Handle & CSV Import */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>StoryGraph Username / Handle</label>
                 <input
@@ -1127,7 +1127,7 @@ export const NookCustomizerPage: React.FC = () => {
                     value={booksSearchQ}
                     onChange={e => setBooksSearchQ(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearchBooks()}
-                    style={{ flex: 1, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                    style={{ flex: 1, minWidth: 0, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
                   />
                   <button type="button" onClick={handleSearchBooks} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
                     Search
@@ -1244,8 +1244,8 @@ export const NookCustomizerPage: React.FC = () => {
             </p>
 
             {/* Custom Sticker Upload */}
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ flex: 1 }}>
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.2rem' }}>Upload Custom Sticker Image (PNG / GIF / SVG / WebP)</label>
                 <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>Uploaded custom stickers appear automatically in your Visual Sticker Studio.</span>
               </div>

@@ -55,6 +55,26 @@
   gap: 1rem;
 }
 
+@media (max-width: 768px) {
+  .webnook-navbar {
+    padding: 0.75rem 1rem;
+  }
+  .webnook-nav-links-desktop {
+    display: none !important;
+  }
+  .webnook-nav-mobile-toggle {
+    display: flex !important;
+  }
+}
+@media (min-width: 769px) {
+  .webnook-nav-links-desktop {
+    display: flex !important;
+  }
+  .webnook-nav-mobile-toggle {
+    display: none !important;
+  }
+}
+
 .nav-item {
   color: var(--text-main);
   text-decoration: none;
