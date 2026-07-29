@@ -119,8 +119,8 @@ input, textarea, select {
 }
 
 @keyframes win9xTitleBarRoll {
-  0% { background-position: 0% 0%; }
-  100% { background-position: 200% 0%; }
+  0% { background-position: 200% 0%; }
+  100% { background-position: 0% 0%; }
 }
 
 .theme-win98 .nook-panel, .theme-win9x .nook-panel {

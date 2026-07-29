@@ -25,8 +25,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
 
-# Install git for in-container self-updating
-RUN apk add --no-cache git
+# Install git, typescript, and vite for in-container self-updating
+RUN apk add --no-cache git && npm install -g typescript vite
 
 COPY package*.json ./
 COPY backend/package*.json ./backend/
@@ -35,8 +35,8 @@ COPY frontend/package*.json ./frontend/
 # Copy git repository metadata for self-updater
 COPY .git ./.git
 
-# Install setup dependencies so in-container git pull and npm run build can compile TypeScript & Vite assets
-RUN npm run setup
+# Install setup dependencies including devDependencies so npm run build can compile TypeScript & Vite assets
+RUN npm install --include=dev && cd backend && npm install --include=dev && cd ../frontend && npm install --include=dev
 
 # Copy compiled dist files
 COPY --from=builder /app/backend/dist ./backend/dist

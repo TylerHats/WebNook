@@ -365,7 +365,8 @@ router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) =>
       execSync('git fetch origin && git pull origin main', { cwd: repoPath, timeout: 45000 });
       gitPulled = true;
       try {
-        execSync('npm run setup && npm run build', { cwd: repoPath, timeout: 180000 });
+        execSync('npm install --include=dev && cd backend && npm install --include=dev && cd ../frontend && npm install --include=dev', { cwd: repoPath, timeout: 180000 });
+        execSync('npm run build', { cwd: repoPath, timeout: 180000 });
       } catch (buildErr: any) {
         console.warn('[Self-Updater Warning] npm run build skipped or failed:', buildErr.message);
       }
