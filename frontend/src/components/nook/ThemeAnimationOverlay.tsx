@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { playCyberpunkSpark } from '../../utils/themeSoundEngine';
+import { playCyberpunkSparkBurst } from '../../utils/themeSoundEngine';
 
 interface ThemeAnimationOverlayProps {
   theme: string;
@@ -8,7 +8,7 @@ interface ThemeAnimationOverlayProps {
 export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ theme }) => {
   const [clickPaws, setClickPaws] = useState<{ id: number; x: number; y: number }[]>([]);
   const [clickCoins, setClickCoins] = useState<{ id: number; x: number; y: number }[]>([]);
-  const [cyberSparks, setCyberSparks] = useState<{ id: number; top: string; left: string; particles: { dx: number; dy: number; size: number; color: string }[] }[]>([]);
+  const [cyberSparks, setCyberSparks] = useState<{ id: number; top: string; left: string; particles: { vx: number; vy: number; fall: number; size: number; color: string; delay: number; duration: number }[] }[]>([]);
 
   const normalizedTheme = theme ? theme.toLowerCase().trim() : '';
 
@@ -49,47 +49,56 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
     if (normalizedTheme !== 'cyberpunk' && normalizedTheme !== 'theme-cyberpunk') return;
 
     const triggerSparkShower = () => {
-        const corners = [
-          { top: '12%', left: '8%' },
-          { top: '16%', left: '48%' },
-          { top: '20%', left: '92%' },
-          { top: '48%', left: '6%' },
-          { top: '52%', left: '52%' },
-          { top: '58%', left: '94%' },
-          { top: '82%', left: '10%' },
-          { top: '85%', left: '88%' }
-        ];
-        const chosen = corners[Math.floor(Math.random() * corners.length)];
-        const colors = ['#00f3ff', '#ff007f', '#ffe600', '#ffffff'];
+      const corners = [
+        { top: '12%', left: '8%' },
+        { top: '16%', left: '48%' },
+        { top: '20%', left: '92%' },
+        { top: '48%', left: '6%' },
+        { top: '52%', left: '52%' },
+        { top: '58%', left: '94%' },
+        { top: '82%', left: '10%' },
+        { top: '85%', left: '88%' }
+      ];
+      const chosen = corners[Math.floor(Math.random() * corners.length)];
+      const colors = ['#00f3ff', '#ff007f', '#ffe600', '#ffffff'];
 
-        const particles = Array.from({ length: 12 }, () => {
-          const angle = Math.random() * Math.PI * 2;
-          const dist = 30 + Math.random() * 65;
-          return {
-            dx: Math.cos(angle) * dist,
-            dy: Math.sin(angle) * dist,
-            size: 3 + Math.random() * 5,
-            color: colors[Math.floor(Math.random() * colors.length)]
-          };
-        });
+      // Generate 30 large spark particles that burst and rain downward
+      const particles = Array.from({ length: 30 }, () => {
+        const vx = (Math.random() - 0.5) * 280; // Horizontal spread (-140px to +140px)
+        const vy = -30 - Math.random() * 110;    // Initial upward burst (-140px to -30px)
+        const fall = 180 + Math.random() * 200;  // Gravity drop (+180px to +380px)
+        const size = 2.5 + Math.random() * 4.5;
+        const delay = Math.random() * 0.28;
+        const duration = 1.1 + Math.random() * 0.5;
+        return {
+          vx,
+          vy,
+          fall,
+          size,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          delay,
+          duration
+        };
+      });
 
-        const newSpark = { id: Date.now() + Math.random(), ...chosen, particles };
-        setCyberSparks(prev => [...prev.slice(-4), newSpark]);
+      const newSpark = { id: Date.now() + Math.random(), ...chosen, particles };
+      setCyberSparks(prev => [...prev.slice(-3), newSpark]);
 
-        playCyberpunkSpark();
+      playCyberpunkSparkBurst();
 
-        setTimeout(() => {
-          setCyberSparks(prev => prev.filter(s => s.id !== newSpark.id));
-        }, 850);
-      };
+      setTimeout(() => {
+        setCyberSparks(prev => prev.filter(s => s.id !== newSpark.id));
+      }, 2200);
+    };
 
-      const interval = setInterval(triggerSparkShower, 4500);
-      const initTimer = setTimeout(triggerSparkShower, 1200);
+    // Less frequent interval (~9.5s)
+    const interval = setInterval(triggerSparkShower, 9500);
+    const initTimer = setTimeout(triggerSparkShower, 1500);
 
-      return () => {
-        clearInterval(interval);
-        clearTimeout(initTimer);
-      };
+    return () => {
+      clearInterval(interval);
+      clearTimeout(initTimer);
+    };
   }, [normalizedTheme]);
 
   if (!theme) return null;
@@ -123,16 +132,16 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
             <div
               style={{
                 position: 'absolute',
-                width: '14px',
-                height: '14px',
+                width: '18px',
+                height: '18px',
                 borderRadius: '50%',
                 background: '#ffffff',
-                boxShadow: '0 0 16px #00f3ff, 0 0 30px #ff007f',
+                boxShadow: '0 0 20px #00f3ff, 0 0 35px #ff007f',
                 transform: 'translate(-50%, -50%)',
-                animation: 'pawDropFade 0.4s ease-out forwards'
+                animation: 'pawDropFade 0.45s ease-out forwards'
               }}
             />
-            {/* Bursting spark particles */}
+            {/* Bursting & Raining spark particles */}
             {spark.particles.map((p, pIdx) => (
               <div
                 key={pIdx}
@@ -142,11 +151,12 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
                   height: `${p.size}px`,
                   borderRadius: '50%',
                   backgroundColor: p.color,
-                  boxShadow: `0 0 8px ${p.color}`,
+                  boxShadow: `0 0 10px ${p.color}, 0 0 4px #ffffff`,
                   transform: 'translate(-50%, -50%)',
-                  '--dx': `${p.dx}px`,
-                  '--dy': `${p.dy}px`,
-                  animation: 'sparkBurstFly 0.75s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
+                  '--vx': `${p.vx}px`,
+                  '--vy': `${p.vy}px`,
+                  '--fall': `${p.fall}px`,
+                  animation: `fireworksSparkRain ${p.duration}s cubic-bezier(0.12, 0.7, 0.45, 1) ${p.delay}s forwards`
                 } as React.CSSProperties}
               />
             ))}

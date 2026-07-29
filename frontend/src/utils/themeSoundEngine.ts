@@ -311,6 +311,62 @@ export function playCyberpunkSpark() {
 }
 
 /**
+ * Synthesize Fireworks / Arc Discharge Spark Shower Sound Effect
+ */
+export function playCyberpunkSparkBurst() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+
+  // Staggered crackle noise burst
+  const bufferSize = Math.floor(ctx.sampleRate * 0.35);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    const decay = Math.exp(-i / (bufferSize * 0.4));
+    const crackle = Math.random() > 0.85 ? (Math.random() * 2 - 1) : 0;
+    data[i] = ((Math.random() * 2 - 1) * 0.4 + crackle * 0.6) * decay;
+  }
+
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(3200, t);
+  filter.frequency.exponentialRampToValueAtTime(1200, t + 0.32);
+  filter.Q.setValueAtTime(2.5, t);
+
+  const mainGain = ctx.createGain();
+  mainGain.gain.setValueAtTime(0.22, t);
+  mainGain.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
+
+  // Cascading metallic arc whistling sweeps (fireworks sizzle)
+  [0, 0.05, 0.12].forEach((offset, idx) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = idx % 2 === 0 ? 'sawtooth' : 'triangle';
+    osc.frequency.setValueAtTime(3500 - idx * 600, t + offset);
+    osc.frequency.exponentialRampToValueAtTime(220 + idx * 80, t + offset + 0.18);
+
+    g.gain.setValueAtTime(0.1, t + offset);
+    g.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.18);
+
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start(t + offset);
+    osc.stop(t + offset + 0.19);
+  });
+
+  noise.connect(filter);
+  filter.connect(mainGain);
+  mainGain.connect(ctx.destination);
+
+  noise.start(t);
+  noise.stop(t + 0.35);
+}
+
+/**
  * Main Sound Dispatcher for Themes
  */
 export function playThemeSound(
