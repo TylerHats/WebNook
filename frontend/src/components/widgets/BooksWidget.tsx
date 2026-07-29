@@ -10,6 +10,7 @@ export interface BookItem {
   coverUrl?: string;
   rating?: number | string;
   status?: 'read' | 'currently_reading' | 'want_to_read' | string;
+  inProgress?: boolean;
 }
 
 interface BooksWidgetProps {
@@ -93,7 +94,13 @@ export const BooksWidget: React.FC<BooksWidgetProps> = ({
                 </div>
 
                 <div style={{ marginTop: '0.4rem' }}>
-                  <StarRatingDisplay rating={b.rating ?? 5} size={12} />
+                  {(b.inProgress || b.status === 'currently_reading') ? (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f472b6', background: 'rgba(244, 114, 182, 0.15)', border: '1px solid rgba(244, 114, 182, 0.3)', padding: '0.15rem 0.45rem', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      Reading... 📖
+                    </span>
+                  ) : (
+                    <StarRatingDisplay rating={b.rating ?? 5} size={12} />
+                  )}
                 </div>
               </div>
             </div>

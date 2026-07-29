@@ -6,23 +6,34 @@ interface ThemeAnimationOverlayProps {
 
 export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ theme }) => {
   const [clickPaws, setClickPaws] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [clickCoins, setClickCoins] = useState<{ id: number; x: number; y: number }[]>([]);
 
   const normalizedTheme = theme ? theme.toLowerCase().trim() : '';
 
   useEffect(() => {
-    if (normalizedTheme !== 'cat-cafe' && normalizedTheme !== 'theme-cat-cafe') return;
+    let handleWindowClick: ((e: MouseEvent) => void) | null = null;
 
-    const handleWindowClick = (e: MouseEvent) => {
-      const newPaw = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY };
-      setClickPaws(prev => [...prev.slice(-15), newPaw]);
+    if (normalizedTheme === 'cat-cafe' || normalizedTheme === 'theme-cat-cafe') {
+      handleWindowClick = (e: MouseEvent) => {
+        const newPaw = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY };
+        setClickPaws(prev => [...prev.slice(-15), newPaw]);
+        setTimeout(() => setClickPaws(prev => prev.filter(p => p.id !== newPaw.id)), 1800);
+      };
+    } else if (normalizedTheme === 'pixel-arcade' || normalizedTheme === 'theme-pixel-arcade') {
+      handleWindowClick = (e: MouseEvent) => {
+        const newCoin = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY };
+        setClickCoins(prev => [...prev.slice(-15), newCoin]);
+        setTimeout(() => setClickCoins(prev => prev.filter(c => c.id !== newCoin.id)), 1400);
+      };
+    }
 
-      setTimeout(() => {
-        setClickPaws(prev => prev.filter(p => p.id !== newPaw.id));
-      }, 1800);
+    if (!handleWindowClick) return;
+
+    const activeHandler = handleWindowClick;
+    window.addEventListener('click', activeHandler);
+    return () => {
+      window.removeEventListener('click', activeHandler);
     };
-
-    window.addEventListener('click', handleWindowClick);
-    return () => window.removeEventListener('click', handleWindowClick);
   }, [normalizedTheme]);
 
   if (!theme) return null;
@@ -130,22 +141,41 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
   }
 
   if (normalizedTheme === 'pixel-arcade' || normalizedTheme === 'theme-pixel-arcade') {
+    const retroIcons = ['👾', '🪙', '❤️', '🕹️', '🍄', '⭐️', '👾', '🪙', '🕹️', '🍄', '👾', '❤️'];
     return (
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
-        {[...Array(6)].map((_, i) => (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999, overflow: 'hidden' }}>
+        {/* Floating click Mario coins */}
+        {clickCoins.map(coin => (
+          <div
+            key={coin.id}
+            style={{
+              position: 'fixed',
+              left: coin.x - 14,
+              top: coin.y - 14,
+              fontSize: '1.6rem',
+              pointerEvents: 'none',
+              animation: 'marioCoinPop 1.4s cubic-bezier(0.25, 1, 0.5, 1) forwards'
+            }}
+          >
+            🪙
+          </div>
+        ))}
+
+        {/* Ambient dense background 8-bit retro icons */}
+        {retroIcons.map((icon, i) => (
           <div
             key={i}
             style={{
               position: 'absolute',
-              top: `${15 + i * 14}%`,
-              right: `${5 + (i * 16) % 80}%`,
-              fontSize: '1.4rem',
-              opacity: 0.3,
-              animation: `pixelPulse 2s steps(2, start) infinite`,
-              animationDelay: `${i * 0.4}s`
+              top: `${6 + (i * 7.5) % 85}%`,
+              left: `${5 + (i * 15) % 90}%`,
+              fontSize: i % 3 === 0 ? '1.8rem' : '1.4rem',
+              opacity: 0.5,
+              animation: `pixelPulse 2.2s steps(2, start) infinite`,
+              animationDelay: `${i * 0.25}s`
             }}
           >
-            {i % 3 === 0 ? '👾' : i % 3 === 1 ? '🪙' : '❤️'}
+            {icon}
           </div>
         ))}
       </div>

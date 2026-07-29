@@ -1031,18 +1031,32 @@ export const NookCustomizerPage: React.FC = () => {
                     <img src={m.posterUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
                     <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{m.type} • {m.year}</div>
-                    <div style={{ marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
-                      <input
-                        type="text"
-                        placeholder="3.0"
-                        value={m.rating !== undefined && m.rating !== null ? m.rating : ''}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
-                        }}
-                        style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
-                      />
+                    <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!m.inProgress}
+                          onChange={e => {
+                            const checked = e.target.checked;
+                            setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, inProgress: checked } : item));
+                          }}
+                        />
+                        <span>In Progress 🍿</span>
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: m.inProgress ? 0.4 : 1 }}>
+                        <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
+                        <input
+                          type="text"
+                          placeholder="5.0"
+                          disabled={!!m.inProgress}
+                          value={m.rating !== undefined && m.rating !== null ? m.rating : ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
+                          }}
+                          style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1147,18 +1161,32 @@ export const NookCustomizerPage: React.FC = () => {
                     <img src={b.coverUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
                     <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{b.author}</div>
-                    <div style={{ marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
-                      <input
-                        type="text"
-                        placeholder="3.0"
-                        value={b.rating !== undefined && b.rating !== null ? b.rating : ''}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
-                        }}
-                        style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
-                      />
+                    <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!b.inProgress}
+                          onChange={e => {
+                            const checked = e.target.checked;
+                            setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, inProgress: checked } : item));
+                          }}
+                        />
+                        <span>In Progress 📖</span>
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: b.inProgress ? 0.4 : 1 }}>
+                        <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
+                        <input
+                          type="text"
+                          placeholder="5.0"
+                          disabled={!!b.inProgress}
+                          value={b.rating !== undefined && b.rating !== null ? b.rating : ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
+                          }}
+                          style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}

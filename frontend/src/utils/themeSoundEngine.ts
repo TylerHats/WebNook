@@ -278,7 +278,10 @@ export function playThemeSound(themeId: string, isSoundEnabled: boolean = true, 
     }
   } else if (t === 'pixel-arcade') {
     if (action === 'guestbook') playPixelCoin();
-    else playPixelArcadeClick();
+    else {
+      if (Math.random() < 0.25) playPixelCoin();
+      else playPixelArcadeClick();
+    }
   } else if (t === 'cloud-dream') {
     playCloudDreamPop();
   } else if (t === 'magical-girl') {

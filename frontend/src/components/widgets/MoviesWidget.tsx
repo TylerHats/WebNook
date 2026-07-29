@@ -10,6 +10,7 @@ export interface MovieItem {
   posterUrl?: string;
   overview?: string;
   rating?: number | string;
+  inProgress?: boolean;
 }
 
 interface MoviesWidgetProps {
@@ -68,7 +69,13 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
                 </div>
 
                 <div style={{ marginTop: '0.4rem' }}>
-                  <StarRatingDisplay rating={m.rating ?? 5} size={12} />
+                  {m.inProgress ? (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.15rem 0.45rem', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      Watching... 🍿
+                    </span>
+                  ) : (
+                    <StarRatingDisplay rating={m.rating ?? 5} size={12} />
+                  )}
                 </div>
               </div>
             </div>
