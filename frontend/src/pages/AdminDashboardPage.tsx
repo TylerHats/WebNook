@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { PasswordComplexityIndicator } from '../components/ui/PasswordComplexityIndicator';
-import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send, Gamepad2, Film, BookOpen } from 'lucide-react';
+import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send, Gamepad2, Film, BookOpen, Bell, Clock } from 'lucide-react';
 
 // Render Markdown helper for Release Notes
 const renderMarkdown = (text: string) => {
@@ -70,6 +70,57 @@ export const AdminDashboardPage: React.FC = () => {
   const [channel, setChannel] = useState('stable');
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState<'metrics' | 'updater' | 'users' | 'config' | 'integrations'>('metrics');
+
+  // Notification Sending form state
+  const [notifTargetType, setNotifTargetType] = useState<'global' | 'user'>('global');
+  const [notifTargetUserId, setNotifTargetUserId] = useState<string>('');
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifMessage, setNotifMessage] = useState('');
+  const [notifLinkTitle, setNotifLinkTitle] = useState('');
+  const [notifLinkUrl, setNotifLinkUrl] = useState('');
+  const [isSendingNotif, setIsSendingNotif] = useState(false);
+
+  const handleSendAdminNotification = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!notifTitle.trim() || !notifMessage.trim()) {
+      showToast('Title and Message are required!', 'error');
+      return;
+    }
+    if (notifTargetType === 'user' && !notifTargetUserId) {
+      showToast('Please select a target user!', 'error');
+      return;
+    }
+
+    setIsSendingNotif(true);
+    try {
+      const res = await fetch('/api/admin/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          target_type: notifTargetType,
+          target_user_id: notifTargetType === 'user' ? Number(notifTargetUserId) : null,
+          title: notifTitle,
+          message: notifMessage,
+          link_title: notifLinkTitle,
+          link_url: notifLinkUrl
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, 'success');
+        setNotifTitle('');
+        setNotifMessage('');
+        setNotifLinkTitle('');
+        setNotifLinkUrl('');
+      } else {
+        showToast(data.error || 'Failed to send notification', 'error');
+      }
+    } catch (e) {
+      showToast('Error sending notification', 'error');
+    } finally {
+      setIsSendingNotif(false);
+    }
+  };
 
   const [settings, setSettings] = useState<Record<string, string>>({
     app_name: 'WebNook',
@@ -613,95 +664,217 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* Tab 3: User Accounts Management Suite */}
       {activeTab === 'users' && (
-        <div className="nook-panel">
-          <div className="nook-panel-header">
-            <Users size={20} />
-            <span>Registered User Accounts ({usersList.length})</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Send Announcement / System Notification Panel */}
+          <div className="nook-panel" id="admin-notif-form">
+            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Bell size={20} style={{ flexShrink: 0 }} />
+              <span>Send System Announcement / User Notification</span>
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
+              Dispatch announcements to all users or send targeted direct notifications. Notifications appear in user dropdowns and trigger styled email delivery if configured.
+            </p>
+
+            <form onSubmit={handleSendAdminNotification} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Row 1: Target Audience & User Selection */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Target Audience</label>
+                  <select
+                    value={notifTargetType}
+                    onChange={e => setNotifTargetType(e.target.value as any)}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                  >
+                    <option value="global">🌐 Broadcast to All Users (Global Announcement)</option>
+                    <option value="user">👤 Specific User Direct Notification</option>
+                  </select>
+                </div>
+
+                {notifTargetType === 'user' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Select Target User</label>
+                    <select
+                      value={notifTargetUserId}
+                      onChange={e => setNotifTargetUserId(e.target.value)}
+                      style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                    >
+                      <option value="">-- Select a User --</option>
+                      {usersList.map(u => (
+                        <option key={u.id} value={u.id}>@{u.username} ({u.display_name || 'No Name'})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 2: Title & Link Title */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Notification Title *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. System Update 🚀"
+                    value={notifTitle}
+                    onChange={e => setNotifTitle(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Link Title (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. View Announcement or Open Customizer"
+                    value={notifLinkTitle}
+                    onChange={e => setNotifLinkTitle(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              {/* Row 3: Link URL & Message */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Link URL (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /customize or /nook/admin"
+                    value={notifLinkUrl}
+                    onChange={e => setNotifLinkUrl(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Notification Message *</label>
+                <textarea
+                  rows={3}
+                  placeholder="Enter the notification message content..."
+                  value={notifMessage}
+                  onChange={e => setNotifMessage(e.target.value)}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', boxSizing: 'border-box', resize: 'vertical' }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isSendingNotif}
+                style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Send size={16} style={{ flexShrink: 0 }} />
+                <span>{isSendingNotif ? 'Sending Notification...' : 'Send Notification'}</span>
+              </button>
+            </form>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                  <th style={{ padding: '0.6rem' }}>ID</th>
-                  <th style={{ padding: '0.6rem' }}>User</th>
-                  <th style={{ padding: '0.6rem' }}>Email</th>
-                  <th style={{ padding: '0.6rem' }}>Role</th>
-                  <th style={{ padding: '0.6rem' }}>Status</th>
-                  <th style={{ padding: '0.6rem' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usersList.map(u => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '0.6rem' }}>#{u.id}</td>
-                    <td style={{ padding: '0.6rem', fontWeight: 600 }}>@{u.username}</td>
-                    <td style={{ padding: '0.6rem', opacity: 0.8 }}>{u.email}</td>
-                    <td style={{ padding: '0.6rem' }}>
-                      <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: u.role === 'admin' ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.6rem' }}>
-                      {u.is_disabled ? (
-                        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#ef4444', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
-                          Disabled
-                        </span>
-                      ) : (
-                        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#22c55e', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
-                          Active
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: '0.6rem' }}>
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        {u.id !== user.id && (
-                          <>
-                            <button
-                              onClick={() => handleToggleRole(u.id, u.role)}
-                              className="btn-secondary"
-                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
-                              title="Toggle Role"
-                            >
-                              Role
-                            </button>
 
-                            <button
-                              onClick={() => { setDisableModalUser(u); setDisableReason(u.disabled_reason || ''); }}
-                              className="btn-secondary"
-                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: u.is_disabled ? '#22c55e' : '#eab308' }}
-                              title={u.is_disabled ? 'Enable Account' : 'Disable Account'}
-                            >
-                              <Power size={12} />
-                              <span>{u.is_disabled ? 'Enable' : 'Disable'}</span>
-                            </button>
-
-                            <button
-                              onClick={() => { setPasswordModalUser(u); setNewPassword(''); }}
-                              className="btn-secondary"
-                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
-                              title="Reset Password"
-                            >
-                              <Key size={12} />
-                              <span>Reset Pass</span>
-                            </button>
-
-                            <button
-                              onClick={() => setDeleteModalUser(u)}
-                              className="btn-secondary"
-                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: '#ef4444' }}
-                              title="Delete User"
-                            >
-                              <Trash2 size={12} />
-                              <span>Delete</span>
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
+          {/* User Accounts Table */}
+          <div className="nook-panel">
+            <div className="nook-panel-header">
+              <Users size={20} />
+              <span>Registered User Accounts ({usersList.length})</span>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.6rem' }}>ID</th>
+                    <th style={{ padding: '0.6rem' }}>User</th>
+                    <th style={{ padding: '0.6rem' }}>Email</th>
+                    <th style={{ padding: '0.6rem' }}>Role</th>
+                    <th style={{ padding: '0.6rem' }}>Status</th>
+                    <th style={{ padding: '0.6rem' }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {usersList.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '0.6rem' }}>#{u.id}</td>
+                      <td style={{ padding: '0.6rem', fontWeight: 600 }}>@{u.username}</td>
+                      <td style={{ padding: '0.6rem', opacity: 0.8 }}>{u.email}</td>
+                      <td style={{ padding: '0.6rem' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: u.role === 'admin' ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.6rem' }}>
+                        {u.is_disabled ? (
+                          <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#ef4444', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
+                            Disabled
+                          </span>
+                        ) : (
+                          <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#22c55e', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
+                            Active
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.6rem' }}>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => {
+                              setNotifTargetType('user');
+                              setNotifTargetUserId(String(u.id));
+                              const el = document.getElementById('admin-notif-form');
+                              if (el) el.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="btn-secondary"
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                            title="Send Notification to User"
+                          >
+                            <Bell size={12} />
+                            <span>Notify</span>
+                          </button>
+
+                          {u.id !== user.id && (
+                            <>
+                              <button
+                                onClick={() => handleToggleRole(u.id, u.role)}
+                                className="btn-secondary"
+                                style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                                title="Toggle Role"
+                              >
+                                Role
+                              </button>
+
+                              <button
+                                onClick={() => { setDisableModalUser(u); setDisableReason(u.disabled_reason || ''); }}
+                                className="btn-secondary"
+                                style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: u.is_disabled ? '#22c55e' : '#eab308' }}
+                                title={u.is_disabled ? 'Enable Account' : 'Disable Account'}
+                              >
+                                <Power size={12} />
+                                <span>{u.is_disabled ? 'Enable' : 'Disable'}</span>
+                              </button>
+
+                              <button
+                                onClick={() => { setPasswordModalUser(u); setNewPassword(''); }}
+                                className="btn-secondary"
+                                style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                                title="Reset Password"
+                              >
+                                <Key size={12} />
+                                <span>Reset Pass</span>
+                              </button>
+
+                              <button
+                                onClick={() => setDeleteModalUser(u)}
+                                className="btn-secondary"
+                                style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: '#ef4444' }}
+                                title="Delete User"
+                              >
+                                <Trash2 size={12} />
+                                <span>Delete</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -924,6 +1097,80 @@ export const AdminDashboardPage: React.FC = () => {
                 <Download size={18} />
                 <span>{isCreatingBackup ? 'Creating Compressed Archive...' : 'Create Compressed Backup (.tar.gz)'}</span>
               </button>
+            </div>
+
+            {/* Automatic Scheduled Backups & Retention Configuration Card */}
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Clock size={16} />
+                <span>Automated Backups & Retention Policy</span>
+              </h4>
+
+              <p style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '0.85rem' }}>
+                Backups bundle your SQLite database, custom branding, and all uploaded media files (avatars, banners, group chat icons).
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                {/* Auto Backup Toggle */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Automatic Backups</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={settings.auto_backup_enabled === 'true'}
+                      onChange={e => setSettings({ ...settings, auto_backup_enabled: String(e.target.checked) })}
+                    />
+                    <span>Enable Scheduled Auto Backups</span>
+                  </label>
+                </div>
+
+                {/* Schedule Interval */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Auto Backup Frequency</label>
+                  <select
+                    value={settings.auto_backup_interval || 'daily'}
+                    onChange={e => setSettings({ ...settings, auto_backup_interval: e.target.value })}
+                    disabled={settings.auto_backup_enabled !== 'true'}
+                    style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                  >
+                    <option value="hourly">Every Hour (Hourly)</option>
+                    <option value="daily">Every 24 Hours (Daily)</option>
+                    <option value="weekly">Every 7 Days (Weekly)</option>
+                  </select>
+                </div>
+
+                {/* Backup Retention Limit */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Backup Retention Limit</label>
+                  <select
+                    value={settings.backup_retention_count || '10'}
+                    onChange={e => setSettings({ ...settings, backup_retention_count: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                  >
+                    <option value="3">Keep last 3 backups</option>
+                    <option value="5">Keep last 5 backups</option>
+                    <option value="10">Keep last 10 backups (Recommended)</option>
+                    <option value="20">Keep last 20 backups</option>
+                    <option value="50">Keep last 50 backups</option>
+                    <option value="0">Unlimited (No auto-purge)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ fontSize: '0.78rem', opacity: 0.75 }}>
+                  {settings.last_auto_backup_at ? (
+                    <span>Last automated backup: <strong>{new Date(settings.last_auto_backup_at).toLocaleString()}</strong></span>
+                  ) : (
+                    <span>No automated backups executed yet.</span>
+                  )}
+                </div>
+
+                <button type="button" onClick={handleSaveSettings} className="btn-primary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Save size={14} />
+                  <span>Save Schedule & Retention Policy</span>
+                </button>
+              </div>
             </div>
 
             {/* List of Available Local Backups */}

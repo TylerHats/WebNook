@@ -21,17 +21,18 @@ Featuring **12 curated themes** (**Cozy Cat Café**, **Fluffy Cloud Dream**, **8
 
 | Category | Highlights |
 | :--- | :--- |
+| **💬 Direct & Group Messaging** | Real-time 1-on-1 and group chats with custom group icons, markdown formatting, and per-Nook theme bubble styling! |
+| **😍 Emoji Reactions & Replies** | Quick emoji reactions, double-tap shortcuts, custom user reaction preferences, and threaded message replies with cancelable quote previews. |
+| **🐛 Bug Reports & Admin Channel** | Isolated private support stream where users can report issues directly to site admins, plus locked system announcement broadcasts. |
+| **🎵 Continuous Music & Autoplay** | Playlist track #1 autoplay toggle, continuous auto-next playback, looping, and theme-styled browser unmute toast banners. |
 | **🎨 12 Whimsical Themes** | 12 curated themes with custom card shapes, 3D pixel borders, paw print backgrounds, and scalloped edges. |
 | **🔊 Theme Sound FX Engine** | Web Audio API sound synthesizer producing retro 95 clicks, 8-bit arcade blips, cat purrs, and magical guestbook chimes (toggleable). |
-| **✨ Micro-Animations** | Windows 9x file transfer animations, Cyberpunk neon laser border sweeps, drifting clouds, and bobbing paws (toggleable). |
 | **🖼️ Visual Sticker Studio** | Live interactive canvas to drag, scale, rotate, and layer cute preset or custom stickers anywhere over your profile! |
 | **🎬 Movies & TV Showcase** | Search film & series databases (TMDB/OMDb) to display poster art, release years, and personal star ratings. |
 | **📚 Books & Reading Nook** | Search books (Open Library) or import your reading lists directly from StoryGraph CSV files with 1 click. |
-| **🎵 Music & Spotify OAuth** | Upload custom MP3 audio tracks, search Spotify catalog, or connect your personal Spotify account for top & recent tracks. |
-| **🎮 Steam Showcase** | Display online status, top all-time games, and recently played games. |
 | **🤝 Social Mechanics** | MySpace-style Top Friends grids, unidirectional favoriting with `⭐ Favorited You` badges, and full-width guestbooks. |
 | **🔒 Privacy & Security** | Private by default profile viewing, fine-grained card visibility controls, email/password + TOTP 2FA & WebAuthn Passkeys. |
-| **⚡ Admin & Container Suite** | Real-time health metrics, 1-click compressed SQLite backups, and automated Docker container process self-reloads. |
+| **📦 Scheduled Backups & Recovery** | Automated hourly/daily/weekly backups with configurable retention limits, bundling database, branding, and all uploaded media files. |
 
 ---
 

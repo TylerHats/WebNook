@@ -8,16 +8,23 @@ import os from 'os';
 const router = Router();
 
 // Helper to determine visitor relationship with Nook owner
-async function getRelationship(visitorId: number | null, ownerId: number): Promise<'owner' | 'friend' | 'public'> {
+async function getRelationship(visitorId: number | null, ownerId: number): Promise<'owner' | 'friend' | 'pending_outgoing' | 'pending_incoming' | 'public'> {
   if (!visitorId) return 'public';
   if (visitorId === ownerId) return 'owner';
 
   const friendRow = await queryOne<any>(
-    'SELECT status FROM friends WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) AND status = "accepted"',
+    'SELECT user_id, friend_id, status FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)',
     [visitorId, ownerId, ownerId, visitorId]
   );
 
-  return friendRow ? 'friend' : 'public';
+  if (!friendRow) return 'public';
+  if (friendRow.status === 'accepted') return 'friend';
+  if (friendRow.status === 'pending') {
+    if (friendRow.user_id === visitorId) return 'pending_outgoing';
+    return 'pending_incoming';
+  }
+
+  return 'public';
 }
 
 // Get Nook Profile by username
@@ -57,12 +64,12 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
       nookSettings = await queryOne<any>('SELECT * FROM nooks WHERE user_id = ?', [owner.id]);
     }
 
-    // Evaluate Nook visibility
+    // Evaluate Nook visibility ('private' = Friends Only Access, 'public' = Everyone)
     const visibility = nookSettings.visibility_nook || 'private';
     const canAccess =
       relationship === 'owner' ||
       visibility === 'public' ||
-      (visibility === 'friends' && relationship === 'friend');
+      ((visibility === 'private' || visibility === 'friends') && relationship === 'friend');
 
     if (!canAccess) {
       return res.status(403).json({
@@ -272,7 +279,7 @@ router.post('/onboarding/complete', authenticateToken, async (req: Authenticated
 router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { display_name, bio, avatar_url, banner_url, status_message, status_emoji, privacy_default, notify_email_guestbook, notify_email_friends } = req.body;
+    const { display_name, bio, avatar_url, banner_url, status_message, status_emoji, privacy_default, notify_email_guestbook, notify_email_friends, notify_email_system, notify_email_messages } = req.body;
 
     await execute(
       `UPDATE users SET 
@@ -285,6 +292,8 @@ router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
         privacy_default = COALESCE(?, privacy_default),
         notify_email_guestbook = COALESCE(?, notify_email_guestbook),
         notify_email_friends = COALESCE(?, notify_email_friends),
+        notify_email_system = COALESCE(?, notify_email_system),
+        notify_email_messages = COALESCE(?, notify_email_messages),
         updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
       [
@@ -297,6 +306,8 @@ router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
         privacy_default,
         notify_email_guestbook !== undefined ? (notify_email_guestbook ? 1 : 0) : null,
         notify_email_friends !== undefined ? (notify_email_friends ? 1 : 0) : null,
+        notify_email_system !== undefined ? (notify_email_system ? 1 : 0) : null,
+        notify_email_messages !== undefined ? (notify_email_messages ? 1 : 0) : null,
         userId
       ]
     );

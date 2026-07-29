@@ -212,7 +212,7 @@ export const NotificationDropdown: React.FC = () => {
                         onClick={() => setIsOpen(false)}
                         style={{ display: 'inline-block', marginTop: '0.4rem', color: 'var(--accent-color)', fontWeight: 600, fontSize: '0.75rem' }}
                       >
-                        View Nook →
+                        {n.link_title ? `${n.link_title} →` : 'View →'}
                       </Link>
                     )}
                   </div>

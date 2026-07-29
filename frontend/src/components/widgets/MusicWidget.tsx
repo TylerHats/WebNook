@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Music, Disc, Play, Pause, Volume2, ListMusic, ExternalLink } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Music, Disc, Play, Pause, Volume2 } from 'lucide-react';
 
 export interface MusicTrack {
   id: string;
@@ -7,11 +7,14 @@ export interface MusicTrack {
   artist?: string;
   type: 'audio' | 'spotify' | 'apple';
   url: string;
+  autoplay?: boolean;
 }
 
 interface MusicWidgetProps {
   title?: string;
   tracks?: MusicTrack[];
+  autoNextPlay?: boolean;
+  loopPlaylist?: boolean;
   // Legacy fallback props
   bgMusicUrl?: string;
   bgMusicTitle?: string;
@@ -22,6 +25,8 @@ interface MusicWidgetProps {
 export const MusicWidget: React.FC<MusicWidgetProps> = ({
   title = 'My Music Playlist',
   tracks = [],
+  autoNextPlay = true,
+  loopPlaylist = false,
   bgMusicUrl,
   bgMusicTitle,
   spotifyTrackUrl,
@@ -44,9 +49,60 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
 
   const [activeTrackIndex, setActiveTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const activeTrack = playlist[activeTrackIndex];
+  const isAllMp3 = playlist.length > 0 && playlist.every(t => t.type === 'audio');
+
+  // Detect touch device vs desktop
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+  // Attempt autoplay on mount if first track is MP3 and has autoplay enabled
+  useEffect(() => {
+    if (playlist.length === 0) return;
+    const firstTrack = playlist[0];
+    if (firstTrack.type !== 'audio' || !firstTrack.autoplay) return;
+
+    const timer = setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.play()
+          .then(() => {
+            setIsPlaying(true);
+            setAutoplayBlocked(false);
+          })
+          .catch(err => {
+            console.log('Autoplay blocked by browser policy:', err);
+            setAutoplayBlocked(true);
+          });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Global document click/tap listener to unblock autoplay if blocked
+  useEffect(() => {
+    if (!autoplayBlocked) return;
+
+    const handleUserInteraction = () => {
+      if (audioRef.current && autoplayBlocked) {
+        audioRef.current.play()
+          .then(() => {
+            setIsPlaying(true);
+            setAutoplayBlocked(false);
+          })
+          .catch(console.error);
+      }
+    };
+
+    window.addEventListener('click', handleUserInteraction, { once: true });
+    window.addEventListener('touchstart', handleUserInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, [autoplayBlocked]);
 
   const togglePlay = () => {
     if (!audioRef.current) return;
@@ -54,8 +110,12 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+      audioRef.current.play()
+        .then(() => {
+          setIsPlaying(true);
+          setAutoplayBlocked(false);
+        })
+        .catch(e => console.log('Playback blocked', e));
     }
   };
 
@@ -65,6 +125,34 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
       setIsPlaying(false);
     }
     setActiveTrackIndex(index);
+  };
+
+  // Handle MP3 Track ended logic (Auto Next Play & Loop)
+  const handleTrackEnded = () => {
+    if (isAllMp3 && autoNextPlay) {
+      if (activeTrackIndex < playlist.length - 1) {
+        const nextIdx = activeTrackIndex + 1;
+        setActiveTrackIndex(nextIdx);
+        setIsPlaying(true);
+        setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.play().catch(console.error);
+          }
+        }, 100);
+      } else if (loopPlaylist && playlist.length > 0) {
+        setActiveTrackIndex(0);
+        setIsPlaying(true);
+        setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.play().catch(console.error);
+          }
+        }, 100);
+      } else {
+        setIsPlaying(false);
+      }
+    } else {
+      setIsPlaying(false);
+    }
   };
 
   const getSpotifyEmbedUrl = (url: string) => {
@@ -84,7 +172,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
   };
 
   return (
-    <div className="nook-panel">
+    <div className="nook-panel" style={{ position: 'relative' }}>
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Music size={20} color="var(--accent-color)" />
@@ -137,7 +225,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
                   <audio
                     ref={audioRef}
                     src={activeTrack.url}
-                    onEnded={() => setIsPlaying(false)}
+                    onEnded={handleTrackEnded}
                     style={{ display: 'none' }}
                   />
                 </div>
@@ -212,6 +300,43 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Floating Browser Unmute Toast Banner */}
+      {autoplayBlocked && (
+        <div
+          onClick={() => {
+            if (audioRef.current) {
+              audioRef.current.play().then(() => {
+                setIsPlaying(true);
+                setAutoplayBlocked(false);
+              }).catch(console.error);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            bottom: '1.5rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 99999,
+            padding: '0.75rem 1.5rem',
+            borderRadius: '30px',
+            background: 'var(--accent-color, #6366f1)',
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            boxShadow: '0 8px 25px rgba(0,0,0,0.5)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            border: '2px solid rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(8px)'
+          }}
+        >
+          <Volume2 size={20} />
+          <span>🎵 {isTouchDevice ? 'Tap anywhere to start music' : 'Click anywhere to start music'}</span>
         </div>
       )}
     </div>

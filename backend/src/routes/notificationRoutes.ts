@@ -11,20 +11,22 @@ export async function createNotification(
   senderId: number | null,
   title: string,
   message: string,
-  linkUrl: string = ''
+  linkUrl: string = '',
+  linkTitle: string = ''
 ) {
   try {
     await execute(
-      'INSERT INTO notifications (user_id, type, sender_id, title, message, link_url) VALUES (?, ?, ?, ?, ?, ?)',
-      [userId, type, senderId, title, message, linkUrl]
+      'INSERT INTO notifications (user_id, type, sender_id, title, message, link_url, link_title) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [userId, type, senderId, title, message, linkUrl, linkTitle]
     );
 
     // Check user email notification preferences
-    const recipient = await queryOne<any>('SELECT email, username, notify_email_guestbook, notify_email_friends FROM users WHERE id = ?', [userId]);
+    const recipient = await queryOne<any>('SELECT email, username, notify_email_guestbook, notify_email_friends, notify_email_system FROM users WHERE id = ?', [userId]);
     if (recipient && recipient.email) {
       let sendEmail = false;
-      if (type === 'guestbook' && recipient.notify_email_guestbook) sendEmail = true;
-      if ((type === 'friend_request' || type === 'friend_accept') && recipient.notify_email_friends) sendEmail = true;
+      if (type === 'guestbook' && recipient.notify_email_guestbook !== 0) sendEmail = true;
+      if ((type === 'friend_request' || type === 'friend_accept') && recipient.notify_email_friends !== 0) sendEmail = true;
+      if (type === 'system' && recipient.notify_email_system !== 0) sendEmail = true;
 
       if (sendEmail) {
         sendStyledEmail({
@@ -33,7 +35,7 @@ export async function createNotification(
           title: title,
           bodyHtml: `<p>Hello @<strong>${recipient.username}</strong>,</p><p>${message}</p>`,
           actionUrl: linkUrl ? linkUrl : undefined,
-          actionText: linkUrl ? 'View Notification' : undefined
+          actionText: linkUrl ? (linkTitle || 'View Notification') : undefined
         });
       }
     }

@@ -245,6 +245,100 @@ const migrations: Migration[] = [
       try { await execute('ALTER TABLE nooks ADD COLUMN theme_sounds_enabled INTEGER DEFAULT 1'); } catch (e) {}
       try { await execute('ALTER TABLE nooks ADD COLUMN theme_animations_enabled INTEGER DEFAULT 1'); } catch (e) {}
     }
+  },
+  {
+    version: 9,
+    name: 'v2.2.0_system_notifications_and_email_pref',
+    up: async () => {
+      try { await execute('ALTER TABLE users ADD COLUMN notify_email_system INTEGER DEFAULT 1'); } catch (e) {}
+      try { await execute('ALTER TABLE notifications ADD COLUMN link_title TEXT DEFAULT ""'); } catch (e) {}
+    }
+  },
+  {
+    version: 10,
+    name: 'v2.3.0_direct_messaging_and_group_chats',
+    up: async () => {
+      try { await execute('ALTER TABLE users ADD COLUMN notify_email_messages INTEGER DEFAULT 1'); } catch (e) {}
+      await execute(`
+        CREATE TABLE IF NOT EXISTS conversations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          type TEXT NOT NULL,
+          name TEXT DEFAULT '',
+          creator_user_id INTEGER NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await execute(`
+        CREATE TABLE IF NOT EXISTS conversation_members (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          is_muted INTEGER DEFAULT 0,
+          last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(conversation_id, user_id)
+        )
+      `);
+      await execute(`
+        CREATE TABLE IF NOT EXISTS messages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL,
+          sender_id INTEGER NOT NULL,
+          content TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Seed System Bot user
+      const systemUser = await queryOne<any>('SELECT id FROM users WHERE username = "system"');
+      if (!systemUser) {
+        try {
+          await execute(
+            'INSERT INTO users (username, email, password_hash, display_name, role, is_email_verified, onboarding_completed) VALUES ("system", "system@webnook.local", "DISABLED", "System Announcement 🤖", "system", 1, 1)'
+          );
+        } catch (e) {}
+      }
+    }
+  },
+  {
+    version: 11,
+    name: 'v2.4.0_group_chat_settings_and_inline_notices',
+    up: async () => {
+      try { await execute('ALTER TABLE conversations ADD COLUMN avatar_url TEXT DEFAULT ""'); } catch (e) {}
+      try { await execute('ALTER TABLE messages ADD COLUMN is_system_notice INTEGER DEFAULT 0'); } catch (e) {}
+    }
+  },
+  {
+    version: 12,
+    name: 'v2.5.0_bug_reports_reactions_and_replies',
+    up: async () => {
+      try { await execute('ALTER TABLE users ADD COLUMN reaction_picker_json TEXT DEFAULT \'["👍","❤️","😂","🔥","😮","🎉"]\''); } catch (e) {}
+      try { await execute('ALTER TABLE users ADD COLUMN default_reaction TEXT DEFAULT "❤️"'); } catch (e) {}
+      try { await execute('ALTER TABLE messages ADD COLUMN reply_to_id INTEGER DEFAULT NULL'); } catch (e) {}
+      await execute(`
+        CREATE TABLE IF NOT EXISTS message_reactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          message_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          emoji TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE,
+          FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+          UNIQUE(message_id, user_id, emoji)
+        )
+      `);
+
+      // Seed Bug Reports System Bot User
+      const bugUser = await queryOne<any>('SELECT id FROM users WHERE username = "bug_reports"');
+      if (!bugUser) {
+        try {
+          await execute(
+            'INSERT INTO users (username, email, password_hash, display_name, role, is_email_verified, onboarding_completed) VALUES ("bug_reports", "bug_reports@webnook.local", "DISABLED", "Bug Reports & Support 🐛", "system", 1, 1)'
+          );
+        } catch (e) {}
+      }
+    }
   }
 ];
 

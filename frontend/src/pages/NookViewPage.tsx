@@ -9,7 +9,7 @@ import { SteamWidget } from '../components/widgets/SteamWidget';
 import { GuestbookWidget } from '../components/nook/GuestbookWidget';
 import { StickerCanvas } from '../components/nook/StickerCanvas';
 import { ThemeAnimationOverlay } from '../components/nook/ThemeAnimationOverlay';
-import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users } from 'lucide-react';
+import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users, Clock, UserCheck, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 import { playThemeSound } from '../utils/themeSoundEngine';
@@ -70,6 +70,7 @@ export const NookViewPage: React.FC = () => {
       const data = await res.json();
       if (res.ok) {
         showToast(data.message, 'success');
+        fetchProfile();
       } else {
         showToast(data.error || 'Failed to send request', 'error');
       }
@@ -102,6 +103,7 @@ export const NookViewPage: React.FC = () => {
 
   // Render Private Nook view if access is blocked
   if (profileData.is_private) {
+    const rel = profileData.relationship || 'public';
     return (
       <div className={themeClass} style={{ minHeight: '90vh', padding: '2rem 1rem' }}>
         <div style={{ maxWidth: '550px', margin: '0 auto', textAlign: 'center' }} className="nook-panel">
@@ -113,10 +115,27 @@ export const NookViewPage: React.FC = () => {
             {profileData.message}
           </p>
           {user && !isOwner && (
-            <button onClick={handleSendFriendRequest} className="btn-primary" style={{ margin: '0 auto' }}>
-              <UserPlus size={18} />
-              <span>Send Friend Request</span>
-            </button>
+            rel === 'pending_outgoing' ? (
+              <button disabled className="btn-secondary" style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85, cursor: 'not-allowed' }}>
+                <Clock size={18} />
+                <span>Friend Request Pending</span>
+              </button>
+            ) : rel === 'pending_incoming' ? (
+              <Link to="/friends" className="btn-primary" style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                <UserCheck size={18} />
+                <span>Respond to Friend Request</span>
+              </Link>
+            ) : rel === 'friend' ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 600 }}>
+                <CheckCircle2 size={18} />
+                <span>Friends</span>
+              </div>
+            ) : (
+              <button onClick={handleSendFriendRequest} className="btn-primary" style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                <UserPlus size={18} />
+                <span>Send Friend Request</span>
+              </button>
+            )
           )}
         </div>
       </div>
@@ -172,6 +191,25 @@ export const NookViewPage: React.FC = () => {
 
   const animationsEnabled = nookSettings?.theme_animations_enabled !== 0;
 
+  let parsedMusicTracks: any[] = [];
+  let autoNextPlay = true;
+  let loopPlaylist = false;
+
+  if (nookSettings?.music_tracks_json) {
+    try {
+      const rawMusicData = typeof nookSettings.music_tracks_json === 'string'
+        ? JSON.parse(nookSettings.music_tracks_json)
+        : nookSettings.music_tracks_json;
+      if (Array.isArray(rawMusicData)) {
+        parsedMusicTracks = rawMusicData;
+      } else if (rawMusicData && typeof rawMusicData === 'object') {
+        parsedMusicTracks = rawMusicData.tracks || [];
+        if (rawMusicData.autoNextPlay !== undefined) autoNextPlay = !!rawMusicData.autoNextPlay;
+        if (rawMusicData.loopPlaylist !== undefined) loopPlaylist = !!rawMusicData.loopPlaylist;
+      }
+    } catch (e) {}
+  }
+
   return (
     <div className={themeClass} style={customStyle} onClick={handleGlobalClick}>
       {/* Custom CSS Injection */}
@@ -220,6 +258,21 @@ export const NookViewPage: React.FC = () => {
                   <Edit3 size={16} />
                   <span>Customize My Nook</span>
                 </Link>
+              ) : profileData.relationship === 'friend' ? (
+                <div className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'default' }}>
+                  <CheckCircle2 size={16} style={{ color: 'var(--accent-color)' }} />
+                  <span>Friends</span>
+                </div>
+              ) : profileData.relationship === 'pending_outgoing' ? (
+                <div className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'default', opacity: 0.8 }}>
+                  <Clock size={16} />
+                  <span>Request Pending</span>
+                </div>
+              ) : profileData.relationship === 'pending_incoming' ? (
+                <Link to="/friends" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <UserCheck size={16} />
+                  <span>Respond to Request</span>
+                </Link>
               ) : (
                 <button onClick={handleSendFriendRequest} className="btn-primary">
                   <UserPlus size={16} />
@@ -247,7 +300,9 @@ export const NookViewPage: React.FC = () => {
             {cardVis.music !== false && (
               <MusicWidget
                 title={cardTitles.music || 'My Music Playlist'}
-                tracks={nookSettings?.music_tracks_json ? (typeof nookSettings.music_tracks_json === 'string' ? JSON.parse(nookSettings.music_tracks_json) : nookSettings.music_tracks_json) : []}
+                tracks={parsedMusicTracks}
+                autoNextPlay={autoNextPlay}
+                loopPlaylist={loopPlaylist}
                 bgMusicUrl={nookSettings?.bg_music_url}
                 bgMusicTitle={nookSettings?.bg_music_title}
                 spotifyTrackUrl={nookSettings?.spotify_track_url}

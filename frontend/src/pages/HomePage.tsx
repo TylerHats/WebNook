@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, Palette, Music, Users, Shield, UserPlus, LogIn, Heart, Home, Star, Smile, Film, BookOpen } from 'lucide-react';
+import { Sparkles, Palette, Music, Users, Shield, UserPlus, LogIn, Heart, Home, Star, Smile, Film, BookOpen, MessageSquare, Bug, HardDrive } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const { user } = useAuth();
@@ -29,7 +29,7 @@ export const HomePage: React.FC = () => {
           Welcome Home to {appName}! 🏡
         </h1>
         <p style={{ fontSize: '1.15rem', opacity: 0.85, maxWidth: '720px', margin: '0 auto 2rem', lineHeight: 1.6 }}>
-          A cozy, private online space for you and your favorite people. Decorate your profile, pick cute themes, add stickers, play background music, and swap notes in guestbooks!
+          A cozy, private online space for you and your favorite people. Decorate your profile, pick cute themes, add stickers, play background music, chat in real-time, and swap notes in guestbooks!
         </p>
 
         {user ? (
@@ -37,6 +37,10 @@ export const HomePage: React.FC = () => {
             <Link to={`/nook/${user.username}`} className="btn-primary" style={{ padding: '0.75rem 1.75rem', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
               <Home size={18} />
               <span>Step Inside My Nook (@{user.username})</span>
+            </Link>
+            <Link to="/messages" className="btn-secondary" style={{ padding: '0.75rem 1.75rem', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <MessageSquare size={18} />
+              <span>Open Messages</span>
             </Link>
             <Link to="/customize" className="btn-secondary" style={{ padding: '0.75rem 1.75rem', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
               <Palette size={18} />
@@ -67,6 +71,46 @@ export const HomePage: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '3rem' }}>
         <div className="nook-panel">
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: 'var(--accent-color)' }}>
+            <MessageSquare size={26} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Cozy Direct & Group Messaging</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
+            Chat 1-on-1 with accepted friends or create group chats with custom icons! Messages are styled after each person's unique Nook theme.
+          </p>
+        </div>
+
+        <div className="nook-panel">
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(236, 72, 153, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#ec4899' }}>
+            <Smile size={26} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Emoji Reactions & Message Replies</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
+            React with custom emoji pickers, double-tap messages for quick reactions, and reply directly to messages with quote previews!
+          </p>
+        </div>
+
+        <div className="nook-panel">
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#ef4444' }}>
+            <Bug size={26} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Direct Bug Reports & Support</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
+            Need help or noticed an issue? Send feedback straight to site admins in your private Bug Reports channel for fast support.
+          </p>
+        </div>
+
+        <div className="nook-panel">
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#22c55e' }}>
+            <Music size={26} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Continuous Playlist Music Player</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
+            Upload custom MP3 audio files or search Spotify to create music playlists with automatic track autoplay, continuous playback, and looping!
+          </p>
+        </div>
+
+        <div className="nook-panel">
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: 'var(--accent-color)' }}>
             <Palette size={26} />
           </div>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Visual Sticker Studio</h3>
@@ -86,36 +130,6 @@ export const HomePage: React.FC = () => {
         </div>
 
         <div className="nook-panel">
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#22c55e' }}>
-            <Music size={26} />
-          </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Music & Spotify Playlists</h3>
-          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
-            Upload custom MP3 audio files or search Spotify to create custom music playlists that friends can listen to when visiting!
-          </p>
-        </div>
-
-        <div className="nook-panel">
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#ef4444' }}>
-            <Film size={26} />
-          </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Movies & TV Showcase</h3>
-          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
-            Search movie and TV show databases to display poster artwork, release years, and your personal 5-star ratings!
-          </p>
-        </div>
-
-        <div className="nook-panel">
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#3b82f6' }}>
-            <BookOpen size={26} />
-          </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Books & StoryGraph Nook</h3>
-          <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
-            Curate your reading nook by searching books or importing your favorite reads directly from StoryGraph CSV files!
-          </p>
-        </div>
-
-        <div className="nook-panel">
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(168, 85, 247, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#a855f7' }}>
             <Heart size={26} />
           </div>
@@ -129,9 +143,9 @@ export const HomePage: React.FC = () => {
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(234, 179, 8, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#eab308' }}>
             <Shield size={26} />
           </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Safe & Private Sanctuary</h3>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Safe, Private & Peace-of-Mind Backups</h3>
           <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.5 }}>
-            No ads, no algorithms, hardware Passkey & 2FA security, and complete control over who can view your profile!
+            No ads, no algorithms, hardware Passkey security, plus automated scheduled backups to keep your Nook data completely safe!
           </p>
         </div>
       </div>

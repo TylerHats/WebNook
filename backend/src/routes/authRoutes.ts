@@ -243,7 +243,7 @@ router.post('/login', async (req: Request, res: Response) => {
 router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = await queryOne<any>(
-      'SELECT id, username, email, display_name, bio, avatar_url, banner_url, status_message, status_emoji, role, is_totp_enabled, is_email_verified, onboarding_completed, privacy_default, created_at FROM users WHERE id = ?',
+      'SELECT id, username, email, display_name, bio, avatar_url, banner_url, status_message, status_emoji, role, is_totp_enabled, is_email_verified, onboarding_completed, privacy_default, notify_email_guestbook, notify_email_friends, notify_email_system, notify_email_messages, reaction_picker_json, default_reaction, created_at FROM users WHERE id = ?',
       [req.user!.id]
     );
 

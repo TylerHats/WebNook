@@ -67,6 +67,7 @@ app.use('/branding', (req, res, next) => {
 
 import notificationRoutes from './routes/notificationRoutes';
 import friendRoutes from './routes/friendRoutes';
+import messageRoutes from './routes/messageRoutes';
 
 // API Routes
 app.use('/api/setup', setupRoutes);
@@ -78,6 +79,7 @@ app.use('/api/integrations', integrationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/friends', friendRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Public Branding Configuration Endpoint
 app.get('/api/branding/public', async (req, res) => {
@@ -150,9 +152,21 @@ app.get('/api/health', (req, res) => {
 const frontendDist = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendDist)) {
   app.use('/assets', express.static(path.join(frontendDist, 'assets'), { immutable: true, maxAge: '1y' }));
-  app.use(express.static(frontendDist));
+  app.use(express.static(frontendDist, {
+    setHeaders: (res, filePath) => {
+      const baseName = path.basename(filePath);
+      if (baseName === 'index.html' || baseName === 'sw.js') {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    }
+  }));
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads') && !req.path.startsWith('/branding') && !req.path.startsWith('/assets')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(path.join(frontendDist, 'index.html'));
     } else {
       res.status(404).send('Asset not found');
@@ -161,10 +175,15 @@ if (fs.existsSync(frontendDist)) {
 }
 
 // Start Server
+import { initBackupScheduler } from './services/backupScheduler';
+
 async function startServer() {
   try {
     console.log('Initializing WebNook database migrations...');
     await runMigrations();
+
+    // Initialize automated scheduled backup daemon
+    initBackupScheduler();
 
     // Auto-sync DB installed_version with current package.json version on container boot
     try {

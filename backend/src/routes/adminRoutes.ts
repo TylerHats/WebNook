@@ -245,6 +245,68 @@ router.delete('/users/:id', async (req: AuthenticatedRequest, res: Response) => 
   }
 });
 
+import { createNotification } from './notificationRoutes';
+
+// Send Admin System Announcement / Direct Notification
+router.post('/send-notification', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { target_type, target_user_id, title, message, link_title, link_url } = req.body;
+
+    if (!title || !title.trim() || !message || !message.trim()) {
+      return res.status(400).json({ error: 'Title and Message are required' });
+    }
+
+    const cleanTitle = title.trim();
+    const cleanMessage = message.trim();
+    const cleanLinkTitle = (link_title || '').trim();
+    const cleanLinkUrl = (link_url || '').trim();
+
+    if (target_type === 'user') {
+      if (!target_user_id) {
+        return res.status(400).json({ error: 'Target user ID is required for direct notifications' });
+      }
+
+      const targetUser = await queryOne<any>('SELECT id, username FROM users WHERE id = ?', [target_user_id]);
+      if (!targetUser) {
+        return res.status(404).json({ error: 'Target user not found' });
+      }
+
+      await createNotification(
+        targetUser.id,
+        'system',
+        req.user!.id,
+        cleanTitle,
+        cleanMessage,
+        cleanLinkUrl,
+        cleanLinkTitle
+      );
+
+      return res.json({ message: `Notification sent successfully to @${targetUser.username}!` });
+    } else {
+      // Global broadcast to all registered non-disabled users
+      const users = await query<any>('SELECT id FROM users WHERE is_disabled = 0');
+      let count = 0;
+      for (const u of users) {
+        await createNotification(
+          u.id,
+          'system',
+          req.user!.id,
+          cleanTitle,
+          cleanMessage,
+          cleanLinkUrl,
+          cleanLinkTitle
+        );
+        count++;
+      }
+
+      return res.json({ message: `Global notification broadcast successfully sent to ${count} users!` });
+    }
+  } catch (err: any) {
+    console.error('Send notification error:', err);
+    return res.status(500).json({ error: 'Failed to send notification' });
+  }
+});
+
 import { execSync } from 'child_process';
 
 // 3. Self-Updater & Release Channels (PolyPress Style)
@@ -418,34 +480,78 @@ router.get('/backups', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+export function purgeExcessBackups(retentionCount: number) {
+  if (retentionCount <= 0) return;
+  try {
+    if (!fs.existsSync(backupsDir)) return;
+    const files = fs.readdirSync(backupsDir);
+    const backups = files.filter(f => f.endsWith('.tar.gz') || f.endsWith('.db')).map(f => {
+      const filePath = path.join(backupsDir, f);
+      const stat = fs.statSync(filePath);
+      return {
+        filename: f,
+        filePath,
+        created_at: stat.mtime
+      };
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    if (backups.length > retentionCount) {
+      const toDelete = backups.slice(retentionCount);
+      for (const b of toDelete) {
+        if (fs.existsSync(b.filePath)) {
+          fs.unlinkSync(b.filePath);
+          console.log(`[Backup Retention] Purged old backup archive: ${b.filename}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Backup Retention Error] Failed to purge old backups:', err);
+  }
+}
+
+export async function createBackupArchiveInternal(): Promise<{ filename: string; sizeBytes: number; created_at: Date }> {
+  if (!fs.existsSync(backupsDir)) {
+    fs.mkdirSync(backupsDir, { recursive: true });
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `webnook-backup-${timestamp}.tar.gz`;
+  const archivePath = path.join(backupsDir, filename);
+
+  // Create metadata JSON file in dataDir before tarring
+  const metaPath = path.join(dataDir, 'backup_metadata.json');
+  fs.writeFileSync(metaPath, JSON.stringify({
+    created_at: new Date().toISOString(),
+    version: '1.0.0',
+    type: 'full_compressed'
+  }));
+
+  const uploadsParent = path.join(__dirname, '../..');
+
+  // Archive webnook.db, branding, metadata, and uploads
+  const cmd = `tar -czf "${archivePath}" -C "${dataDir}" webnook.db branding backup_metadata.json -C "${uploadsParent}" uploads 2>/dev/null || tar -czf "${archivePath}" -C "${dataDir}" webnook.db`;
+  await execPromise(cmd);
+
+  const stat = fs.statSync(archivePath);
+
+  // Apply retention cleanup policy if configured
+  const retentionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "backup_retention_count"');
+  const retentionCount = parseInt(retentionRow?.value || '10', 10);
+  purgeExcessBackups(retentionCount);
+
+  return {
+    filename,
+    sizeBytes: stat.size,
+    created_at: stat.mtime
+  };
+}
+
 router.post('/backups/create', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `webnook-backup-${timestamp}.tar.gz`;
-    const archivePath = path.join(backupsDir, filename);
-
-    // Create metadata JSON file in dataDir before tarring
-    const metaPath = path.join(dataDir, 'backup_metadata.json');
-    fs.writeFileSync(metaPath, JSON.stringify({
-      created_at: new Date().toISOString(),
-      version: '1.0.0',
-      type: 'full_compressed'
-    }));
-
-    const uploadsDir = path.join(__dirname, '../../uploads');
-
-    // Archive webnook.db, branding, metadata, and uploads
-    const cmd = `tar -czf "${archivePath}" -C "${dataDir}" webnook.db branding backup_metadata.json -C "${path.join(__dirname, '../..')}" uploads 2>/dev/null || tar -czf "${archivePath}" -C "${dataDir}" webnook.db`;
-    await execPromise(cmd);
-
-    const stat = fs.statSync(archivePath);
+    const backup = await createBackupArchiveInternal();
     return res.json({
       message: 'Compressed backup archive created successfully!',
-      backup: {
-        filename,
-        sizeBytes: stat.size,
-        created_at: stat.mtime
-      }
+      backup
     });
   } catch (err: any) {
     console.error('Backup creation error:', err);
@@ -528,7 +634,9 @@ router.get('/settings', async (req: AuthenticatedRequest, res: Response) => {
       smtp_from: '',
       smtp_secure: 'false',
       auto_backup_enabled: 'false',
-      auto_backup_interval: 'daily'
+      auto_backup_interval: 'daily',
+      backup_retention_count: '10',
+      last_auto_backup_at: ''
     };
     rows.forEach(r => settings[r.key] = r.value);
     return res.json({ settings });

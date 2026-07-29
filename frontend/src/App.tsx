@@ -13,6 +13,7 @@ import { SetupWizardPage } from './pages/SetupWizardPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { UserOnboardingPage } from './pages/UserOnboardingPage';
 import { FriendsPage } from './pages/FriendsPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { useAuth } from './context/AuthContext';
 import { Sparkles } from 'lucide-react';
 
@@ -64,6 +65,7 @@ const AppRoutes: React.FC = () => {
           <Route path="/onboarding" element={<UserOnboardingPage />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/nook/:username" element={<NookViewPage />} />
+          <Route path="/messages" element={<MessagesPage />} />
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/customize" element={<NookCustomizerPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -80,7 +82,7 @@ export const App: React.FC = () => {
   return (
     <AuthProvider>
       <ToastProvider>
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AppRoutes />
         </BrowserRouter>
       </ToastProvider>

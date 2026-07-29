@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { User, Palette, Settings, Shield, LogOut, LogIn, UserPlus, Users, Menu, X } from 'lucide-react';
+import { User, Palette, Settings, Shield, LogOut, LogIn, UserPlus, Users, Menu, X, MessageSquare } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown';
 
 export const Navbar: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [appName, setAppName] = useState('WebNook');
   const [logoUrl, setLogoUrl] = useState('/branding/logo.png');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,6 +31,27 @@ export const Navbar: React.FC = () => {
       })
       .catch(err => console.error(err));
   }, []);
+
+  // Poll unread messages count
+  useEffect(() => {
+    if (!token || !user) return;
+    const checkUnread = () => {
+      fetch('/api/messages/unread-count', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && typeof data.unread_count === 'number') {
+            setUnreadMsgCount(data.unread_count);
+          }
+        })
+        .catch(() => {});
+    };
+
+    checkUnread();
+    const interval = setInterval(checkUnread, 5000);
+    return () => clearInterval(interval);
+  }, [token, user, location.pathname]);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -70,6 +92,18 @@ export const Navbar: React.FC = () => {
             <Link to={`/nook/${user.username}`} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <User size={18} />
               <span>My Nook</span>
+            </Link>
+            <Link to="/messages" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', position: 'relative' }}>
+              <MessageSquare size={18} />
+              <span>Messages</span>
+              {unreadMsgCount > 0 && (
+                <span style={{
+                  background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800,
+                  borderRadius: '10px', padding: '0.1rem 0.4rem', minWidth: '16px', textAlign: 'center'
+                }}>
+                  {unreadMsgCount}
+                </span>
+              )}
             </Link>
             <Link to="/friends" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Users size={18} />
@@ -149,6 +183,18 @@ export const Navbar: React.FC = () => {
                 <Link to={`/nook/${user.username}`} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
                   <User size={18} color="var(--accent-color)" />
                   <span>My Nook</span>
+                </Link>
+                <Link to="/messages" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
+                  <MessageSquare size={18} color="var(--accent-color)" />
+                  <span>Messages</span>
+                  {unreadMsgCount > 0 && (
+                    <span style={{
+                      background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800,
+                      borderRadius: '10px', padding: '0.1rem 0.4rem', minWidth: '16px', textAlign: 'center', marginLeft: 'auto'
+                    }}>
+                      {unreadMsgCount}
+                    </span>
+                  )}
                 </Link>
                 <Link to="/friends" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
                   <Users size={18} color="var(--accent-color)" />

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { startRegistration } from '@simplewebauthn/browser';
-import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail } from 'lucide-react';
+import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail, Smile } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 
 export const AccountSettingsPage: React.FC = () => {
@@ -15,6 +15,10 @@ export const AccountSettingsPage: React.FC = () => {
   const [bannerUrl, setBannerUrl] = useState(user?.banner_url || '');
   const [statusMessage, setStatusMessage] = useState(user?.status_message || '');
   const [statusEmoji, setStatusEmoji] = useState(user?.status_emoji || '');
+
+  // Message reaction preferences
+  const [reactionEmojis, setReactionEmojis] = useState<string[]>(['👍', '❤️', '😂', '🔥', '😮', '🎉']);
+  const [defaultReaction, setDefaultReaction] = useState<string>('❤️');
 
   // Crop Modal state
   const [cropModal, setCropModal] = useState<{
@@ -34,6 +38,8 @@ export const AccountSettingsPage: React.FC = () => {
   // Email Notifications Preferences state
   const [notifyEmailGuestbook, setNotifyEmailGuestbook] = useState((user as any)?.notify_email_guestbook !== 0);
   const [notifyEmailFriends, setNotifyEmailFriends] = useState((user as any)?.notify_email_friends !== 0);
+  const [notifyEmailSystem, setNotifyEmailSystem] = useState((user as any)?.notify_email_system !== 0);
+  const [notifyEmailMessages, setNotifyEmailMessages] = useState((user as any)?.notify_email_messages !== 0);
 
   // TOTP setup state
   const [totpQr, setTotpQr] = useState<string | null>(null);
@@ -47,7 +53,40 @@ export const AccountSettingsPage: React.FC = () => {
     if (token) {
       fetchPasskeys();
     }
-  }, [token]);
+    if ((user as any)?.reaction_picker_json) {
+      try {
+        const parsed = typeof (user as any).reaction_picker_json === 'string'
+          ? JSON.parse((user as any).reaction_picker_json)
+          : (user as any).reaction_picker_json;
+        if (Array.isArray(parsed) && parsed.length > 0) setReactionEmojis(parsed);
+      } catch (e) {}
+    }
+    if ((user as any)?.default_reaction) {
+      setDefaultReaction((user as any).default_reaction);
+    }
+  }, [user, token]);
+
+  const handleSaveReactionPreferences = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/messages/reaction-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          reaction_picker_json: reactionEmojis,
+          default_reaction: defaultReaction
+        })
+      });
+      if (res.ok) {
+        showToast('Reaction preferences saved!', 'success');
+        refreshUser();
+      } else {
+        showToast('Failed to save reaction preferences', 'error');
+      }
+    } catch (e) {
+      showToast('Error saving reaction preferences', 'error');
+    }
+  };
 
   const handleSaveNotificationPreferences = async () => {
     if (!token) return;
@@ -57,7 +96,9 @@ export const AccountSettingsPage: React.FC = () => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           notify_email_guestbook: notifyEmailGuestbook,
-          notify_email_friends: notifyEmailFriends
+          notify_email_friends: notifyEmailFriends,
+          notify_email_system: notifyEmailSystem,
+          notify_email_messages: notifyEmailMessages
         })
       });
       if (res.ok) {
@@ -446,11 +487,82 @@ export const AccountSettingsPage: React.FC = () => {
               />
               <span>Send email on new friend requests and accepted invitations</span>
             </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+              <input
+                type="checkbox"
+                checked={notifyEmailSystem}
+                onChange={e => setNotifyEmailSystem(e.target.checked)}
+              />
+              <span>Send email for system announcements and admin notifications</span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+              <input
+                type="checkbox"
+                checked={notifyEmailMessages}
+                onChange={e => setNotifyEmailMessages(e.target.checked)}
+              />
+              <span>Send email on new direct and group messages</span>
+            </label>
           </div>
 
           <button onClick={handleSaveNotificationPreferences} className="btn-primary" style={{ alignSelf: 'flex-start' }}>
             <Save size={16} />
             <span>Save Email Preferences</span>
+          </button>
+        </div>
+
+        {/* Message Reaction Preferences Card */}
+        <div className="nook-panel" style={{ marginTop: '1.5rem' }}>
+          <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Smile size={20} style={{ flexShrink: 0 }} />
+            <span>Message Reaction Preferences</span>
+          </div>
+          <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
+            Customize the quick emojis available when reacting to messages, and choose your default double-tap reaction emoji.
+          </p>
+
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Default Double-Tap Reaction Emoji</label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              {reactionEmojis.map(emoji => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => setDefaultReaction(emoji)}
+                  style={{
+                    fontSize: '1.3rem',
+                    padding: '0.4rem 0.6rem',
+                    borderRadius: '8px',
+                    border: defaultReaction === emoji ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                    background: defaultReaction === emoji ? 'rgba(99, 102, 241, 0.2)' : 'rgba(0,0,0,0.2)',
+                    cursor: 'pointer'
+                  }}
+                  title={defaultReaction === emoji ? 'Current Default Double-Tap Emoji' : `Set ${emoji} as Default`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Quick Reactions List (Comma separated emojis)</label>
+            <input
+              type="text"
+              value={reactionEmojis.join(', ')}
+              onChange={e => {
+                const split = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                setReactionEmojis(split.length > 0 ? split : ['👍', '❤️', '😂', '🔥', '😮', '🎉']);
+              }}
+              style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <button onClick={handleSaveReactionPreferences} className="btn-primary" style={{ alignSelf: 'flex-start' }}>
+            <Save size={16} />
+            <span>Save Reaction Preferences</span>
           </button>
         </div>
       </div>

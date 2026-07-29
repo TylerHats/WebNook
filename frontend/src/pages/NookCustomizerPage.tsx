@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare } from 'lucide-react';
+import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare, Volume2 } from 'lucide-react';
 import { StickerCanvas, Sticker } from '../components/nook/StickerCanvas';
 import { PRESET_STICKERS } from '../constants/presetStickers';
 
@@ -44,6 +44,8 @@ export const NookCustomizerPage: React.FC = () => {
   const [bgMusicUrl, setBgMusicUrl] = useState('');
   const [bgMusicTitle, setBgMusicTitle] = useState('');
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
+  const [autoNextPlay, setAutoNextPlay] = useState(true);
+  const [loopPlaylist, setLoopPlaylist] = useState(false);
   const [newTrackType, setNewTrackType] = useState<'spotify' | 'apple' | 'audio'>('spotify');
   const [newTrackTitle, setNewTrackTitle] = useState('');
   const [newTrackUrl, setNewTrackUrl] = useState('');
@@ -124,8 +126,9 @@ export const NookCustomizerPage: React.FC = () => {
 
   useEffect(() => {
     if (user && token) {
-      fetch(`/api/nook/profile/${user.username}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      fetch(`/api/nook/profile/${user.username}?_t=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
       })
         .then(res => res.json())
         .then(data => {
@@ -152,7 +155,13 @@ export const NookCustomizerPage: React.FC = () => {
                 const parsedTracks = typeof data.nookSettings.music_tracks_json === 'string'
                   ? JSON.parse(data.nookSettings.music_tracks_json)
                   : data.nookSettings.music_tracks_json;
-                if (Array.isArray(parsedTracks)) setMusicTracks(parsedTracks);
+                if (Array.isArray(parsedTracks)) {
+                  setMusicTracks(parsedTracks);
+                } else if (parsedTracks && typeof parsedTracks === 'object') {
+                  setMusicTracks(parsedTracks.tracks || []);
+                  if (parsedTracks.autoNextPlay !== undefined) setAutoNextPlay(!!parsedTracks.autoNextPlay);
+                  if (parsedTracks.loopPlaylist !== undefined) setLoopPlaylist(!!parsedTracks.loopPlaylist);
+                }
               } catch (e) {}
             }
 
@@ -364,7 +373,7 @@ export const NookCustomizerPage: React.FC = () => {
           card_visibility_json: cardVisibility,
           card_colors_json: { cardBg: cardBgColor, border: borderColor },
           card_titles_json: cardTitles,
-          music_tracks_json: musicTracks,
+          music_tracks_json: { tracks: musicTracks, autoNextPlay, loopPlaylist },
           favorite_movies_json: cleanedMovies,
           favorite_books_json: cleanedBooks,
           storygraph_username: storygraphUsername,
@@ -875,6 +884,34 @@ export const NookCustomizerPage: React.FC = () => {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          {idx === 0 && tr.type === 'audio' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...musicTracks];
+                                updated[0] = { ...updated[0], autoplay: !updated[0].autoplay };
+                                setMusicTracks(updated);
+                              }}
+                              style={{
+                                background: tr.autoplay ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)',
+                                color: tr.autoplay ? '#ffffff' : 'var(--text-main)',
+                                border: tr.autoplay ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+                                borderRadius: '4px',
+                                padding: '0.2rem 0.5rem',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                fontWeight: 600
+                              }}
+                              title={tr.autoplay ? 'Autoplay Enabled on Nook Load' : 'Enable Autoplay on Nook Load'}
+                            >
+                              <Volume2 size={13} />
+                              <span>{tr.autoplay ? 'Autoplay On' : 'Autoplay Off'}</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => handleMoveTrack(idx, 'up')}
@@ -905,6 +942,43 @@ export const NookCustomizerPage: React.FC = () => {
                       </div>
                     ))}
                   </div>
+
+                  {/* All-MP3 Playlist Playback Settings (Auto Next Play & Loop) */}
+                  {musicTracks.every(t => t.type === 'audio') && (
+                    <div style={{
+                      marginTop: '0.85rem',
+                      padding: '0.85rem 1rem',
+                      background: 'rgba(99, 102, 241, 0.1)',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.6rem'
+                    }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Volume2 size={16} />
+                        <span>All-MP3 Playlist Audio Settings</span>
+                      </div>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={autoNextPlay}
+                          onChange={e => setAutoNextPlay(e.target.checked)}
+                        />
+                        <span>⏭️ <strong>Auto Next Play:</strong> Automatically start playing the next track when current MP3 finishes</span>
+                      </label>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={loopPlaylist}
+                          onChange={e => setLoopPlaylist(e.target.checked)}
+                        />
+                        <span>🔁 <strong>Loop Playlist:</strong> Restart and play the first track after the last track finishes</span>
+                      </label>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p style={{ fontSize: '0.8rem', opacity: 0.6, textAlign: 'center', margin: 0, padding: '0.5rem' }}>
