@@ -424,7 +424,7 @@ router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) =>
     let gitPulled = false;
 
     try {
-      execSync('git fetch origin && git pull origin main', { cwd: repoPath, timeout: 45000 });
+      execSync('git fetch --all && git reset --hard origin/main && git clean -fd', { cwd: repoPath, timeout: 45000 });
       gitPulled = true;
       try {
         const buildEnv = { ...process.env, NODE_ENV: 'development' };
@@ -436,7 +436,7 @@ router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) =>
         if (buildErr.stderr) console.warn('[Self-Updater Stderr]:', buildErr.stderr.toString());
       }
     } catch (gitErr: any) {
-      console.warn('[Self-Updater Warning] Git pull skipped or failed:', gitErr.message);
+      console.warn('[Self-Updater Warning] Git fetch/reset failed:', gitErr.message);
     }
 
     await runMigrations();
