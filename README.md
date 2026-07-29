@@ -8,7 +8,6 @@
   <strong>A modern, customizable, self-hosted social platform for friend groups — inspired by classic MySpace.</strong>
 </p>
 
----
 
 ## 📌 Overview
 
