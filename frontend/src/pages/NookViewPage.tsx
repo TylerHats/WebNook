@@ -8,6 +8,7 @@ import { BooksWidget } from '../components/widgets/BooksWidget';
 import { SteamWidget } from '../components/widgets/SteamWidget';
 import { GuestbookWidget } from '../components/nook/GuestbookWidget';
 import { StickerCanvas } from '../components/nook/StickerCanvas';
+import { ThemeAnimationOverlay } from '../components/nook/ThemeAnimationOverlay';
 import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
@@ -169,12 +170,17 @@ export const NookViewPage: React.FC = () => {
     '--border-color': borderColor
   } as React.CSSProperties;
 
+  const animationsEnabled = nookSettings?.theme_animations_enabled !== 0;
+
   return (
     <div className={themeClass} style={customStyle} onClick={handleGlobalClick}>
       {/* Custom CSS Injection */}
       {nookSettings?.custom_css && (
         <style dangerouslySetInnerHTML={{ __html: nookSettings.custom_css }} />
       )}
+
+      {/* Theme Animated Micro-Overlays */}
+      {animationsEnabled && <ThemeAnimationOverlay theme={nookSettings?.theme} />}
 
       {/* Layer 1: Behind Cards Sticker Overlay */}
       {stickers && <StickerCanvas stickers={stickers} targetLayer="behind_cards" />}

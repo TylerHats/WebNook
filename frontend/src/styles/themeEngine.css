@@ -111,9 +111,16 @@ input, textarea, select {
 }
 
 @keyframes win9xFileFly {
-  0% { transform: translateX(0); opacity: 0.7; }
-  50% { transform: translateX(10px); opacity: 1; }
-  100% { transform: translateX(20px); opacity: 0.7; }
+  0% { left: 5%; opacity: 0.3; transform: translateY(-50%) rotate(0deg); }
+  25% { left: 30%; opacity: 1; transform: translateY(-50%) rotate(-6deg); }
+  50% { left: 55%; opacity: 0.4; transform: translateY(-50%) rotate(6deg); }
+  75% { left: 80%; opacity: 1; transform: translateY(-50%) rotate(-4deg); }
+  100% { left: 95%; opacity: 0.3; transform: translateY(-50%) rotate(0deg); }
+}
+
+@keyframes win9xTitleBarPulse {
+  0%, 100% { background: linear-gradient(90deg, #000080 0%, #1084d0 100%); }
+  50% { background: linear-gradient(90deg, #1084d0 0%, #000080 100%); }
 }
 
 .theme-win98 .nook-panel, .theme-win9x .nook-panel {
@@ -130,7 +137,10 @@ input, textarea, select {
 }
 
 .theme-win98 .nook-panel-header, .theme-win9x .nook-panel-header {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(90deg, var(--accent-color) 0%, #1084d0 100%);
+  animation: win9xTitleBarPulse 4s ease-in-out infinite;
   color: #ffffff !important;
   padding: 4px 8px;
   font-weight: bold;
@@ -142,8 +152,20 @@ input, textarea, select {
   border-bottom: none;
 }
 
+.theme-win98 .nook-panel-header::before, .theme-win9x .nook-panel-header::before {
+  content: '📄';
+  position: absolute;
+  top: 50%;
+  font-size: 0.8rem;
+  animation: win9xFileFly 3.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
 .theme-win98 .nook-panel-header::after, .theme-win9x .nook-panel-header::after {
   content: 'X';
+  position: relative;
+  z-index: 3;
   background: #c0c0c0;
   color: #000000;
   border-top: 1px solid #ffffff;
@@ -167,6 +189,12 @@ input, textarea, select {
   padding: 4px 12px;
   font-weight: bold;
   box-shadow: none;
+  transition: none;
+}
+
+.theme-win98 button:hover, .theme-win9x button:hover {
+  outline: 1px dotted #000000;
+  outline-offset: -4px;
 }
 
 .theme-win98 button:active, .theme-win9x button:active {
@@ -174,6 +202,7 @@ input, textarea, select {
   border-left: 2px solid #000000 !important;
   border-right: 2px solid #ffffff !important;
   border-bottom: 2px solid #ffffff !important;
+  padding: 5px 11px 3px 13px !important;
 }
 
 /* ========================================================
@@ -598,4 +627,38 @@ input, textarea, select {
   border-radius: 24px !important;
   box-shadow: 0 4px 15px rgba(244, 114, 182, 0.4) !important;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Custom Keyframe Overlay Animations */
+@keyframes win9xIconFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes cyberSpark {
+  0%, 100% { opacity: 0.2; transform: scaleY(0.6); }
+  50% { opacity: 1; transform: scaleY(1.3); }
+}
+
+@keyframes floatUpDrift {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  20% { opacity: 0.5; }
+  80% { opacity: 0.5; }
+  100% { transform: translateY(-110vh) rotate(15deg); opacity: 0; }
+}
+
+@keyframes cloudFloatRight {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(120vw); }
+}
+
+@keyframes pixelPulse {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.15); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 0.3; }
+}
+
+@keyframes sparkleShimmer {
+  0% { transform: scale(0.8) rotate(0deg); opacity: 0.3; }
+  100% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
 }
