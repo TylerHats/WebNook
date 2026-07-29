@@ -21,6 +21,8 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
       };
     } else if (normalizedTheme === 'pixel-arcade' || normalizedTheme === 'theme-pixel-arcade') {
       handleWindowClick = (e: MouseEvent) => {
+        // Sync coin visual pop with 25% coin sound trigger in themeSoundEngine.ts
+        if (Math.random() >= 0.25) return;
         const newCoin = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY };
         setClickCoins(prev => [...prev.slice(-15), newCoin]);
         setTimeout(() => setClickCoins(prev => prev.filter(c => c.id !== newCoin.id)), 1400);
@@ -141,44 +143,66 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
   }
 
   if (normalizedTheme === 'pixel-arcade' || normalizedTheme === 'theme-pixel-arcade') {
-    const retroIcons = ['👾', '🪙', '❤️', '🕹️', '🍄', '⭐️', '👾', '🪙', '🕹️', '🍄', '👾', '❤️'];
-    return (
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999, overflow: 'hidden' }}>
-        {/* Floating click Mario coins */}
-        {clickCoins.map(coin => (
-          <div
-            key={coin.id}
-            style={{
-              position: 'fixed',
-              left: coin.x - 14,
-              top: coin.y - 14,
-              fontSize: '1.6rem',
-              pointerEvents: 'none',
-              animation: 'marioCoinPop 1.4s cubic-bezier(0.25, 1, 0.5, 1) forwards'
-            }}
-          >
-            🪙
-          </div>
-        ))}
+    const retroElements = [
+      { icon: '👾', top: '8%', left: '3%', opacity: 0.45, delay: '0s' },
+      { icon: '🪙', top: '18%', left: '88%', opacity: 0.4, delay: '0.4s' },
+      { icon: '❤️', top: '35%', left: '2%', opacity: 0.45, delay: '1.2s' },
+      { icon: '🕹️', top: '55%', left: '92%', opacity: 0.35, delay: '0.8s' },
+      { icon: '🍄', top: '72%', left: '4%', opacity: 0.5, delay: '1.6s' },
+      { icon: '⭐️', top: '88%', left: '89%', opacity: 0.45, delay: '0.2s' },
+      { icon: '👾', top: '12%', left: '78%', opacity: 0.4, delay: '1.4s' },
+      { icon: '🪙', top: '48%', left: '5%', opacity: 0.45, delay: '0.6s' },
+      { icon: '🕹️', top: '82%', left: '12%', opacity: 0.35, delay: '1.8s' },
+      { icon: '❤️', top: '25%', left: '94%', opacity: 0.45, delay: '0.3s' },
+      { icon: '🍄', top: '65%', left: '87%', opacity: 0.4, delay: '1.1s' },
+      { icon: '⭐️', top: '42%', left: '91%', opacity: 0.5, delay: '0.9s' },
+      { icon: '👾', top: '92%', left: '75%', opacity: 0.4, delay: '1.5s' },
+      { icon: '🪙', top: '5%', left: '18%', opacity: 0.35, delay: '0.7s' },
+      { icon: '❤️', top: '95%', left: '32%', opacity: 0.4, delay: '1.3s' },
+      { icon: '🕹️', top: '3%', left: '82%', opacity: 0.45, delay: '0.5s' }
+    ];
 
-        {/* Ambient dense background 8-bit retro icons */}
-        {retroIcons.map((icon, i) => (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              top: `${6 + (i * 7.5) % 85}%`,
-              left: `${5 + (i * 15) % 90}%`,
-              fontSize: i % 3 === 0 ? '1.8rem' : '1.4rem',
-              opacity: 0.5,
-              animation: `pixelPulse 2.2s steps(2, start) infinite`,
-              animationDelay: `${i * 0.25}s`
-            }}
-          >
-            {icon}
-          </div>
-        ))}
-      </div>
+    return (
+      <>
+        {/* Layer 1: Behind Cards Ambient 8-Bit Retro Icons */}
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+          {retroElements.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                top: item.top,
+                left: item.left,
+                fontSize: i % 2 === 0 ? '1.6rem' : '1.3rem',
+                opacity: item.opacity,
+                animation: 'pixelPulse 2s steps(2, start) infinite',
+                animationDelay: item.delay
+              }}
+            >
+              {item.icon}
+            </div>
+          ))}
+        </div>
+
+        {/* Layer 999: Floating Click Mario Coins */}
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999, overflow: 'hidden' }}>
+          {clickCoins.map(coin => (
+            <div
+              key={coin.id}
+              style={{
+                position: 'fixed',
+                left: coin.x - 14,
+                top: coin.y - 14,
+                fontSize: '1.6rem',
+                pointerEvents: 'none',
+                animation: 'marioCoinPop 1.4s cubic-bezier(0.25, 1, 0.5, 1) forwards'
+              }}
+            >
+              🪙
+            </div>
+          ))}
+        </div>
+      </>
     );
   }
 
