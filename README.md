@@ -8,13 +8,6 @@
   <strong>A modern, customizable, self-hosted social platform for friend groups — inspired by classic MySpace.</strong>
 </p>
 
-<p align="center">
-  <a href="https://github.com/TylerHats/WebNook/releases"><img src="https://img.shields.io/github/v/release/TylerHats/WebNook?style=flat-square&color=6366f1" alt="Release" /></a>
-  <a href="https://hub.docker.com/repository/docker/tylerhats/webnook"><img src="https://img.shields.io/docker/v/tylerhats/webnook?label=docker&style=flat-square&color=0080ff" alt="Docker Hub" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square" alt="License" /></a>
-  <img src="https://img.shields.io/badge/PWA-Ready-ff69b4.svg?style=flat-square" alt="PWA Ready" />
-</p>
-
 ---
 
 ## 📌 Overview
