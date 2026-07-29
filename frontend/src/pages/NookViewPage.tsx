@@ -47,11 +47,11 @@ export const NookViewPage: React.FC = () => {
     fetchProfile();
   }, [targetUsername, token]);
 
-  const handleGlobalClick = () => {
+  const handleGlobalClick = (e: React.MouseEvent) => {
     if (profileData?.nookSettings) {
       const themeId = profileData.nookSettings.theme;
       const isSoundEnabled = profileData.nookSettings.theme_sounds_enabled !== 0 && profileData.nookSettings.theme_sounds_enabled !== false;
-      playThemeSound(themeId, isSoundEnabled, 'click');
+      playThemeSound(themeId, isSoundEnabled, 'click', { x: e.clientX, y: e.clientY });
     }
   };
 

@@ -262,7 +262,12 @@ export function playCyberpunkSpark() {
 /**
  * Main Sound Dispatcher for Themes
  */
-export function playThemeSound(themeId: string, isSoundEnabled: boolean = true, action: 'click' | 'guestbook' | 'action' = 'click') {
+export function playThemeSound(
+  themeId: string,
+  isSoundEnabled: boolean = true,
+  action: 'click' | 'guestbook' | 'action' = 'click',
+  coords?: { x: number; y: number }
+) {
   if (!isSoundEnabled) return;
 
   const t = themeId || 'glassmorphism';
@@ -273,14 +278,30 @@ export function playThemeSound(themeId: string, isSoundEnabled: boolean = true, 
   } else if (t === 'cat-cafe') {
     if (action === 'guestbook') playCatCafePurr();
     else {
-      if (Math.random() < 0.25) playCatCafeMeow();
-      else playCatCafeClick();
+      if (Math.random() < 0.25) {
+        playCatCafeMeow();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('webnook-theme-sound', { detail: { theme: 'cat-cafe', sound: 'meow', x: coords?.x, y: coords?.y } }));
+        }
+      } else {
+        playCatCafeClick();
+      }
     }
   } else if (t === 'pixel-arcade') {
-    if (action === 'guestbook') playPixelCoin();
-    else {
-      if (Math.random() < 0.25) playPixelCoin();
-      else playPixelArcadeClick();
+    if (action === 'guestbook') {
+      playPixelCoin();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('webnook-theme-sound', { detail: { theme: 'pixel-arcade', sound: 'coin', x: coords?.x, y: coords?.y } }));
+      }
+    } else {
+      if (Math.random() < 0.25) {
+        playPixelCoin();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('webnook-theme-sound', { detail: { theme: 'pixel-arcade', sound: 'coin', x: coords?.x, y: coords?.y } }));
+        }
+      } else {
+        playPixelArcadeClick();
+      }
     }
   } else if (t === 'cloud-dream') {
     playCloudDreamPop();

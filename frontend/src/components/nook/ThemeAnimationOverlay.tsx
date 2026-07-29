@@ -11,30 +11,35 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
   const normalizedTheme = theme ? theme.toLowerCase().trim() : '';
 
   useEffect(() => {
-    let handleWindowClick: ((e: MouseEvent) => void) | null = null;
+    let lastMousePos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
-    if (normalizedTheme === 'cat-cafe' || normalizedTheme === 'theme-cat-cafe') {
-      handleWindowClick = (e: MouseEvent) => {
+    const handleWindowClick = (e: MouseEvent) => {
+      lastMousePos = { x: e.clientX, y: e.clientY };
+
+      if (normalizedTheme === 'cat-cafe' || normalizedTheme === 'theme-cat-cafe') {
         const newPaw = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY };
         setClickPaws(prev => [...prev.slice(-15), newPaw]);
         setTimeout(() => setClickPaws(prev => prev.filter(p => p.id !== newPaw.id)), 1800);
-      };
-    } else if (normalizedTheme === 'pixel-arcade' || normalizedTheme === 'theme-pixel-arcade') {
-      handleWindowClick = (e: MouseEvent) => {
-        // Sync coin visual pop with 25% coin sound trigger in themeSoundEngine.ts
-        if (Math.random() >= 0.25) return;
-        const newCoin = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY };
+      }
+    };
+
+    const handleThemeSound = (e: Event) => {
+      const customEv = e as CustomEvent;
+      if (customEv.detail?.sound === 'coin') {
+        const posX = customEv.detail?.x !== undefined ? customEv.detail.x : lastMousePos.x;
+        const posY = customEv.detail?.y !== undefined ? customEv.detail.y : lastMousePos.y;
+        const newCoin = { id: Date.now() + Math.random(), x: posX, y: posY };
         setClickCoins(prev => [...prev.slice(-15), newCoin]);
         setTimeout(() => setClickCoins(prev => prev.filter(c => c.id !== newCoin.id)), 1400);
-      };
-    }
+      }
+    };
 
-    if (!handleWindowClick) return;
+    window.addEventListener('click', handleWindowClick);
+    window.addEventListener('webnook-theme-sound', handleThemeSound);
 
-    const activeHandler = handleWindowClick;
-    window.addEventListener('click', activeHandler);
     return () => {
-      window.removeEventListener('click', activeHandler);
+      window.removeEventListener('click', handleWindowClick);
+      window.removeEventListener('webnook-theme-sound', handleThemeSound);
     };
   }, [normalizedTheme]);
 
