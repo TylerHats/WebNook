@@ -7,6 +7,7 @@ import { PRESET_STICKERS } from '../constants/presetStickers';
 
 import { VisualStickerStudioModal } from '../components/nook/VisualStickerStudioModal';
 import { MusicTrack } from '../components/widgets/MusicWidget';
+import { ImageCropModal } from '../components/ui/ImageCropModal';
 
 export const NookCustomizerPage: React.FC = () => {
   const { user, token } = useAuth();
@@ -14,6 +15,21 @@ export const NookCustomizerPage: React.FC = () => {
 
   const [theme, setTheme] = useState('glassmorphism');
   const [visibilityNook, setVisibilityNook] = useState('private');
+
+  // Image Crop Modal state
+  const [cropModal, setCropModal] = useState<{
+    isOpen: boolean;
+    file: File | null;
+    title: string;
+    aspectRatio: number;
+    target: 'avatar' | 'banner' | 'sticker';
+  }>({
+    isOpen: false,
+    file: null,
+    title: '',
+    aspectRatio: 1,
+    target: 'avatar'
+  });
   const [bgColor, setBgColor] = useState('#12131C');
   const [cardBgColor, setCardBgColor] = useState('rgba(255,255,255,0.06)');
   const [accentColor, setAccentColor] = useState('#6366f1');
@@ -535,7 +551,10 @@ export const NookCustomizerPage: React.FC = () => {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={e => handleAvatarFileUpload(e.target.files?.[0] || null)}
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar' });
+                  }}
                   style={{ fontSize: '0.85rem' }}
                 />
               </div>
@@ -544,7 +563,10 @@ export const NookCustomizerPage: React.FC = () => {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={e => handleBannerFileUpload(e.target.files?.[0] || null)}
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
+                  }}
                   style={{ fontSize: '0.85rem' }}
                 />
               </div>
@@ -1252,7 +1274,10 @@ export const NookCustomizerPage: React.FC = () => {
               <input
                 type="file"
                 accept="image/*"
-                onChange={e => handleCustomStickerUpload(e.target.files?.[0] || null)}
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Custom Sticker Image', aspectRatio: 1, target: 'sticker' });
+                }}
                 style={{ fontSize: '0.85rem' }}
               />
             </div>
@@ -1267,22 +1292,33 @@ export const NookCustomizerPage: React.FC = () => {
                   key={st.id}
                   type="button"
                   onClick={() => handleAddSticker(st.url)}
-                  style={{ background: 'rgba(255,255,255,0.08)', padding: '0.5rem 0.75rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                  title={st.name}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '10px',
+                    padding: '0.5rem 0.75rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    color: 'var(--text-main)'
+                  }}
                 >
-                  <span>{st.url}</span>
+                  <img src={st.url} alt={st.name} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{st.name}</span>
                 </button>
               ))}
             </div>
 
+            {/* Active Canvas Stickers List */}
             {stickers.length > 0 && (
               <div>
                 <h4 style={{ fontSize: '0.9rem', marginBottom: '0.75rem' }}>Active Canvas Stickers ({stickers.length}):</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {stickers.map((st, idx) => (
+                  {stickers.map((st: Sticker, idx: number) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.25)', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '1.5rem' }}>{st.sticker_url.startsWith('/') ? '🖼️' : st.sticker_url}</span>
+                        <img src={st.sticker_url} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                         <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Sticker #{idx + 1}</span>
                         <span style={{ fontSize: '0.75rem', opacity: 0.6, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
                           Layer: {st.layer === 'behind_cards' ? 'Behind Cards' : 'Above Cards'}
@@ -1332,6 +1368,23 @@ export const NookCustomizerPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ImageCropModal
+        isOpen={cropModal.isOpen}
+        imageFile={cropModal.file}
+        title={cropModal.title}
+        aspectRatio={cropModal.aspectRatio}
+        onCropComplete={(croppedFile) => {
+          if (cropModal.target === 'avatar') {
+            handleAvatarFileUpload(croppedFile);
+          } else if (cropModal.target === 'banner') {
+            handleBannerFileUpload(croppedFile);
+          } else if (cropModal.target === 'sticker') {
+            handleCustomStickerUpload(croppedFile);
+          }
+        }}
+        onClose={() => setCropModal({ ...cropModal, isOpen: false, file: null })}
+      />
     </div>
   );
 };

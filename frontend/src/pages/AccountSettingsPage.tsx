@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { startRegistration } from '@simplewebauthn/browser';
 import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail } from 'lucide-react';
+import { ImageCropModal } from '../components/ui/ImageCropModal';
 
 export const AccountSettingsPage: React.FC = () => {
   const { user, token, refreshUser } = useAuth();
@@ -14,6 +15,21 @@ export const AccountSettingsPage: React.FC = () => {
   const [bannerUrl, setBannerUrl] = useState(user?.banner_url || '');
   const [statusMessage, setStatusMessage] = useState(user?.status_message || '');
   const [statusEmoji, setStatusEmoji] = useState(user?.status_emoji || '');
+
+  // Crop Modal state
+  const [cropModal, setCropModal] = useState<{
+    isOpen: boolean;
+    file: File | null;
+    title: string;
+    aspectRatio: number;
+    target: 'avatar' | 'banner';
+  }>({
+    isOpen: false,
+    file: null,
+    title: '',
+    aspectRatio: 1,
+    target: 'avatar'
+  });
 
   // Email Notifications Preferences state
   const [notifyEmailGuestbook, setNotifyEmailGuestbook] = useState((user as any)?.notify_email_guestbook !== 0);
@@ -70,6 +86,10 @@ export const AccountSettingsPage: React.FC = () => {
     e.preventDefault();
     if (!token) return;
 
+    // Preserve existing uploaded avatar/banner if inputs are left blank
+    const finalAvatar = avatarUrl.trim() !== '' ? avatarUrl.trim() : (user?.avatar_url || '');
+    const finalBanner = bannerUrl.trim() !== '' ? bannerUrl.trim() : (user?.banner_url || '');
+
     try {
       const res = await fetch('/api/nook/profile', {
         method: 'PUT',
@@ -80,8 +100,8 @@ export const AccountSettingsPage: React.FC = () => {
         body: JSON.stringify({
           display_name: displayName,
           bio,
-          avatar_url: avatarUrl,
-          banner_url: bannerUrl,
+          avatar_url: finalAvatar,
+          banner_url: finalBanner,
           status_message: statusMessage,
           status_emoji: statusEmoji
         })
@@ -275,7 +295,7 @@ export const AccountSettingsPage: React.FC = () => {
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Avatar Image URL or Direct File Upload</label>
                 <input
-                  type="url"
+                  type="text"
                   placeholder="https://example.com/avatar.jpg or /uploads/..."
                   value={avatarUrl}
                   onChange={e => setAvatarUrl(e.target.value)}
@@ -284,14 +304,17 @@ export const AccountSettingsPage: React.FC = () => {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={e => handleAvatarFileUpload(e.target.files?.[0] || null)}
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar' });
+                  }}
                   style={{ fontSize: '0.8rem' }}
                 />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Header Banner URL or Direct File Upload</label>
                 <input
-                  type="url"
+                  type="text"
                   placeholder="https://example.com/banner.jpg or /uploads/..."
                   value={bannerUrl}
                   onChange={e => setBannerUrl(e.target.value)}
@@ -300,7 +323,10 @@ export const AccountSettingsPage: React.FC = () => {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={e => handleBannerFileUpload(e.target.files?.[0] || null)}
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
+                  }}
                   style={{ fontSize: '0.8rem' }}
                 />
               </div>
@@ -428,6 +454,21 @@ export const AccountSettingsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <ImageCropModal
+        isOpen={cropModal.isOpen}
+        imageFile={cropModal.file}
+        title={cropModal.title}
+        aspectRatio={cropModal.aspectRatio}
+        onCropComplete={(croppedFile) => {
+          if (cropModal.target === 'avatar') {
+            handleAvatarFileUpload(croppedFile);
+          } else if (cropModal.target === 'banner') {
+            handleBannerFileUpload(croppedFile);
+          }
+        }}
+        onClose={() => setCropModal({ ...cropModal, isOpen: false, file: null })}
+      />
     </div>
   );
 };
