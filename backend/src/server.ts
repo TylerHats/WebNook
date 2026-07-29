@@ -5,7 +5,7 @@ import fs from 'fs';
 import https from 'https';
 import http from 'http';
 import { runMigrations } from './db/migrations';
-import { queryOne } from './db/connection';
+import { queryOne, execute } from './db/connection';
 import authRoutes from './routes/authRoutes';
 import mfaRoutes from './routes/mfaRoutes';
 import nookRoutes from './routes/nookRoutes';
