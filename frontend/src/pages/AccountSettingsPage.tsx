@@ -336,10 +336,10 @@ export const AccountSettingsPage: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Avatar Image URL or Direct File Upload</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Profile Avatar Image (URL or Direct Upload)</label>
                 <input
                   type="text"
-                  placeholder="https://example.com/avatar.jpg or /uploads/..."
+                  placeholder="https://example.com/avatar.jpg"
                   value={avatarUrl}
                   onChange={e => setAvatarUrl(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}
@@ -362,10 +362,10 @@ export const AccountSettingsPage: React.FC = () => {
                 </label>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Header Banner URL or Direct File Upload</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Header Banner Image (URL or Direct Upload)</label>
                 <input
                   type="text"
-                  placeholder="https://example.com/banner.jpg or /uploads/..."
+                  placeholder="https://example.com/banner.jpg"
                   value={bannerUrl}
                   onChange={e => setBannerUrl(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}

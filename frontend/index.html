@@ -29,6 +29,11 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
+          if ('caches' in window) {
+            caches.keys().then((names) => {
+              for (const name of names) caches.delete(name);
+            });
+          }
           navigator.serviceWorker.register('/sw.js').then((reg) => {
             reg.update();
           }).catch((err) => console.log('SW reg error: ', err));

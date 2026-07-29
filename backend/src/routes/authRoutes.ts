@@ -145,6 +145,8 @@ router.post('/register', async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     );
 
+    res.cookie('token', token, { maxAge: 7 * 86400 * 1000, sameSite: 'lax', path: '/' });
+
     return res.json({
       message: isEmailVerified ? 'Account registered successfully' : 'Account registered! Please check your email to verify your address.',
       token,
@@ -214,6 +216,8 @@ router.post('/login', async (req: Request, res: Response) => {
       JWT_SECRET,
       { expiresIn: '7d' }
     );
+
+    res.cookie('token', token, { maxAge: 7 * 86400 * 1000, sameSite: 'lax', path: '/' });
 
     return res.json({
       token,

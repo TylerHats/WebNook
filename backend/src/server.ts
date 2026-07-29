@@ -25,8 +25,8 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Anti-Caching Middleware for API Endpoints
-app.use('/api', (req, res, next) => {
+// Global Anti-Caching Middleware across ALL requests (HTML, JS, CSS, Assets, API)
+app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, post-check=0, pre-check=0');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
@@ -34,12 +34,122 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from './middleware/authMiddleware';
+
+const parseCookies = (cookieHeader?: string): Record<string, string> => {
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+  cookieHeader.split(';').forEach(cookie => {
+    const parts = cookie.split('=');
+    if (parts.length >= 2) {
+      cookies[parts[0].trim()] = decodeURIComponent(parts.slice(1).join('=').trim());
+    }
+  });
+  return cookies;
+};
+
 // Static Asset Directories
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadsDir));
+
+// Privacy-Aware Media Handler for User Uploads (/uploads/:filename)
+app.get('/uploads/:filename', async (req, res) => {
+  try {
+    const filename = path.basename(req.params.filename);
+    const filePath = path.join(uploadsDir, filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('File not found');
+    }
+
+    const fileUrl = `/uploads/${filename}`;
+
+    // 1. Check if file belongs to a User Nook Profile (avatar, banner, bg_music, sticker, guestbook)
+    const ownerUser = await queryOne<any>(
+      `SELECT u.id, u.username, u.role, n.visibility_nook 
+       FROM users u 
+       LEFT JOIN nooks n ON n.user_id = u.id 
+       WHERE u.avatar_url = ? OR u.banner_url = ? OR u.avatar_url LIKE ? OR u.banner_url LIKE ?`,
+      [fileUrl, fileUrl, `%${filename}`, `%${filename}`]
+    );
+
+    // If file belongs to a user whose Nook is private
+    if (ownerUser && ownerUser.visibility_nook === 'private') {
+      const cookies = parseCookies(req.headers.cookie);
+      let token = req.headers.authorization?.split(' ')[1] || cookies.token || (req.query.token as string);
+      let requestingUser: any = null;
+
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET) as any;
+          requestingUser = await queryOne('SELECT id, username, role FROM users WHERE id = ?', [decoded.id]);
+        } catch (e) {}
+      }
+
+      if (!requestingUser) {
+        return res.status(403).send('Access denied: This file belongs to a private Nook');
+      }
+
+      const isOwner = requestingUser.id === ownerUser.id;
+      const isAdmin = requestingUser.role === 'admin';
+
+      let isFriend = false;
+      if (!isOwner && !isAdmin) {
+        const friendRow = await queryOne(
+          `SELECT id FROM friends 
+           WHERE status = 'accepted' 
+           AND ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))`,
+          [requestingUser.id, ownerUser.id, ownerUser.id, requestingUser.id]
+        );
+        if (friendRow) isFriend = true;
+      }
+
+      if (!isOwner && !isAdmin && !isFriend) {
+        return res.status(403).send('Access denied: This file belongs to a private Nook');
+      }
+    }
+
+    // 2. Check if file belongs to a Group Chat Icon
+    const groupConv = await queryOne<any>(
+      `SELECT id FROM conversations WHERE type = 'group' AND avatar_url LIKE ?`,
+      [`%${filename}`]
+    );
+
+    if (groupConv) {
+      const cookies = parseCookies(req.headers.cookie);
+      let token = req.headers.authorization?.split(' ')[1] || cookies.token || (req.query.token as string);
+      let requestingUser: any = null;
+
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET) as any;
+          requestingUser = await queryOne('SELECT id, username, role FROM users WHERE id = ?', [decoded.id]);
+        } catch (e) {}
+      }
+
+      if (!requestingUser) {
+        return res.status(403).send('Access denied: Group chat media requires authentication');
+      }
+
+      const member = await queryOne(
+        `SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?`,
+        [groupConv.id, requestingUser.id]
+      );
+
+      if (!member && requestingUser.role !== 'admin') {
+        return res.status(403).send('Access denied: You are not a member of this group chat');
+      }
+    }
+
+    // Serve file if authorized or public
+    return res.sendFile(filePath);
+  } catch (err) {
+    return res.status(500).send('Error serving media file');
+  }
+});
 
 // Whitelabel Branding Directory (Check persistent user data dir first, fallback to shipped default)
 const dataDir = process.env.DATA_DIR || path.join(__dirname, '../data');
@@ -148,25 +258,35 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Serve Frontend Static Files in production if built
+// Serve Frontend Static Files in production if built (Enforcing 100% fresh network fetches)
 const frontendDist = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendDist)) {
-  app.use('/assets', express.static(path.join(frontendDist, 'assets'), { immutable: true, maxAge: '1y' }));
+  app.use('/assets', express.static(path.join(frontendDist, 'assets'), {
+    etag: false,
+    lastModified: false,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+    }
+  }));
   app.use(express.static(frontendDist, {
-    setHeaders: (res, filePath) => {
-      const baseName = path.basename(filePath);
-      if (baseName === 'index.html' || baseName === 'sw.js') {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-      }
+    etag: false,
+    lastModified: false,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
     }
   }));
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads') && !req.path.startsWith('/branding') && !req.path.startsWith('/assets')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
       res.sendFile(path.join(frontendDist, 'index.html'));
     } else {
       res.status(404).send('Asset not found');

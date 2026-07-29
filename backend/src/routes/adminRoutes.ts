@@ -514,36 +514,64 @@ export async function createBackupArchiveInternal(): Promise<{ filename: string;
     fs.mkdirSync(backupsDir, { recursive: true });
   }
 
+  const uploadsDir = path.join(__dirname, '../../uploads');
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `webnook-backup-${timestamp}.tar.gz`;
   const archivePath = path.join(backupsDir, filename);
 
-  // Create metadata JSON file in dataDir before tarring
-  const metaPath = path.join(dataDir, 'backup_metadata.json');
-  fs.writeFileSync(metaPath, JSON.stringify({
-    created_at: new Date().toISOString(),
-    version: '1.0.0',
-    type: 'full_compressed'
-  }));
+  // Stage directory for bundling database, branding, metadata, and user uploads
+  const stageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webnook-backup-stage-'));
 
-  const uploadsParent = path.join(__dirname, '../..');
+  try {
+    // 1. Copy webnook.db
+    const dbPath = path.join(dataDir, 'webnook.db');
+    if (fs.existsSync(dbPath)) {
+      fs.copyFileSync(dbPath, path.join(stageDir, 'webnook.db'));
+    }
 
-  // Archive webnook.db, branding, metadata, and uploads
-  const cmd = `tar -czf "${archivePath}" -C "${dataDir}" webnook.db branding backup_metadata.json -C "${uploadsParent}" uploads 2>/dev/null || tar -czf "${archivePath}" -C "${dataDir}" webnook.db`;
-  await execPromise(cmd);
+    // 2. Create backup_metadata.json
+    fs.writeFileSync(path.join(stageDir, 'backup_metadata.json'), JSON.stringify({
+      created_at: new Date().toISOString(),
+      version: '2.5.1',
+      type: 'full_compressed'
+    }, null, 2));
 
-  const stat = fs.statSync(archivePath);
+    // 3. Copy branding directory if exists
+    if (fs.existsSync(customBrandingDir)) {
+      fs.cpSync(customBrandingDir, path.join(stageDir, 'branding'), { recursive: true });
+    } else {
+      fs.mkdirSync(path.join(stageDir, 'branding'), { recursive: true });
+    }
 
-  // Apply retention cleanup policy if configured
-  const retentionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "backup_retention_count"');
-  const retentionCount = parseInt(retentionRow?.value || '10', 10);
-  purgeExcessBackups(retentionCount);
+    // 4. Copy uploads directory if exists
+    if (fs.existsSync(uploadsDir)) {
+      fs.cpSync(uploadsDir, path.join(stageDir, 'uploads'), { recursive: true });
+    } else {
+      fs.mkdirSync(path.join(stageDir, 'uploads'), { recursive: true });
+    }
 
-  return {
-    filename,
-    sizeBytes: stat.size,
-    created_at: stat.mtime
-  };
+    // 5. Compress stage directory contents into tar.gz archive
+    const cmd = `tar -czf "${archivePath}" -C "${stageDir}" .`;
+    await execPromise(cmd);
+
+    const stat = fs.statSync(archivePath);
+
+    // Apply retention cleanup policy
+    const retentionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "backup_retention_count"');
+    const retentionCount = parseInt(retentionRow?.value || '10', 10);
+    purgeExcessBackups(retentionCount);
+
+    return {
+      filename,
+      sizeBytes: stat.size,
+      created_at: stat.mtime
+    };
+  } finally {
+    // Clean up temporary stage directory
+    try {
+      fs.rmSync(stageDir, { recursive: true, force: true });
+    } catch (e) {}
+  }
 }
 
 router.post('/backups/create', async (req: AuthenticatedRequest, res: Response) => {
@@ -594,11 +622,42 @@ router.post('/backups/restore', restoreUpload.single('backup_file'), async (req:
       return res.status(400).json({ error: 'No valid backup file provided' });
     }
 
-    // Unpack archive over dataDir and uploads directory if tar.gz
+    const uploadsDir = path.join(__dirname, '../../uploads');
+
     if (sourcePath.endsWith('.tar.gz') || req.file) {
-      const uploadsParent = path.join(__dirname, '../..');
-      await execPromise(`tar -xzf "${sourcePath}" -C "${dataDir}" 2>/dev/null || true`);
-      await execPromise(`tar -xzf "${sourcePath}" -C "${uploadsParent}" uploads 2>/dev/null || true`);
+      // Create temporary unpack directory
+      const unpackDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webnook-restore-unpack-'));
+      try {
+        await execPromise(`tar -xzf "${sourcePath}" -C "${unpackDir}"`);
+
+        // 1. Restore Database file
+        const restoredDbPath = path.join(unpackDir, 'webnook.db');
+        if (fs.existsSync(restoredDbPath)) {
+          fs.copyFileSync(restoredDbPath, path.join(dataDir, 'webnook.db'));
+        }
+
+        // 2. Restore Branding directory
+        const restoredBrandingDir = path.join(unpackDir, 'branding');
+        if (fs.existsSync(restoredBrandingDir)) {
+          fs.cpSync(restoredBrandingDir, customBrandingDir, { recursive: true });
+        }
+
+        // 3. Restore Uploads directory
+        const restoredUploadsDir = path.join(unpackDir, 'uploads');
+        if (fs.existsSync(restoredUploadsDir)) {
+          fs.cpSync(restoredUploadsDir, uploadsDir, { recursive: true });
+        }
+
+        // 4. Restore Metadata file
+        const restoredMetaPath = path.join(unpackDir, 'backup_metadata.json');
+        if (fs.existsSync(restoredMetaPath)) {
+          fs.copyFileSync(restoredMetaPath, path.join(dataDir, 'backup_metadata.json'));
+        }
+      } finally {
+        try {
+          fs.rmSync(unpackDir, { recursive: true, force: true });
+        } catch (e) {}
+      }
     } else if (sourcePath.endsWith('.db')) {
       fs.copyFileSync(sourcePath, path.join(dataDir, 'webnook.db'));
     }
@@ -612,7 +671,7 @@ router.post('/backups/restore', restoreUpload.single('backup_file'), async (req:
 
     return res.json({
       success: true,
-      message: 'System backup restored successfully! Database schema automatically migrated to latest version.'
+      message: 'System backup restored successfully! Database, custom branding, and all uploaded media files have been fully restored.'
     });
   } catch (err: any) {
     console.error('Restore error:', err);
