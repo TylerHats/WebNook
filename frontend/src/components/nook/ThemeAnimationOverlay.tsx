@@ -82,42 +82,46 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
     ];
 
     return (
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999, overflow: 'hidden' }}>
-        {/* Floating click pawprints */}
-        {clickPaws.map(paw => (
-          <div
-            key={paw.id}
-            style={{
-              position: 'fixed',
-              left: paw.x - 14,
-              top: paw.y - 14,
-              fontSize: '1.6rem',
-              pointerEvents: 'none',
-              animation: 'pawDropFade 1.8s ease-out forwards'
-            }}
-          >
-            🐾
-          </div>
-        ))}
+      <>
+        {/* Layer 1: Ambient randomized rising background elements (Behind Cards) */}
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+          {risingCats.map((cat, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                bottom: '-10%',
+                left: cat.left,
+                fontSize: cat.size,
+                opacity: 0.38,
+                animation: `floatUpDrift ${cat.speed} linear infinite`,
+                animationDelay: cat.delay
+              }}
+            >
+              {cat.icon}
+            </div>
+          ))}
+        </div>
 
-        {/* Ambient randomized rising background elements */}
-        {risingCats.map((cat, i) => (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              bottom: '-10%',
-              left: cat.left,
-              fontSize: cat.size,
-              opacity: 0.38,
-              animation: `floatUpDrift ${cat.speed} linear infinite`,
-              animationDelay: cat.delay
-            }}
-          >
-            {cat.icon}
-          </div>
-        ))}
-      </div>
+        {/* Layer 999: Floating click pawprints */}
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999, overflow: 'hidden' }}>
+          {clickPaws.map(paw => (
+            <div
+              key={paw.id}
+              style={{
+                position: 'fixed',
+                left: paw.x - 14,
+                top: paw.y - 14,
+                fontSize: '1.6rem',
+                pointerEvents: 'none',
+                animation: 'pawDropFade 1.8s ease-out forwards'
+              }}
+            >
+              🐾
+            </div>
+          ))}
+        </div>
+      </>
     );
   }
 
