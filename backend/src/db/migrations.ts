@@ -361,6 +361,13 @@ export async function runMigrations() {
     );
   `);
 
+  try {
+    await execute('ALTER TABLE conversation_members ADD COLUMN is_pinned INTEGER DEFAULT 0');
+  } catch (e) {}
+  try {
+    await execute('ALTER TABLE nooks ADD COLUMN hobbies_json TEXT DEFAULT "[]"');
+  } catch (e) {}
+
   const currentVersionRow = await queryOne<{ max_version: number }>(
     'SELECT MAX(version) as max_version FROM schema_migrations'
   );

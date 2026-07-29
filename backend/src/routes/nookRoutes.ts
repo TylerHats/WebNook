@@ -102,13 +102,18 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
     // Fetch stickers attached to nook
     const stickers = await query<any>('SELECT * FROM nook_stickers WHERE user_id = ?', [owner.id]);
 
-    // Fetch Top Friends for Top 8/12 grid
+    // Fetch Top Friends for Top 8/12 grid (Unidirectional: Only friends that owner.id favorited)
     const topFriends = await query<any>(
       `SELECT f.top_position, u.id, u.username, u.display_name, u.avatar_url, u.status_message, u.status_emoji 
        FROM friends f 
-       JOIN users u ON (f.friend_id = u.id OR f.user_id = u.id) AND u.id != ?
-       WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted' AND f.top_position > 0 
-       ORDER BY f.top_position ASC`,
+       JOIN users u ON (CASE WHEN f.user_id = ? THEN f.friend_id ELSE f.user_id END) = u.id
+       WHERE f.status = 'accepted' 
+         AND f.top_position > 0
+         AND (
+           (f.user_id = ? AND COALESCE(f.user_is_favorite, f.is_favorite, 0) = 1) OR
+           (f.friend_id = ? AND COALESCE(f.friend_is_favorite, 0) = 1)
+         )
+       ORDER BY f.top_position ASC, u.display_name ASC`,
       [owner.id, owner.id, owner.id]
     );
 
@@ -344,6 +349,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
       top_songs_json,
       favorite_movies_json,
       favorite_books_json,
+      hobbies_json,
       storygraph_username,
       spotify_personal_mode,
       theme_sounds_enabled,
@@ -357,6 +363,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
     const topSongsString = typeof top_songs_json === 'object' ? JSON.stringify(top_songs_json) : top_songs_json;
     const favMoviesString = typeof favorite_movies_json === 'object' ? JSON.stringify(favorite_movies_json) : favorite_movies_json;
     const favBooksString = typeof favorite_books_json === 'object' ? JSON.stringify(favorite_books_json) : favorite_books_json;
+    const hobbiesString = typeof hobbies_json === 'object' ? JSON.stringify(hobbies_json) : hobbies_json;
 
     await execute(
       `UPDATE nooks SET 
@@ -381,6 +388,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         top_songs_json = COALESCE(?, top_songs_json),
         favorite_movies_json = COALESCE(?, favorite_movies_json),
         favorite_books_json = COALESCE(?, favorite_books_json),
+        hobbies_json = COALESCE(?, hobbies_json),
         storygraph_username = COALESCE(?, storygraph_username),
         spotify_personal_mode = COALESCE(?, spotify_personal_mode),
         theme_sounds_enabled = COALESCE(?, theme_sounds_enabled),
@@ -409,6 +417,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         topSongsString,
         favMoviesString,
         favBooksString,
+        hobbiesString,
         storygraph_username,
         spotify_personal_mode,
         theme_sounds_enabled !== undefined ? (theme_sounds_enabled ? 1 : 0) : null,

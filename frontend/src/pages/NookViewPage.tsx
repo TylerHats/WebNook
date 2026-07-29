@@ -6,6 +6,7 @@ import { MusicWidget } from '../components/widgets/MusicWidget';
 import { MoviesWidget } from '../components/widgets/MoviesWidget';
 import { BooksWidget } from '../components/widgets/BooksWidget';
 import { SteamWidget } from '../components/widgets/SteamWidget';
+import { HobbiesWidget } from '../components/widgets/HobbiesWidget';
 import { GuestbookWidget } from '../components/nook/GuestbookWidget';
 import { StickerCanvas } from '../components/nook/StickerCanvas';
 import { ThemeAnimationOverlay } from '../components/nook/ThemeAnimationOverlay';
@@ -212,6 +213,31 @@ export const NookViewPage: React.FC = () => {
 
   return (
     <div className={themeClass} style={customStyle} onClick={handleGlobalClick}>
+      {/* Retro Win9X Dial-Up Connection Bar */}
+      {(nookSettings?.theme === 'win98' || nookSettings?.theme === 'win9x') && (
+        <div style={{
+          background: '#c0c0c0',
+          color: '#000000',
+          borderBottom: '2px solid #000000',
+          borderTop: '2px solid #ffffff',
+          padding: '4px 12px',
+          fontSize: '0.78rem',
+          fontFamily: "'MS Sans Serif', Tahoma, sans-serif",
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px',
+          boxShadow: 'inset 0 -1px 0 #808080',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000
+        }}>
+          <span>🌐 Connected at 28.8 Kbps (ISP: AOL 4.0) — Transferring 56KB / 120KB...</span>
+          <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>Netscape Navigator v4.77</span>
+        </div>
+      )}
+
       {/* Custom CSS Injection */}
       {nookSettings?.custom_css && (
         <style dangerouslySetInnerHTML={{ __html: nookSettings.custom_css }} />
@@ -314,6 +340,13 @@ export const NookViewPage: React.FC = () => {
               <MoviesWidget
                 title={cardTitles.movies || 'Movies & TV Favorites'}
                 movies={nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : []}
+              />
+            )}
+
+            {cardVis.hobbies !== false && (
+              <HobbiesWidget
+                hobbies={nookSettings?.hobbies_json ? (typeof nookSettings.hobbies_json === 'string' ? JSON.parse(nookSettings.hobbies_json) : nookSettings.hobbies_json) : []}
+                isOwner={user?.id === owner.id}
               />
             )}
           </div>

@@ -7,6 +7,7 @@ import { PRESET_STICKERS } from '../constants/presetStickers';
 
 import { VisualStickerStudioModal } from '../components/nook/VisualStickerStudioModal';
 import { MusicTrack } from '../components/widgets/MusicWidget';
+import { HobbiesWidget, HobbyItem } from '../components/widgets/HobbiesWidget';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 
 export const NookCustomizerPage: React.FC = () => {
@@ -127,6 +128,7 @@ export const NookCustomizerPage: React.FC = () => {
   const [booksSearchQ, setBooksSearchQ] = useState('');
   const [booksResults, setBooksResults] = useState<any[]>([]);
 
+  const [hobbies, setHobbies] = useState<HobbyItem[]>([]);
   const [customCss, setCustomCss] = useState('');
   const [stickers, setStickers] = useState<Sticker[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -187,6 +189,15 @@ export const NookCustomizerPage: React.FC = () => {
                   ? JSON.parse(data.nookSettings.favorite_books_json)
                   : data.nookSettings.favorite_books_json;
                 if (Array.isArray(parsed)) setFavoriteBooks(parsed);
+              } catch (e) {}
+            }
+
+            if (data.nookSettings.hobbies_json) {
+              try {
+                const parsed = typeof data.nookSettings.hobbies_json === 'string'
+                  ? JSON.parse(data.nookSettings.hobbies_json)
+                  : data.nookSettings.hobbies_json;
+                if (Array.isArray(parsed)) setHobbies(parsed);
               } catch (e) {}
             }
 
@@ -383,6 +394,7 @@ export const NookCustomizerPage: React.FC = () => {
           music_tracks_json: { tracks: musicTracks, autoNextPlay, loopPlaylist },
           favorite_movies_json: cleanedMovies,
           favorite_books_json: cleanedBooks,
+          hobbies_json: hobbies,
           storygraph_username: storygraphUsername,
           theme_sounds_enabled: themeSoundsEnabled,
           theme_animations_enabled: themeAnimationsEnabled,
@@ -713,6 +725,7 @@ export const NookCustomizerPage: React.FC = () => {
                 { key: 'bio', label: 'Bio & About Me Card' },
                 { key: 'music', label: 'Profile Anthem & Music Player' },
                 { key: 'friends', label: 'Top Friends Grid' },
+                { key: 'hobbies', label: 'Hobbies & Passions Card' },
                 { key: 'guestbook', label: 'Guestbook Notes' },
                 { key: 'steam', label: 'Steam Gaming Showcase' },
                 { key: 'movies', label: 'Movies & TV Showcase' },
@@ -1352,6 +1365,140 @@ export const NookCustomizerPage: React.FC = () => {
               </div>
             ) : (
               <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No books added to your reading nook yet. Search or import CSV above! 📖</p>
+            )}
+          </div>
+
+          {/* Hobbies & Passions Manager Panel */}
+          <div className="nook-panel">
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>🎯 Hobbies & Passions ({hobbies.length} items)</span>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ padding: '0.3rem 0.65rem', fontSize: '0.8rem' }}
+                onClick={() => {
+                  const newHobby: HobbyItem = {
+                    id: `h_${Date.now()}`,
+                    name: 'New Hobby',
+                    icon: '✨',
+                    category: 'Interest',
+                    description: 'Description of your passion'
+                  };
+                  setHobbies([...hobbies, newHobby]);
+                }}
+              >
+                + Add Custom Hobby
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '0.85rem' }}>
+              Add hobbies, interests, and passions to showcase on your Nook:
+            </p>
+
+            {/* Quick Add Presets */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '0.78rem', opacity: 0.7, alignSelf: 'center', marginRight: '0.3rem' }}>Quick Add:</span>
+              {[
+                { name: 'Retro Gaming', icon: '🎮', category: 'Gaming' },
+                { name: 'Film Photography', icon: '📷', category: 'Creative' },
+                { name: 'Music Production', icon: '🎧', category: 'Music' },
+                { name: 'Gourmet Coffee', icon: '☕', category: 'Lifestyle' },
+                { name: 'Cooking & Baking', icon: '🍳', category: 'Food' },
+                { name: 'Anime & Manga', icon: '🌸', category: 'Media' },
+                { name: 'Art & Graphic Design', icon: '🎨', category: 'Creative' }
+              ].map(preset => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  className="btn-secondary"
+                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', borderRadius: '6px' }}
+                  onClick={() => {
+                    if (hobbies.some(h => h.name === preset.name)) return;
+                    setHobbies([...hobbies, { id: `h_${Date.now()}_${Math.random()}`, ...preset, description: `Enthusiast & lover of ${preset.name}` }]);
+                  }}
+                >
+                  {preset.icon} {preset.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Editable Hobbies List */}
+            {hobbies.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                {hobbies.map((h, idx) => (
+                  <div
+                    key={h.id || idx}
+                    style={{
+                      background: 'rgba(0,0,0,0.2)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '0.65rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      position: 'relative'
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setHobbies(hobbies.filter((_, i) => i !== idx))}
+                      style={{ position: 'absolute', top: '4px', right: '6px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem' }}
+                      title="Remove Hobby"
+                    >
+                      ✕
+                    </button>
+
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <input
+                        type="text"
+                        placeholder="Emoji"
+                        value={h.icon || ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setHobbies(hobbies.map((item, i) => i === idx ? { ...item, icon: val } : item));
+                        }}
+                        style={{ width: '45px', padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', textAlign: 'center' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Hobby Name"
+                        value={h.name}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setHobbies(hobbies.map((item, i) => i === idx ? { ...item, name: val } : item));
+                        }}
+                        style={{ flex: 1, padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <input
+                        type="text"
+                        placeholder="Category (e.g. Gaming)"
+                        value={h.category || ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setHobbies(hobbies.map((item, i) => i === idx ? { ...item, category: val } : item));
+                        }}
+                        style={{ width: '100%', padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.78rem' }}
+                      />
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Short description..."
+                      value={h.description || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setHobbies(hobbies.map((item, i) => i === idx ? { ...item, description: val } : item));
+                      }}
+                      style={{ width: '100%', padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.78rem' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No hobbies added yet. Click + Add Custom Hobby or a Quick Add preset above! 🎯</p>
             )}
           </div>
 

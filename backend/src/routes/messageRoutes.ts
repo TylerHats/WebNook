@@ -41,14 +41,13 @@ export async function getBugReportsBotUser() {
 // Helper to ensure System Announcement DM conversation exists for a user
 async function ensureSystemDM(userId: number) {
   const sys = await getSystemBotUser();
-  if (!sys || sys.id === userId) return null;
+  if (!sys) return null;
 
   const existing = await queryOne<any>(`
     SELECT c.id 
     FROM conversations c
-    JOIN conversation_members cm1 ON c.id = cm1.conversation_id
-    JOIN conversation_members cm2 ON c.id = cm2.conversation_id
-    WHERE c.type = 'direct' AND cm1.user_id = ? AND cm2.user_id = ? AND cm1.id != cm2.id
+    JOIN conversation_members cm ON c.id = cm.conversation_id
+    WHERE c.type = 'direct' AND cm.user_id = ? AND c.creator_user_id = ?
   `, [userId, sys.id]);
 
   if (existing) return existing.id;
@@ -56,8 +55,8 @@ async function ensureSystemDM(userId: number) {
   const res = await execute('INSERT INTO conversations (type, name, creator_user_id) VALUES ("direct", "System 🤖", ?)', [sys.id]);
   const convId = res.lastID;
 
-  await execute('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, userId]);
-  await execute('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, sys.id]);
+  await execute('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, userId]);
+  await execute('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, sys.id]);
 
   await execute(
     'INSERT INTO messages (conversation_id, sender_id, content, is_system_notice) VALUES (?, ?, ?, 0)',
@@ -70,14 +69,13 @@ async function ensureSystemDM(userId: number) {
 // Helper to ensure Bug Reports DM conversation exists for a user
 async function ensureBugReportsDM(userId: number) {
   const bug = await getBugReportsBotUser();
-  if (!bug || bug.id === userId) return null;
+  if (!bug) return null;
 
   const existing = await queryOne<any>(`
     SELECT c.id 
     FROM conversations c
-    JOIN conversation_members cm1 ON c.id = cm1.conversation_id
-    JOIN conversation_members cm2 ON c.id = cm2.conversation_id
-    WHERE c.type = 'direct' AND cm1.user_id = ? AND cm2.user_id = ? AND cm1.id != cm2.id
+    JOIN conversation_members cm ON c.id = cm.conversation_id
+    WHERE c.type = 'direct' AND cm.user_id = ? AND c.creator_user_id = ?
   `, [userId, bug.id]);
 
   if (existing) return existing.id;
@@ -85,16 +83,8 @@ async function ensureBugReportsDM(userId: number) {
   const res = await execute('INSERT INTO conversations (type, name, creator_user_id) VALUES ("direct", "Bug Reports 🐛", ?)', [bug.id]);
   const convId = res.lastID;
 
-  await execute('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, userId]);
-  await execute('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, bug.id]);
-
-  // Add site administrators to conversation_members so admins can view and reply to user bug report threads
-  const admins = await query<any>('SELECT id FROM users WHERE role = "admin" AND is_disabled = 0');
-  for (const a of admins) {
-    if (a.id !== userId && a.id !== bug.id) {
-      await execute('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, a.id]);
-    }
-  }
+  await execute('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, userId]);
+  await execute('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, bug.id]);
 
   await execute(
     'INSERT INTO messages (conversation_id, sender_id, content, is_system_notice) VALUES (?, ?, ?, 0)',
@@ -146,15 +136,28 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
     await ensureSystemDM(userId);
     await ensureBugReportsDM(userId);
 
-    const convRows = await query<any>(`
-      SELECT 
-        c.id, c.type, c.name, c.avatar_url, c.creator_user_id, c.created_at, c.updated_at,
-        cm.is_muted, COALESCE(cm.is_pinned, 0) as is_pinned, cm.last_read_at
-      FROM conversations c
-      JOIN conversation_members cm ON c.id = cm.conversation_id
-      WHERE cm.user_id = ?
-      ORDER BY COALESCE(cm.is_pinned, 0) DESC, c.updated_at DESC
-    `, [userId]);
+    let convRows: any[] = [];
+    try {
+      convRows = await query<any>(`
+        SELECT 
+          c.id, c.type, c.name, c.avatar_url, c.creator_user_id, c.created_at, c.updated_at,
+          cm.is_muted, COALESCE(cm.is_pinned, 0) as is_pinned, cm.last_read_at
+        FROM conversations c
+        JOIN conversation_members cm ON c.id = cm.conversation_id
+        WHERE cm.user_id = ?
+        ORDER BY COALESCE(cm.is_pinned, 0) DESC, c.updated_at DESC
+      `, [userId]);
+    } catch (e) {
+      convRows = await query<any>(`
+        SELECT 
+          c.id, c.type, c.name, c.avatar_url, c.creator_user_id, c.created_at, c.updated_at,
+          cm.is_muted, 0 as is_pinned, cm.last_read_at
+        FROM conversations c
+        JOIN conversation_members cm ON c.id = cm.conversation_id
+        WHERE cm.user_id = ?
+        ORDER BY c.updated_at DESC
+      `, [userId]);
+    }
 
     const conversations = [];
     const seenSystemUserIds = new Set<number>();
