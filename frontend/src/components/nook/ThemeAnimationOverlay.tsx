@@ -8,7 +8,7 @@ interface ThemeAnimationOverlayProps {
 export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ theme }) => {
   const [clickPaws, setClickPaws] = useState<{ id: number; x: number; y: number }[]>([]);
   const [clickCoins, setClickCoins] = useState<{ id: number; x: number; y: number }[]>([]);
-  const [cyberSparks, setCyberSparks] = useState<{ id: number; top: string; left: string; particles: { vx: number; vy: number; fall: number; size: number; color: string; delay: number; duration: number }[] }[]>([]);
+  const [cyberSparks, setCyberSparks] = useState<{ id: number; top: string; left: string; particles: { vx: number; vy: number; size: number; color: string; delay: number; duration: number }[] }[]>([]);
 
   const normalizedTheme = theme ? theme.toLowerCase().trim() : '';
 
@@ -60,20 +60,18 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
         { top: '85%', left: '88%' }
       ];
       const chosen = corners[Math.floor(Math.random() * corners.length)];
-      const colors = ['#00f3ff', '#ff007f', '#ffe600', '#ffffff'];
+      const colors = ['#ffe600', '#ffff33', '#ffd700', '#ffffff'];
 
-      // Generate 30 large spark particles that burst and rain downward
-      const particles = Array.from({ length: 30 }, () => {
-        const vx = (Math.random() - 0.5) * 280; // Horizontal spread (-140px to +140px)
-        const vy = -30 - Math.random() * 110;    // Initial upward burst (-140px to -30px)
-        const fall = 180 + Math.random() * 200;  // Gravity drop (+180px to +380px)
+      // Generate 32 neon yellow spark particles with smooth continuous arc physics
+      const particles = Array.from({ length: 32 }, () => {
+        const vx = (Math.random() - 0.5) * 240; // Horizontal drift (-120px to +120px)
+        const vy = 90 + Math.random() * 250;    // Continuous fluid downward trajectory (+90px to +340px)
         const size = 2.5 + Math.random() * 4.5;
-        const delay = Math.random() * 0.28;
+        const delay = Math.random() * 0.25;
         const duration = 1.1 + Math.random() * 0.5;
         return {
           vx,
           vy,
-          fall,
           size,
           color: colors[Math.floor(Math.random() * colors.length)],
           delay,
@@ -91,7 +89,7 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
       }, 2200);
     };
 
-    // Less frequent interval (~9.5s)
+    // Organic interval (~9.5s)
     const interval = setInterval(triggerSparkShower, 9500);
     const initTimer = setTimeout(triggerSparkShower, 1500);
 
@@ -136,12 +134,12 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
                 height: '18px',
                 borderRadius: '50%',
                 background: '#ffffff',
-                boxShadow: '0 0 20px #00f3ff, 0 0 35px #ff007f',
+                boxShadow: '0 0 20px #ffe600, 0 0 35px #ffff33',
                 transform: 'translate(-50%, -50%)',
                 animation: 'pawDropFade 0.45s ease-out forwards'
               }}
             />
-            {/* Bursting & Raining spark particles */}
+            {/* Neon Yellow Spark Particles */}
             {spark.particles.map((p, pIdx) => (
               <div
                 key={pIdx}
@@ -151,12 +149,11 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
                   height: `${p.size}px`,
                   borderRadius: '50%',
                   backgroundColor: p.color,
-                  boxShadow: `0 0 10px ${p.color}, 0 0 4px #ffffff`,
+                  boxShadow: `0 0 10px ${p.color}, 0 0 4px #ffffaa`,
                   transform: 'translate(-50%, -50%)',
                   '--vx': `${p.vx}px`,
                   '--vy': `${p.vy}px`,
-                  '--fall': `${p.fall}px`,
-                  animation: `fireworksSparkRain ${p.duration}s cubic-bezier(0.12, 0.7, 0.45, 1) ${p.delay}s forwards`
+                  animation: `cyberpunkSparkRain ${p.duration}s cubic-bezier(0.15, 0.75, 0.4, 1) ${p.delay}s forwards`
                 } as React.CSSProperties}
               />
             ))}

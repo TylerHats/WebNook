@@ -311,59 +311,60 @@ export function playCyberpunkSpark() {
 }
 
 /**
- * Synthesize Fireworks / Arc Discharge Spark Shower Sound Effect
+ * Synthesize High-Voltage Electrical Arc Discharge & Spark Crackle Sound
  */
 export function playCyberpunkSparkBurst() {
   const ctx = getAudioContext();
   if (!ctx) return;
   const t = ctx.currentTime;
 
-  // Staggered crackle noise burst
-  const bufferSize = Math.floor(ctx.sampleRate * 0.35);
+  // Electrical arc noise sizzle (highpass filtered)
+  const bufferSize = Math.floor(ctx.sampleRate * 0.28);
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < bufferSize; i++) {
-    const decay = Math.exp(-i / (bufferSize * 0.4));
-    const crackle = Math.random() > 0.85 ? (Math.random() * 2 - 1) : 0;
-    data[i] = ((Math.random() * 2 - 1) * 0.4 + crackle * 0.6) * decay;
+    const isArcPop = Math.random() > 0.92 ? (Math.random() * 2 - 1) : 0;
+    data[i] = ((Math.random() * 2 - 1) * 0.3 + isArcPop * 0.7) * Math.exp(-i / (bufferSize * 0.35));
   }
 
   const noise = ctx.createBufferSource();
   noise.buffer = buffer;
 
   const filter = ctx.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.setValueAtTime(3200, t);
-  filter.frequency.exponentialRampToValueAtTime(1200, t + 0.32);
-  filter.Q.setValueAtTime(2.5, t);
+  filter.type = 'highpass';
+  filter.frequency.setValueAtTime(3000, t);
+  filter.frequency.exponentialRampToValueAtTime(7500, t + 0.25);
 
-  const mainGain = ctx.createGain();
-  mainGain.gain.setValueAtTime(0.22, t);
-  mainGain.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.25, t);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.27);
 
-  // Cascading metallic arc whistling sweeps (fireworks sizzle)
-  [0, 0.05, 0.12].forEach((offset, idx) => {
+  // Electrical pitch zaps (Rapid frequency modulation simulating high-voltage electrical arcing)
+  [0, 0.04, 0.09, 0.15].forEach((offset, idx) => {
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
-    osc.type = idx % 2 === 0 ? 'sawtooth' : 'triangle';
-    osc.frequency.setValueAtTime(3500 - idx * 600, t + offset);
-    osc.frequency.exponentialRampToValueAtTime(220 + idx * 80, t + offset + 0.18);
+    osc.type = 'sawtooth';
 
-    g.gain.setValueAtTime(0.1, t + offset);
-    g.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.18);
+    const startFreq = 4200 - idx * 700;
+    const endFreq = 600 + idx * 300;
+    osc.frequency.setValueAtTime(startFreq, t + offset);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, t + offset + 0.08);
+
+    g.gain.setValueAtTime(0.14, t + offset);
+    g.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.08);
 
     osc.connect(g);
     g.connect(ctx.destination);
     osc.start(t + offset);
-    osc.stop(t + offset + 0.19);
+    osc.stop(t + offset + 0.09);
   });
 
   noise.connect(filter);
-  filter.connect(mainGain);
-  mainGain.connect(ctx.destination);
+  filter.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
 
   noise.start(t);
-  noise.stop(t + 0.35);
+  noise.stop(t + 0.28);
 }
 
 /**
