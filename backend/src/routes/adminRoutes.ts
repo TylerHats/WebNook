@@ -365,10 +365,13 @@ router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) =>
       execSync('git fetch origin && git pull origin main', { cwd: repoPath, timeout: 45000 });
       gitPulled = true;
       try {
-        execSync('npm install --include=dev && cd backend && npm install --include=dev && cd ../frontend && npm install --include=dev', { cwd: repoPath, timeout: 180000 });
-        execSync('npm run build', { cwd: repoPath, timeout: 180000 });
+        const buildEnv = { ...process.env, NODE_ENV: 'development' };
+        execSync('npm run setup', { cwd: repoPath, timeout: 180000, env: buildEnv });
+        execSync('npm run build', { cwd: repoPath, timeout: 180000, env: buildEnv });
       } catch (buildErr: any) {
-        console.warn('[Self-Updater Warning] npm run build skipped or failed:', buildErr.message);
+        console.warn('[Self-Updater Warning] In-container build failed:', buildErr.message);
+        if (buildErr.stdout) console.warn('[Self-Updater Stdout]:', buildErr.stdout.toString());
+        if (buildErr.stderr) console.warn('[Self-Updater Stderr]:', buildErr.stderr.toString());
       }
     } catch (gitErr: any) {
       console.warn('[Self-Updater Warning] Git pull skipped or failed:', gitErr.message);

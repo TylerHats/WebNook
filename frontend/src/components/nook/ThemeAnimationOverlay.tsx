@@ -93,22 +93,38 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
   if (normalizedTheme === 'cloud-dream' || normalizedTheme === 'theme-cloud-dream') {
     return (
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
-        {[...Array(5)].map((_, i) => (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              top: `${10 + i * 18}%`,
-              left: '-15%',
-              fontSize: `${2 + (i % 2)}rem`,
-              opacity: 0.45,
-              animation: `cloudFloatRight ${18 + i * 5}s linear infinite`,
-              animationDelay: `${i * 3}s`
-            }}
-          >
-            ☁️
-          </div>
-        ))}
+        {[...Array(8)].map((_, i) => {
+          const width = 60 + (i % 4) * 22;
+          const topPos = 4 + i * 11;
+          const duration = 20 + (i % 4) * 7;
+          const delay = i * 2.8;
+          return (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                top: `${topPos}%`,
+                left: '-25%',
+                opacity: 0.95,
+                filter: 'drop-shadow(0 8px 18px rgba(2, 132, 199, 0.45))',
+                animation: `cloudFloatRight ${duration}s linear infinite`,
+                animationDelay: `-${delay}s`
+              }}
+            >
+              <svg width={width} height={width * 0.55} viewBox="0 0 100 55" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M18 42 C8 42 3 32 12 25 C8 15 22 8 35 15 C42 6 62 6 68 15 C78 7 92 14 88 25 C96 32 92 42 80 42 Z"
+                  fill="#ffffff"
+                  stroke="#38bdf8"
+                  strokeWidth="2.5"
+                />
+                <path d="M26 22 C32 16 42 16 48 22" stroke="#bae6fd" strokeWidth="2" strokeLinecap="round" />
+                <path d="M52 19 C60 14 70 15 74 21" stroke="#bae6fd" strokeWidth="2" strokeLinecap="round" />
+                <path d="M18 32 C25 28 32 30 36 34" stroke="#e0f2fe" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </div>
+          );
+        })}
       </div>
     );
   }
