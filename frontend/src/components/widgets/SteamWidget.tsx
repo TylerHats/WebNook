@@ -26,9 +26,14 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const targetIdentifier = steamInput || steamId64 || steamId || '76561198000000000';
+  const targetIdentifier = (steamInput || steamId64 || steamId || '').trim();
 
   useEffect(() => {
+    if (!targetIdentifier || targetIdentifier === '76561198000000000') {
+      setLoading(false);
+      setData(null);
+      return;
+    }
     setLoading(true);
     setError(false);
     fetch(`/api/integrations/steam/${encodeURIComponent(targetIdentifier)}`)
@@ -47,6 +52,20 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   }, [targetIdentifier]);
 
   const minContainerHeight = displayMode === 'none' ? '120px' : (displayMode === 'both' ? '390px' : '260px');
+
+  if (!targetIdentifier || targetIdentifier === '76561198000000000') {
+    return (
+      <div className="nook-panel" style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '1.25rem', textAlign: 'center' }}>
+        <div className="nook-panel-header" style={{ width: '100%', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Gamepad2 size={20} color="var(--accent-color)" />
+          <span style={{ fontWeight: 700 }}>{title}</span>
+        </div>
+        <div style={{ opacity: 0.7, fontSize: '0.85rem' }}>
+          🎮 Enter your Steam Username, Profile ID, or URL above to preview and showcase your games!
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -108,7 +127,10 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   };
 
   const filteredRecentlyPlayed = rawRecentlyPlayed.filter((g: any) => !isExcluded(g.name));
+  const activeRecentTop3 = filteredRecentlyPlayed.slice(0, 3);
+
   const filteredTopGames = rawTopGames.filter((g: any) => !isExcluded(g.name));
+  const activeTopGamesTop3 = filteredTopGames.slice(0, 3);
 
   const wantRecent = displayMode === 'recently_played' || displayMode === 'both';
   const wantTop = displayMode === 'top_games' || displayMode === 'both';
@@ -203,7 +225,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
       {/* Games Lists (Recently Played & Top Games) */}
       {displayMode !== 'none' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Top Recently Played Games (Past 2 Weeks) */}
+          {/* Recently Played Games (Past 2 Weeks) */}
           {wantRecent && (
             <div>
               <div
@@ -223,10 +245,13 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                 <span>Recently Played (Past 2 Weeks):</span>
               </div>
 
-              {(isCustomizerPreview ? rawRecentlyPlayed : filteredRecentlyPlayed).length > 0 ? (
+              {(isCustomizerPreview ? rawRecentlyPlayed.slice(0, 10) : activeRecentTop3).length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                  {(isCustomizerPreview ? rawRecentlyPlayed : filteredRecentlyPlayed.slice(0, 3)).map((g: any, idx: number) => {
+                  {(isCustomizerPreview ? rawRecentlyPlayed.slice(0, 10) : activeRecentTop3).map((g: any, idx: number) => {
                     const excluded = isExcluded(g.name);
+                    const activeRankIdx = activeRecentTop3.findIndex((item: any) => item.name.toLowerCase() === g.name.toLowerCase());
+                    const isActiveOnProfile = !excluded && activeRankIdx !== -1;
+
                     return (
                       <div
                         key={g.appid || idx}
@@ -236,17 +261,34 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
-                          background: excluded ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.2)',
+                          background: excluded ? 'rgba(0, 0, 0, 0.45)' : (isCustomizerPreview && !isActiveOnProfile ? 'rgba(0, 0, 0, 0.15)' : 'rgba(0, 0, 0, 0.25)'),
                           padding: '0.5rem 0.75rem',
                           borderRadius: '8px',
-                          border: excluded ? '1px dashed rgba(239, 68, 68, 0.4)' : '1px solid var(--border-color)',
+                          border: excluded
+                            ? '1px dashed rgba(239, 68, 68, 0.4)'
+                            : isCustomizerPreview && isActiveOnProfile
+                            ? '1px solid var(--accent-color)'
+                            : '1px solid var(--border-color)',
                           fontSize: '0.85rem',
                           cursor: isCustomizerPreview ? 'pointer' : 'default',
-                          opacity: excluded ? 0.45 : 1,
+                          opacity: excluded ? 0.45 : (isCustomizerPreview && !isActiveOnProfile ? 0.75 : 1),
                           transition: 'all 0.15s ease'
                         }}
                       >
                         <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
+                          {isCustomizerPreview && (
+                            <span style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              color: isActiveOnProfile ? 'var(--accent-color)' : 'rgba(255,255,255,0.4)',
+                              background: isActiveOnProfile ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                              padding: '0.1rem 0.35rem',
+                              borderRadius: '4px',
+                              flexShrink: 0
+                            }}>
+                              {isActiveOnProfile ? `#${activeRankIdx + 1}` : (excluded ? 'Filtered' : 'Next')}
+                            </span>
+                          )}
                           <img
                             src={g.icon || g.headerUrl}
                             alt=""
@@ -305,10 +347,13 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                 <span>Top All-Time Games:</span>
               </div>
 
-              {(isCustomizerPreview ? rawTopGames : filteredTopGames).length > 0 ? (
+              {(isCustomizerPreview ? rawTopGames.slice(0, 10) : activeTopGamesTop3).length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                  {(isCustomizerPreview ? rawTopGames : filteredTopGames.slice(0, 3)).map((g: any, idx: number) => {
+                  {(isCustomizerPreview ? rawTopGames.slice(0, 10) : activeTopGamesTop3).map((g: any, idx: number) => {
                     const excluded = isExcluded(g.name);
+                    const activeRankIdx = activeTopGamesTop3.findIndex((item: any) => item.name.toLowerCase() === g.name.toLowerCase());
+                    const isActiveOnProfile = !excluded && activeRankIdx !== -1;
+
                     return (
                       <div
                         key={g.appid || idx}
@@ -318,19 +363,29 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
-                          background: excluded ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.2)',
+                          background: excluded ? 'rgba(0, 0, 0, 0.45)' : (isCustomizerPreview && !isActiveOnProfile ? 'rgba(0, 0, 0, 0.15)' : 'rgba(0, 0, 0, 0.25)'),
                           padding: '0.5rem 0.75rem',
                           borderRadius: '8px',
-                          border: excluded ? '1px dashed rgba(239, 68, 68, 0.4)' : '1px solid var(--border-color)',
+                          border: excluded
+                            ? '1px dashed rgba(239, 68, 68, 0.4)'
+                            : isCustomizerPreview && isActiveOnProfile
+                            ? '1px solid var(--accent-color)'
+                            : '1px solid var(--border-color)',
                           fontSize: '0.85rem',
                           cursor: isCustomizerPreview ? 'pointer' : 'default',
-                          opacity: excluded ? 0.45 : 1,
+                          opacity: excluded ? 0.45 : (isCustomizerPreview && !isActiveOnProfile ? 0.75 : 1),
                           transition: 'all 0.15s ease'
                         }}
                       >
                         <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
-                          <span style={{ fontSize: '0.75rem', opacity: excluded ? 0.3 : 0.6, fontWeight: 800, flexShrink: 0 }}>
-                            #{idx + 1}
+                          <span style={{
+                            fontSize: '0.75rem',
+                            opacity: excluded ? 0.3 : 0.7,
+                            fontWeight: 800,
+                            flexShrink: 0,
+                            color: isActiveOnProfile ? 'var(--accent-color)' : 'inherit'
+                          }}>
+                            {isCustomizerPreview ? (isActiveOnProfile ? `#${activeRankIdx + 1}` : (excluded ? 'Filtered' : 'Next')) : `#${idx + 1}`}
                           </span>
                           <img
                             src={g.icon || g.headerUrl}
