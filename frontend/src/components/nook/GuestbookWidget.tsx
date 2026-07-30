@@ -208,7 +208,7 @@ export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({
             >
               <Link to={`/nook/${entry.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <img
-                  src={entry.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                  src={entry.avatar_url || '/branding/default_avatar.svg'}
                   alt={entry.display_name}
                   style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
                 />

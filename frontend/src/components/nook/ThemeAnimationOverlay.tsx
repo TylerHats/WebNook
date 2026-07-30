@@ -366,5 +366,388 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
     );
   }
 
+  if (normalizedTheme === 'christmas' || normalizedTheme === 'theme-christmas') {
+    const snowItems = [
+      { icon: '❄️', left: '5%', size: '1.2rem', speed: '8s', delay: '-1s' },
+      { icon: '✨', left: '18%', size: '1.5rem', speed: '11s', delay: '-4s' },
+      { icon: '❄️', left: '32%', size: '1.4rem', speed: '9s', delay: '-2.5s' },
+      { icon: '🎄', left: '48%', size: '1.6rem', speed: '12s', delay: '-5.5s' },
+      { icon: '❄️', left: '62%', size: '1.3rem', speed: '7.8s', delay: '-3s' },
+      { icon: '🎁', left: '76%', size: '1.5rem', speed: '10.5s', delay: '-1.5s' },
+      { icon: '❄️', left: '90%', size: '1.4rem', speed: '8.5s', delay: '-6s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {snowItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              top: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.45,
+              animation: `floatUpDrift ${item.speed} linear infinite reverse`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'hanukkah' || normalizedTheme === 'theme-hanukkah') {
+    const hanukkahItems = [
+      { icon: '🕎', left: '10%', size: '1.6rem', speed: '9s', delay: '0s' },
+      { icon: '✨', left: '30%', size: '1.3rem', speed: '7s', delay: '-3s' },
+      { icon: '✡️', left: '50%', size: '1.5rem', speed: '11s', delay: '-1.5s' },
+      { icon: '🕎', left: '70%', size: '1.6rem', speed: '8.5s', delay: '-5s' },
+      { icon: '✨', left: '88%', size: '1.4rem', speed: '10s', delay: '-2s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {hanukkahItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.45,
+              animation: `floatUpDrift ${item.speed} linear infinite`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'halloween' || normalizedTheme === 'theme-halloween') {
+    const spookyItems = [
+      { icon: '🎃', left: '8%', size: '1.6rem', speed: '10s', delay: '0s' },
+      { icon: '🦇', left: '26%', size: '1.4rem', speed: '7.5s', delay: '-2s' },
+      { icon: '👻', left: '46%', size: '1.7rem', speed: '11s', delay: '-4s' },
+      { icon: '🎃', left: '68%', size: '1.5rem', speed: '8.5s', delay: '-1s' },
+      { icon: '🦇', left: '86%', size: '1.4rem', speed: '9.5s', delay: '-3.5s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {spookyItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.42,
+              animation: `floatUpDrift ${item.speed} linear infinite`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'spring' || normalizedTheme === 'theme-spring') {
+    const springItems = [
+      { icon: '🌸', left: '6%', size: '1.4rem', speed: '8s', delay: '-0.5s' },
+      { icon: '🦋', left: '24%', size: '1.3rem', speed: '10s', delay: '-3s' },
+      { icon: '🌸', left: '44%', size: '1.5rem', speed: '7.5s', delay: '-1.8s' },
+      { icon: '🌱', left: '65%', size: '1.2rem', speed: '9s', delay: '-4.2s' },
+      { icon: '🌸', left: '84%', size: '1.4rem', speed: '8.2s', delay: '-2.2s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {springItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              top: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.45,
+              animation: `floatUpDrift ${item.speed} linear infinite reverse`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'summer' || normalizedTheme === 'theme-summer') {
+    const summerItems = [
+      { icon: '☀️', left: '12%', size: '1.7rem', speed: '11s', delay: '0s' },
+      { icon: '🌊', left: '34%', size: '1.4rem', speed: '8.5s', delay: '-2.5s' },
+      { icon: '🏝️', left: '56%', size: '1.6rem', speed: '10s', delay: '-5s' },
+      { icon: '☀️', left: '80%', size: '1.5rem', speed: '9s', delay: '-1.5s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {summerItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.38,
+              animation: `floatUpDrift ${item.speed} linear infinite`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'autumn' || normalizedTheme === 'theme-autumn') {
+    const autumnItems = [
+      { icon: '🍁', left: '8%', size: '1.5rem', speed: '7.5s', delay: '-1s' },
+      { icon: '🍂', left: '28%', size: '1.4rem', speed: '9.5s', delay: '-3.5s' },
+      { icon: '🌾', left: '48%', size: '1.3rem', speed: '8s', delay: '-0.2s' },
+      { icon: '🍁', left: '68%', size: '1.6rem', speed: '10s', delay: '-4s' },
+      { icon: '🍂', left: '88%', size: '1.4rem', speed: '8.5s', delay: '-2s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {autumnItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              top: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.45,
+              animation: `floatUpDrift ${item.speed} linear infinite reverse`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'win11' || normalizedTheme === 'fluent-eleven' || normalizedTheme === 'theme-win11') {
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '12%', left: '5%', opacity: 0.2, fontSize: '2.2rem', animation: 'win9xIconFloat 10s ease-in-out infinite' }}>🪟</div>
+        <div style={{ position: 'absolute', top: '75%', right: '6%', opacity: 0.2, fontSize: '2.2rem', animation: 'win9xIconFloat 12s ease-in-out infinite 2s' }}>✨</div>
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'discord' || normalizedTheme === 'vibecord' || normalizedTheme === 'theme-discord') {
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '15%', right: '7%', opacity: 0.22, fontSize: '2rem', animation: 'sparkleShimmer 4s ease-in-out infinite' }}>💬</div>
+        <div style={{ position: 'absolute', bottom: '18%', left: '6%', opacity: 0.25, fontSize: '1.8rem', animation: 'sparkleShimmer 3s ease-in-out infinite 1s' }}>🟢</div>
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'liquid-glass' || normalizedTheme === 'theme-liquid-glass') {
+    const glassItems = [
+      { icon: '💧', left: '10%', size: '1.5rem', speed: '9s', delay: '0s' },
+      { icon: '✨', left: '35%', size: '1.3rem', speed: '7.5s', delay: '-2s' },
+      { icon: '🔮', left: '60%', size: '1.6rem', speed: '11s', delay: '-4s' },
+      { icon: '💧', left: '85%', size: '1.4rem', speed: '8.5s', delay: '-1s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {glassItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.35,
+              animation: `floatUpDrift ${item.speed} linear infinite`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'material-expressive' || normalizedTheme === 'theme-material-expressive') {
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '10%', left: '8%', opacity: 0.25, fontSize: '2.2rem', animation: 'sparkleShimmer 3.5s ease-in-out infinite' }}>🎨</div>
+        <div style={{ position: 'absolute', bottom: '15%', right: '8%', opacity: 0.25, fontSize: '2rem', animation: 'sparkleShimmer 4.5s ease-in-out infinite 1.5s' }}>📱</div>
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'coffee' || normalizedTheme === 'theme-coffee') {
+    const coffeeItems = [
+      { icon: '☕', left: '10%', size: '1.6rem', speed: '9s', delay: '0s' },
+      { icon: '🫘', left: '32%', size: '1.3rem', speed: '7.5s', delay: '-2.5s' },
+      { icon: '🥐', left: '55%', size: '1.5rem', speed: '11s', delay: '-1s' },
+      { icon: '☕', left: '78%', size: '1.6rem', speed: '8.5s', delay: '-4s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {coffeeItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.38,
+              animation: `floatUpDrift ${item.speed} linear infinite`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'velvet' || normalizedTheme === 'theme-velvet') {
+    const velvetItems = [
+      { icon: '🔮', left: '8%', size: '1.5rem', speed: '9s', delay: '0s' },
+      { icon: '🌙', left: '30%', size: '1.7rem', speed: '12s', delay: '-3s' },
+      { icon: '✨', left: '52%', size: '1.4rem', speed: '7.5s', delay: '-1.5s' },
+      { icon: '🔮', left: '74%', size: '1.6rem', speed: '10s', delay: '-4.5s' },
+      { icon: '🌙', left: '90%', size: '1.5rem', speed: '8.5s', delay: '-2s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {velvetItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.42,
+              animation: `floatUpDrift ${item.speed} linear infinite`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'pastel' || normalizedTheme === 'theme-pastel') {
+    const pastelItems = [
+      { icon: '🎀', left: '12%', size: '1.5rem', speed: '8.5s', delay: '0s' },
+      { icon: '💖', left: '34%', size: '1.4rem', speed: '10s', delay: '-2.5s' },
+      { icon: '✨', left: '58%', size: '1.3rem', speed: '7.5s', delay: '-1s' },
+      { icon: '🎀', left: '82%', size: '1.5rem', speed: '9s', delay: '-3.5s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {pastelItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.45,
+              animation: `floatUpDrift ${item.speed} linear infinite`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'frutiger-aero' || normalizedTheme === 'theme-frutiger-aero') {
+    const aeroItems = [
+      { icon: '💧', left: '10%', size: '1.5rem', speed: '8s', delay: '0s' },
+      { icon: '🫧', left: '32%', size: '1.6rem', speed: '10.5s', delay: '-3s' },
+      { icon: '🌊', left: '56%', size: '1.4rem', speed: '7.8s', delay: '-1.5s' },
+      { icon: '💧', left: '78%', size: '1.5rem', speed: '9s', delay: '-4.2s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {aeroItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.4,
+              animation: `floatUpDrift ${item.speed} linear infinite`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'seasonal-winter' || normalizedTheme === 'theme-seasonal-winter') {
+    const winterItems = [
+      { icon: '❄️', left: '8%', size: '1.4rem', speed: '8.5s', delay: '-1s' },
+      { icon: '🧊', left: '30%', size: '1.3rem', speed: '10s', delay: '-3.5s' },
+      { icon: '❄️', left: '54%', size: '1.5rem', speed: '7.8s', delay: '-2s' },
+      { icon: '✨', left: '76%', size: '1.4rem', speed: '9.2s', delay: '-4.8s' }
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {winterItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              top: '-10%',
+              left: item.left,
+              fontSize: item.size,
+              opacity: 0.45,
+              animation: `floatUpDrift ${item.speed} linear infinite reverse`,
+              animationDelay: item.delay
+            }}
+          >
+            {item.icon}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return null;
 };

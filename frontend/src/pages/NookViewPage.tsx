@@ -15,6 +15,7 @@ import { useToast } from '../context/ToastContext';
 
 import { playThemeSound } from '../utils/themeSoundEngine';
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
+import { getThemeById } from '../themes/registry';
 
 export const NookViewPage: React.FC = () => {
   const { username } = useParams<{ username?: string }>();
@@ -324,9 +325,9 @@ export const NookViewPage: React.FC = () => {
 
       <div className="nook-container" style={{ position: 'relative', zIndex: 10 }}>
         {/* Nook Header Banner & User Bio */}
-        <div className="nook-panel" style={{ marginBottom: '1.5rem', position: 'relative', overflow: 'hidden', padding: 0 }}>
+        <div className="nook-panel nook-header-panel">
           {owner.banner_url ? (
-            <div style={{ height: '180px', position: 'relative', overflow: 'hidden' }}>
+            <div className="nook-header-banner">
               <img
                 className="nook-banner-image"
                 src={owner.banner_url}
@@ -335,30 +336,30 @@ export const NookViewPage: React.FC = () => {
               />
             </div>
           ) : (
-            <div style={{ height: '180px', background: 'linear-gradient(135deg, var(--accent-color) 0%, #a855f7 100%)' }} />
+            <div className="nook-header-banner" style={{ background: 'linear-gradient(135deg, var(--accent-color) 0%, #a855f7 100%)' }} />
           )}
 
-          <div style={{ padding: '1.5rem', marginTop: '-50px', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-end' }}>
+          <div className="nook-header-body">
+            <div className="nook-avatar-name-group">
               <img
-                src={owner.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
+                src={owner.avatar_url || '/branding/default_avatar.svg'}
                 alt={owner.display_name}
-                style={{ width: '110px', height: '110px', borderRadius: '50%', border: '4px solid var(--bg-panel-solid)', objectFit: 'cover', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', position: 'relative', zIndex: 5 }}
+                className="nook-header-avatar"
               />
-              <div>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="nook-header-user-info">
+                <h1 className="nook-header-title">
                   {owner.display_name || owner.username}
                 </h1>
-                <p style={{ opacity: 0.7, fontSize: '0.95rem' }}>@{owner.username}</p>
+                <p className="nook-header-handle">@{owner.username}</p>
                 {owner.status_message && (
-                  <p style={{ fontSize: '0.85rem', marginTop: '0.4rem', fontStyle: 'italic', color: 'var(--accent-color)' }}>
+                  <p className="nook-header-status">
                     "{owner.status_message}"
                   </p>
                 )}
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div className="nook-header-actions">
               {isOwner ? (
                 <Link to="/customize" className="btn-primary">
                   <Edit3 size={16} />
@@ -421,6 +422,17 @@ export const NookViewPage: React.FC = () => {
           const leftCards = gridCards.filter((_, idx) => idx % 2 === 0);
           const rightCards = gridCards.filter((_, idx) => idx % 2 !== 0);
 
+          const activeThemeDef = getThemeById(nookSettings?.theme);
+
+          const resolveTitle = (c: any, defaultFallback: string) => {
+            if (c.title && c.title.trim() !== '') return c.title;
+            if (cardTitles && cardTitles[c.type]) return cardTitles[c.type];
+            if (activeThemeDef?.defaultCardTitles && activeThemeDef.defaultCardTitles[c.type]) {
+              return activeThemeDef.defaultCardTitles[c.type];
+            }
+            return defaultFallback;
+          };
+
           const renderSingleCard = (c: any) => {
             if (!c) return null;
             switch (c.type) {
@@ -429,7 +441,7 @@ export const NookViewPage: React.FC = () => {
                   <div key={c.id} className="nook-panel">
                     <div className="nook-panel-header">
                       <Heart size={20} />
-                      <span>{c.title || cardTitles.bio || `About ${owner.display_name || owner.username}`}</span>
+                      <span>{resolveTitle(c, `About ${owner.display_name || owner.username}`)}</span>
                     </div>
                     <p style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{owner.bio}</p>
                   </div>
@@ -439,7 +451,7 @@ export const NookViewPage: React.FC = () => {
                 return (
                   <MusicWidget
                     key={c.id}
-                    title={c.title || cardTitles.music || 'My Music Playlist'}
+                    title={resolveTitle(c, 'My Music Playlist')}
                     tracks={c.music_tracks || parsedMusicTracks}
                     autoNextPlay={autoNextPlay}
                     loopPlaylist={loopPlaylist}
@@ -454,7 +466,7 @@ export const NookViewPage: React.FC = () => {
                 return (
                   <MoviesWidget
                     key={c.id}
-                    title={c.title || cardTitles.movies || 'Movies & TV Favorites'}
+                    title={resolveTitle(c, 'Movies & TV Favorites')}
                     movies={c.favorite_movies || (nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : [])}
                   />
                 );
@@ -463,7 +475,7 @@ export const NookViewPage: React.FC = () => {
                 return (
                   <HobbiesWidget
                     key={c.id}
-                    title={c.title || cardTitles.hobbies || 'Hobbies & Passions'}
+                    title={resolveTitle(c, 'Hobbies & Passions')}
                     hobbies={c.hobbies || (nookSettings?.hobbies_json ? (typeof nookSettings.hobbies_json === 'string' ? JSON.parse(nookSettings.hobbies_json) : nookSettings.hobbies_json) : [])}
                     isOwner={user?.id === owner.id}
                   />
@@ -473,7 +485,7 @@ export const NookViewPage: React.FC = () => {
                 return (
                   <TopFriendsGrid
                     key={c.id}
-                    title={c.title || cardTitles.friends || 'Top Friends'}
+                    title={resolveTitle(c, 'Top Friends')}
                     topFriends={topFriends}
                     ownerUsername={owner.display_name || owner.username}
                   />
@@ -483,7 +495,7 @@ export const NookViewPage: React.FC = () => {
                 return (
                   <BooksWidget
                     key={c.id}
-                    title={c.title || cardTitles.books || 'Reading Nook & Favorite Books'}
+                    title={resolveTitle(c, 'Reading Nook & Favorite Books')}
                     books={c.favorite_books || (nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : [])}
                     storygraphUsername={nookSettings?.storygraph_username}
                   />
@@ -493,7 +505,7 @@ export const NookViewPage: React.FC = () => {
                 return (c.steam_id64 || nookSettings?.steam_id64) ? (
                   <SteamWidget
                     key={c.id}
-                    title={c.title || cardTitles.steam || 'Steam Showcase'}
+                    title={resolveTitle(c, 'Steam Showcase')}
                     steamId64={c.steam_id64 || nookSettings.steam_id64}
                     displayMode={c.steam_display_mode || nookSettings.steam_display_mode || 'both'}
                   />

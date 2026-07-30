@@ -11,6 +11,10 @@ import { HobbiesWidget, HobbyItem } from '../components/widgets/HobbiesWidget';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 import { CustomSelect } from '../components/ui/CustomSelect';
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
+import { ThemeBookshelfPicker } from '../components/nook/ThemeBookshelfPicker';
+import { ThemeDefinition, ThemePalette } from '../themes/types';
+import { playThemeSound } from '../utils/themeSoundEngine';
+import { ThemeAnimationOverlay } from '../components/nook/ThemeAnimationOverlay';
 
 export interface NookCardConfig {
   id: string;
@@ -44,6 +48,7 @@ export const NookCustomizerPage: React.FC = () => {
   const { showToast } = useToast();
 
   const [theme, setTheme] = useState('glassmorphism');
+  const [savedTheme, setSavedTheme] = useState('glassmorphism');
   const [visibilityNook, setVisibilityNook] = useState('private');
   const [cardLayout, setCardLayout] = useState<NookCardConfig[]>(DEFAULT_CARD_LAYOUT);
 
@@ -176,6 +181,7 @@ export const NookCustomizerPage: React.FC = () => {
         .then(data => {
           if (data.nookSettings) {
             setTheme(data.nookSettings.theme || 'glassmorphism');
+            setSavedTheme(data.nookSettings.theme || 'glassmorphism');
             setVisibilityNook(data.nookSettings.visibility_nook || 'private');
             setBgColor(data.nookSettings.bg_color || '#12131C');
             setAccentColor(data.nookSettings.accent_color || '#6366f1');
@@ -438,9 +444,11 @@ export const NookCustomizerPage: React.FC = () => {
     }
   };
 
-  const handleSave = async (silent = false) => {
+  const handleSave = async (silent = false, themeToSave?: string) => {
     if (!token) return;
     setIsSaving(true);
+
+    const activeThemeToPersist = themeToSave || savedTheme;
 
     const cleanedMovies = favoriteMovies.map(m => {
       let r = m.rating;
@@ -463,7 +471,7 @@ export const NookCustomizerPage: React.FC = () => {
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          theme,
+          theme: activeThemeToPersist,
           visibility_nook: visibilityNook,
           bg_color: bgColor,
           text_color: textColor,
@@ -511,7 +519,14 @@ export const NookCustomizerPage: React.FC = () => {
     }
   };
 
-  // Debounced Autosave Effect
+  const handleCommitTheme = async (targetThemeId: string, palette: ThemePalette) => {
+    setSavedTheme(targetThemeId);
+    setTheme(targetThemeId);
+    handleApplyPalette(palette);
+    await handleSave(false, targetThemeId);
+  };
+
+  // Debounced Autosave Effect (Theme swaps require deliberate save action)
   useEffect(() => {
     if (!isInitialLoaded) return;
 
@@ -524,7 +539,7 @@ export const NookCustomizerPage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [
-    theme, visibilityNook, bgColor, cardBgColor, accentColor, textColor, borderColor,
+    visibilityNook, bgColor, cardBgColor, accentColor, textColor, borderColor,
     steamId64, steamDisplayMode, spotifyTrackUrl, appleMusicUrl, bgMusicUrl, bgMusicTitle,
     musicTracks, autoNextPlay, loopPlaylist, cardVisibility, cardTitles, favoriteMovies,
     favoriteBooks, storygraphUsername, themeSoundsEnabled, themeAnimationsEnabled,
@@ -624,8 +639,17 @@ export const NookCustomizerPage: React.FC = () => {
     '--border-color': borderColor
   } as React.CSSProperties;
 
+  const handleGlobalClick = (e: React.MouseEvent) => {
+    if (themeSoundsEnabled) {
+      playThemeSound(theme, themeSoundsEnabled, 'click', { x: e.clientX, y: e.clientY });
+    }
+  };
+
   return (
-    <div className={`theme-${theme}`} style={customStyle}>
+    <div className={`theme-${theme}`} style={customStyle} onClick={handleGlobalClick}>
+      {/* Theme Animation Overlay in Customizer Live Preview */}
+      {themeAnimationsEnabled && <ThemeAnimationOverlay theme={theme} />}
+
       {/* Dedicated Visual Sticker Studio Modal */}
       <VisualStickerStudioModal
         isOpen={showStickerStudio}
@@ -741,37 +765,19 @@ export const NookCustomizerPage: React.FC = () => {
               <span>Choose Nook Theme & Color Palettes</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-              {[
-                { id: 'glassmorphism', name: 'Modern Glass', desc: 'Frosted glass with dark blurred backdrops', palette: { bg: '#12131C', cardBg: 'rgba(255,255,255,0.06)', accent: '#6366f1', text: '#ffffff', border: 'rgba(255,255,255,0.1)' } },
-                { id: 'win9x', name: 'Retro Windows 9x Classic', desc: 'Classic 90s teal desktop with animated file transfers & bevels', palette: { bg: '#008080', cardBg: '#c0c0c0', accent: '#000080', text: '#000000', border: '#ffffff' } },
-                { id: 'frutiger-aero', name: 'Frutiger Aero (Win 7)', desc: 'Glossy Windows 7 glass with aqua blue sky gradients', palette: { bg: '#1c3b6f', cardBg: 'rgba(255, 255, 255, 0.85)', accent: '#0080ff', text: '#0c2340', border: 'rgba(255, 255, 255, 0.9)' } },
-                { id: 'cat-cafe', name: '🐾 Cozy Cat Café', desc: 'Warm peach & cream with dashed pink borders & paw prints', palette: { bg: '#fbf4eb', cardBg: '#fffbf7', accent: '#f43f5e', text: '#431407', border: '#fbcfe8' } },
-                { id: 'cloud-dream', name: '☁️ Fluffy Cloud Dream', desc: 'Organic bubbly cloud corners with sky blue gradient', palette: { bg: '#e0f2fe', cardBg: 'rgba(255, 255, 255, 0.9)', accent: '#3b82f6', text: '#0f172a', border: '#bae6fd' } },
-                { id: 'pixel-arcade', name: '👾 8-Bit Pixel Arcade', desc: 'Blocky 3D offset pixel borders with retro arcade bleeps', palette: { bg: '#0c051a', cardBg: '#190a38', accent: '#ff007f', text: '#00ffcc', border: '#ff007f' } },
-                { id: 'magical-girl', name: '✨ Magical Girl Kawaii', desc: 'Pastel pink & gold scalloped borders with star sparkles', palette: { bg: '#fff0f6', cardBg: '#fff8fa', accent: '#ec4899', text: '#831843', border: '#facc15' } },
-                { id: 'synthwave', name: 'Synthwave Neon', desc: 'Neon magenta glow with synthwave purples', palette: { bg: '#0d0221', cardBg: '#190b34', accent: '#ff007f', text: '#00f5d4', border: '#ff007f' } },
-                { id: 'cyberpunk', name: 'Cyberpunk Y2K', desc: 'Neon laser sweep borders & electric spark pulses', palette: { bg: '#050505', cardBg: '#121212', accent: '#facc15', text: '#00ffcc', border: '#facc15' } },
-                { id: 'pastel', name: 'Y2K Retro Pastel', desc: 'Warm soft pinks and playful pastel accents', palette: { bg: '#fef2f2', cardBg: '#ffffff', accent: '#ec4899', text: '#1f2937', border: '#f472b6' } },
-                { id: 'coffee', name: 'Cozy Coffee', desc: 'Warm amber tones and dark roasts', palette: { bg: '#1c1917', cardBg: '#292524', accent: '#d97706', text: '#f5f5f4', border: '#78350f' } },
-                { id: 'velvet', name: 'Midnight Velvet', desc: 'Deep violet, plum and glowing amethysts', palette: { bg: '#09090b', cardBg: '#18181b', accent: '#a855f7', text: '#fafafa', border: '#3f3f46' } }
-              ].map(t => (
-                <div
-                  key={t.id}
-                  onClick={() => { setTheme(t.id); handleApplyPalette(t.palette); }}
-                  style={{
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    border: theme === t.id ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
-                    background: theme === t.id ? 'rgba(99, 102, 241, 0.15)' : 'rgba(0,0,0,0.2)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>{t.name}</div>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.7, lineHeight: 1.4 }}>{t.desc}</div>
-                </div>
-              ))}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <ThemeBookshelfPicker
+                currentSavedThemeId={savedTheme}
+                stagedThemeId={theme}
+                onStageTheme={(selectedThemeObj) => {
+                  setTheme(selectedThemeObj.id);
+                  handleApplyPalette(selectedThemeObj.palette);
+                }}
+                onCommitTheme={(targetThemeId, palette) => {
+                  handleCommitTheme(targetThemeId, palette);
+                }}
+                isSaving={isSaving}
+              />
             </div>
 
             {/* Theme Sound & Animation Toggles - Rendered ONLY for supported themes */}

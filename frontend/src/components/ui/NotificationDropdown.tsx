@@ -307,7 +307,7 @@ export const NotificationDropdown: React.FC = () => {
                       style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, overflow: 'hidden' }}
                     >
                       <img
-                        src={r.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                        src={r.avatar_url || '/branding/default_avatar.svg'}
                         alt={r.username}
                         style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
                       />

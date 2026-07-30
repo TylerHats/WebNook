@@ -370,13 +370,286 @@ export function playCyberpunkSparkBurst() {
 /**
  * Main Sound Dispatcher for Themes
  */
+
+
+/** Christmas Sleigh Bell & Festive Chime */
+export function playChristmasChime() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const notes = [1046.5, 1318.5, 1567.98, 2093.0];
+  notes.forEach((freq, idx) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.05);
+    gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.05);
+    gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + idx * 0.05 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.05 + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + idx * 0.05);
+    osc.stop(ctx.currentTime + idx * 0.05 + 0.25);
+  });
+}
+
+/** Hanukkah Menorah Spark Chime */
+export function playHanukkahSparkle() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const notes = [523.25, 659.25, 783.99, 1046.5];
+  notes.forEach((freq, idx) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.06);
+    gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.06);
+    gain.gain.linearRampToValueAtTime(0.14, ctx.currentTime + idx * 0.06 + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.06 + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + idx * 0.06);
+    osc.stop(ctx.currentTime + idx * 0.06 + 0.3);
+  });
+}
+
+/** Halloween Spooky Organ Riser & Creak */
+export function playHalloweenCreak() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(130.81, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(261.63, ctx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.18);
+}
+
+/** Spring Blossom Windchime */
+export function playSpringWindchime() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const notes = [783.99, 880.0, 1046.5, 1174.66, 1318.51];
+  notes.forEach((freq, idx) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.04);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime + idx * 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.04 + 0.2);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + idx * 0.04);
+    osc.stop(ctx.currentTime + idx * 0.04 + 0.2);
+  });
+}
+
+/** Summer Ocean Wave Surge */
+export function playSummerOceanWave() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(350, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 0.08);
+  osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.15);
+}
+
+/** Autumn Leaf Rustle Click */
+export function playAutumnLeafRustle() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(280, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.06);
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.06);
+}
+
+/** Windows 11 Modern Fluent Soft Click */
+export function playWin11Click() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(800, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.04);
+  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.04);
+}
+
+/** Discord Dark Ping Sound */
+export function playDiscordPing() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const notes = [440, 880];
+  notes.forEach((freq, idx) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.06);
+    gain.gain.setValueAtTime(0.14, ctx.currentTime + idx * 0.06);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.06 + 0.12);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + idx * 0.06);
+    osc.stop(ctx.currentTime + idx * 0.06 + 0.12);
+  });
+}
+
+/** Liquid Crystal Bubble Ripple */
+export function playLiquidRipple() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(450, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.07);
+  gain.gain.setValueAtTime(0.14, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.07);
+}
+
+/** Material You Expressive Haptic Pop */
+export function playMaterialHapticPop() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(520, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(260, ctx.currentTime + 0.05);
+  gain.gain.setValueAtTime(0.16, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.05);
+}
+
+/** Cozy Coffee Ceramic Espresso Cup Clink */
+export function playCoffeeClink() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(620, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(310, ctx.currentTime + 0.05);
+  gain.gain.setValueAtTime(0.14, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.05);
+}
+
+/** Midnight Velvet Amethyst Bell Chime */
+export function playVelvetSynth() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const notes = [329.63, 440.0, 554.37];
+  notes.forEach((freq, idx) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.05);
+    gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.05);
+    gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + idx * 0.05 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.05 + 0.28);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + idx * 0.05);
+    osc.stop(ctx.currentTime + idx * 0.05 + 0.28);
+  });
+}
+
+/** Y2K Retro Pastel Bubble Pop */
+export function playPastelPop() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(750, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(380, ctx.currentTime + 0.05);
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.05);
+}
+
+/** Frutiger Aero Aqua Water Drop Chime */
+export function playAeroWaterDrop() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(400, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.06);
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.06);
+}
+
+/** Winter Wonderland Ice Chime */
+export function playWinterIceChime() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const notes = [1046.5, 1318.5, 1567.98];
+  notes.forEach((freq, idx) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.04);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime + idx * 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.04 + 0.2);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + idx * 0.04);
+    osc.stop(ctx.currentTime + idx * 0.04 + 0.2);
+  });
+}
+
 export function playThemeSound(
   themeId: string,
-  isSoundEnabled: boolean = true,
-  action: 'click' | 'guestbook' | 'action' = 'click',
-  coords?: { x: number; y: number }
+  isEnabled: boolean = true,
+  action: 'click' | 'guestbook' = 'click',
+  coords?: { x?: number; y?: number }
 ) {
-  if (!isSoundEnabled) return;
+  if (!isEnabled) return;
 
   const t = themeId || 'glassmorphism';
 
@@ -417,5 +690,35 @@ export function playThemeSound(
     playMagicalChime();
   } else if (t === 'cyberpunk' || t === 'synthwave') {
     playCyberpunkSpark();
+  } else if (t === 'christmas') {
+    playChristmasChime();
+  } else if (t === 'hanukkah') {
+    playHanukkahSparkle();
+  } else if (t === 'halloween') {
+    playHalloweenCreak();
+  } else if (t === 'spring') {
+    playSpringWindchime();
+  } else if (t === 'summer') {
+    playSummerOceanWave();
+  } else if (t === 'autumn') {
+    playAutumnLeafRustle();
+  } else if (t === 'win11' || t === 'fluent-eleven') {
+    playWin11Click();
+  } else if (t === 'discord' || t === 'vibecord') {
+    playDiscordPing();
+  } else if (t === 'liquid-glass') {
+    playLiquidRipple();
+  } else if (t === 'material-expressive') {
+    playMaterialHapticPop();
+  } else if (t === 'coffee') {
+    playCoffeeClink();
+  } else if (t === 'velvet') {
+    playVelvetSynth();
+  } else if (t === 'pastel') {
+    playPastelPop();
+  } else if (t === 'frutiger-aero') {
+    playAeroWaterDrop();
+  } else if (t === 'seasonal-winter') {
+    playWinterIceChime();
   }
 }

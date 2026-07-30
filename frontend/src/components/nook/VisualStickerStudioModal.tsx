@@ -348,29 +348,38 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           transition: 'all 0.2s ease'
         }}>
           {/* User Header Preview */}
-          <div className="nook-panel" style={{ marginBottom: '1.5rem', position: 'relative', overflow: 'hidden', padding: 0 }}>
+          <div className="nook-panel nook-header-panel">
             {user?.banner_url ? (
-              <div style={{ height: '180px', backgroundImage: `url(${user.banner_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              <div className="nook-header-banner">
+                <img
+                  className="nook-banner-image"
+                  src={user.banner_url}
+                  alt="Nook Banner"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
             ) : (
-              <div style={{ height: '180px', background: 'linear-gradient(135deg, var(--accent-color) 0%, #a855f7 100%)' }} />
+              <div className="nook-header-banner" style={{ background: 'linear-gradient(135deg, var(--accent-color) 0%, #a855f7 100%)' }} />
             )}
 
-            <div style={{ padding: '1.5rem', marginTop: '-50px', display: 'flex', gap: '1.25rem', alignItems: 'flex-end' }}>
-              <img
-                src={user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
-                alt=""
-                style={{ width: '110px', height: '110px', borderRadius: '50%', border: '4px solid var(--bg-panel-solid)', objectFit: 'cover', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}
-              />
-              <div>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, color: 'var(--accent-color)' }}>
-                  {user?.display_name || user?.username || 'My WebNook Space'}
-                </h1>
-                <p style={{ opacity: 0.7, fontSize: '0.95rem', margin: '0.2rem 0 0' }}>@{user?.username || 'user'}</p>
-                {user?.status_message && (
-                  <p style={{ fontSize: '0.85rem', marginTop: '0.4rem', fontStyle: 'italic', color: 'var(--accent-color)' }}>
-                    "{user.status_message}"
-                  </p>
-                )}
+            <div className="nook-header-body">
+              <div className="nook-avatar-name-group">
+                <img
+                  src={user?.avatar_url || '/branding/default_avatar.svg'}
+                  alt=""
+                  className="nook-header-avatar"
+                />
+                <div className="nook-header-user-info">
+                  <h1 className="nook-header-title" style={{ color: 'var(--accent-color)' }}>
+                    {user?.display_name || user?.username || 'My WebNook Space'}
+                  </h1>
+                  <p className="nook-header-handle">@{user?.username || 'user'}</p>
+                  {user?.status_message && (
+                    <p className="nook-header-status">
+                      "{user.status_message}"
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

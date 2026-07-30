@@ -979,16 +979,12 @@ export const MessagesPage: React.FC = () => {
                                 style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                                 title={`Visit @${msg.sender_username}'s Nook`}
                               >
-                                {msg.sender_avatar_url && (
-                                  <img src={msg.sender_avatar_url} alt={msg.sender_username} style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
-                                )}
+                                <img src={msg.sender_avatar_url || '/branding/default_avatar.svg'} alt={msg.sender_username} style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
                                 <span style={{ fontWeight: 700 }}>@{msg.sender_username}</span>
                               </Link>
                             ) : (
                               <>
-                                {msg.sender_avatar_url && (
-                                  <img src={msg.sender_avatar_url} alt={msg.sender_username} style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
-                                )}
+                                <img src={msg.sender_avatar_url || '/branding/default_avatar.svg'} alt={msg.sender_username} style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
                                 <span style={{ fontWeight: 700 }}>@{msg.sender_username}</span>
                               </>
                             )}

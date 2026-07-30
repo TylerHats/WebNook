@@ -167,7 +167,7 @@ export const FriendsPage: React.FC = () => {
             {pendingIncoming.map(req => (
               <div key={req.request_id} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
                 <img
-                  src={req.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                  src={req.avatar_url || '/branding/default_avatar.svg'}
                   alt={req.username}
                   style={{ width: '46px', height: '46px', borderRadius: '50%', objectFit: 'cover' }}
                 />
@@ -232,7 +232,7 @@ export const FriendsPage: React.FC = () => {
                 }}
               >
                 <img
-                  src={f.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                  src={f.avatar_url || '/branding/default_avatar.svg'}
                   alt={f.username}
                   style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }}
                 />

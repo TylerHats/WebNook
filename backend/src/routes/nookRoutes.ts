@@ -562,4 +562,50 @@ router.put('/stickers', authenticateToken, async (req: AuthenticatedRequest, res
   }
 });
 
+// Delete User Account & Anonymize Data
+router.delete('/account', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+
+    // 1. Anonymize user record placeholders & clear credentials
+    const deletedUsername = `deleted_user_${userId}`;
+    const deletedEmail = `deleted_${userId}_${Date.now()}@webnook.local`;
+
+    await execute(
+      `UPDATE users SET 
+        username = ?,
+        display_name = 'Deleted User',
+        email = ?,
+        password_hash = 'ACCOUNT_DELETED',
+        avatar_url = '/branding/default_avatar.svg',
+        banner_url = '',
+        bio = '',
+        status_message = '',
+        status_emoji = '',
+        is_disabled = 1,
+        disabled_reason = 'Account deleted by user',
+        is_totp_enabled = 0,
+        totp_secret = NULL
+       WHERE id = ?`,
+      [deletedUsername, deletedEmail, userId]
+    );
+
+    // 2. Remove user relationships and personal settings
+    await execute('DELETE FROM friends WHERE user_id = ? OR friend_id = ?', [userId, userId]);
+    await execute('DELETE FROM nooks WHERE user_id = ?', [userId]);
+    await execute('DELETE FROM nook_widgets WHERE user_id = ?', [userId]);
+    await execute('DELETE FROM nook_stickers WHERE user_id = ?', [userId]);
+    await execute('DELETE FROM passkey_credentials WHERE user_id = ?', [userId]);
+    await execute('DELETE FROM password_resets WHERE user_id = ?', [userId]);
+    await execute('DELETE FROM email_verifications WHERE user_id = ?', [userId]);
+    await execute('DELETE FROM notifications WHERE user_id = ? OR sender_id = ?', [userId, userId]);
+    await execute('DELETE FROM conversation_members WHERE user_id = ?', [userId]);
+
+    return res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error('Account deletion error:', err);
+    return res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
 export default router;

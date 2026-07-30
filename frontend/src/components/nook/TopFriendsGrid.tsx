@@ -58,7 +58,7 @@ export const TopFriendsGrid: React.FC<TopFriendsGridProps> = ({
               }}
             >
               <img
-                src={friend.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                src={friend.avatar_url || '/branding/default_avatar.svg'}
                 alt={friend.display_name}
                 style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.4rem', border: '2px solid var(--accent-color)' }}
               />

@@ -168,6 +168,7 @@ app.use('/branding', (req, res, next) => {
 import notificationRoutes from './routes/notificationRoutes';
 import friendRoutes from './routes/friendRoutes';
 import messageRoutes from './routes/messageRoutes';
+import themeRoutes from './routes/themeRoutes';
 
 // API Routes
 app.use('/api/setup', setupRoutes);
@@ -180,6 +181,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/themes', themeRoutes);
 
 // Public Branding Configuration Endpoint
 app.get('/api/branding/public', async (req, res) => {
@@ -213,7 +215,14 @@ app.get(['/manifest.json', '/api/manifest.json'], async (req, res) => {
         {
           src: logoUrl,
           type: "image/png",
-          sizes: "192x192 512x512"
+          sizes: "192x192",
+          purpose: "any maskable"
+        },
+        {
+          src: logoUrl,
+          type: "image/png",
+          sizes: "512x512",
+          purpose: "any maskable"
         }
       ],
       start_url: "/",
@@ -226,7 +235,10 @@ app.get(['/manifest.json', '/api/manifest.json'], async (req, res) => {
     return res.json({
       short_name: "WebNook",
       name: "WebNook Social",
-      icons: [{ src: "/branding/logo.png", type: "image/png", sizes: "192x192" }],
+      icons: [
+        { src: "/branding/logo.png", type: "image/png", sizes: "192x192", purpose: "any maskable" },
+        { src: "/branding/logo.png", type: "image/png", sizes: "512x512", purpose: "any maskable" }
+      ],
       start_url: "/",
       display: "standalone"
     });

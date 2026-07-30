@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { usePWA } from '../context/PWAContext';
 import { startRegistration } from '@simplewebauthn/browser';
-import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail, Smile, Upload } from 'lucide-react';
+import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail, Smile, Upload, Smartphone, Download, AlertTriangle, X } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 
 export const AccountSettingsPage: React.FC = () => {
-  const { user, token, refreshUser } = useAuth();
+  const { user, token, refreshUser, logout } = useAuth();
   const { showToast } = useToast();
+  const { isInstallable, isStandalone, promptInstall } = usePWA();
+  const navigate = useNavigate();
+
+  const [deleteModalStep, setDeleteModalStep] = useState<0 | 1 | 2>(0);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [bio, setBio] = useState(user?.bio || '');
@@ -297,6 +305,30 @@ export const AccountSettingsPage: React.FC = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!token) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/nook/account', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast('Account permanently deleted', 'info');
+        logout();
+        navigate('/login');
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Failed to delete account', 'error');
+      }
+    } catch (e) {
+      showToast('Error deleting account', 'error');
+    } finally {
+      setIsDeleting(false);
+      setDeleteModalStep(0);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', padding: '2rem 1rem' }}>
       <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -404,6 +436,55 @@ export const AccountSettingsPage: React.FC = () => {
               <span>Save Profile Info</span>
             </button>
           </form>
+        </div>
+
+        {/* Mobile PWA & App Installation Card */}
+        <div className="nook-panel">
+          <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Smartphone size={20} style={{ flexShrink: 0 }} />
+            <span>Mobile PWA & App Installation</span>
+          </div>
+
+          {isStandalone ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#22c55e', background: 'rgba(34, 197, 94, 0.1)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+              <CheckCircle2 size={22} style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontSize: '0.95rem' }}>WebNook App Installed & Active!</strong>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', opacity: 0.9 }}>You are currently running WebNook as a standalone native-feeling progressive web app.</p>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p style={{ fontSize: '0.9rem', opacity: 0.85, lineHeight: 1.5, marginBottom: '1rem' }}>
+                Install WebNook on your Android phone, iPhone, or desktop to access your Nook like a native app directly from your home screen with zero browser address bars!
+              </p>
+
+              {isInstallable ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const success = await promptInstall();
+                    if (success) {
+                      showToast('WebNook App installed successfully!', 'success');
+                    }
+                  }}
+                  className="btn-primary"
+                  style={{ marginBottom: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <Download size={18} />
+                  <span>Install WebNook App to Home Screen</span>
+                </button>
+              ) : (
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                  <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: 'var(--accent-color)' }}>📱 How to install WebNook on your phone:</div>
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: 1.6, opacity: 0.9 }}>
+                    <li><strong>Android Chrome / Edge:</strong> Tap the 3 dots menu <span style={{ fontWeight: 800 }}>(⋮)</span> at top right ➔ Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.</li>
+                    <li><strong>iOS Safari:</strong> Tap the Share button <span style={{ fontWeight: 800 }}>(⎋)</span> ➔ Scroll down & tap <strong>"Add to Home Screen"</strong>.</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* TOTP Authenticator Setup */}
@@ -600,7 +681,153 @@ export const AccountSettingsPage: React.FC = () => {
             <span>Save Reaction Preferences</span>
           </button>
         </div>
+
+        {/* Danger Zone: Account Deletion Card */}
+        <div className="nook-panel" style={{ marginTop: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+          <div className="nook-panel-header" style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={20} style={{ flexShrink: 0 }} />
+            <span>Danger Zone</span>
+          </div>
+          <p style={{ fontSize: '0.85rem', opacity: 0.85, lineHeight: 1.5, marginBottom: '1.25rem' }}>
+            Permanently delete your WebNook account, profile customizations, and stickers. This action is permanent and cannot be undone.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setDeleteModalStep(1)}
+            style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#ef4444',
+              border: '1px solid #ef4444',
+              borderRadius: 'var(--border-radius-btn)',
+              padding: '0.6rem 1.2rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Trash2 size={16} />
+            <span>Delete My Account</span>
+          </button>
+        </div>
       </div>
+
+      {/* Double Confirmation Modal Step 1 */}
+      {deleteModalStep === 1 && (
+        <div className="custom-modal-backdrop" onClick={() => setDeleteModalStep(0)}>
+          <div className="custom-modal-content" onClick={e => e.stopPropagation()} style={{ border: '1px solid #ef4444' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444', fontWeight: 800, fontSize: '1.1rem' }}>
+                <AlertTriangle size={22} />
+                <span>Delete Account? (Step 1 of 2)</span>
+              </div>
+              <button onClick={() => setDeleteModalStep(0)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ fontSize: '0.9rem', lineHeight: 1.5, opacity: 0.9, marginBottom: '1.5rem' }}>
+              <p style={{ marginTop: 0 }}>
+                Are you sure you want to delete your WebNook account <strong>@{user?.username}</strong>?
+              </p>
+              <ul style={{ paddingLeft: '1.2rem', margin: '0.5rem 0' }}>
+                <li>Your Nook customizations, widgets, theme selections, and stickers will be permanently erased.</li>
+                <li>Your friends list and pending requests will be cleared.</li>
+                <li>Messages sent in chats will remain visible, but your profile avatar will be replaced by a <strong>generic gray silhouette avatar</strong> and your name will display as <strong>"Deleted User"</strong>.</li>
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button type="button" onClick={() => setDeleteModalStep(0)} className="btn-secondary">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setDeleteModalStep(2); setDeleteConfirmText(''); }}
+                style={{
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 'var(--border-radius-btn)',
+                  padding: '0.6rem 1.2rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Proceed to Final Step ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Double Confirmation Modal Step 2 (Type Username or DELETE to Confirm) */}
+      {deleteModalStep === 2 && (
+        <div className="custom-modal-backdrop" onClick={() => setDeleteModalStep(0)}>
+          <div className="custom-modal-content" onClick={e => e.stopPropagation()} style={{ border: '2px solid #ef4444', boxShadow: '0 0 25px rgba(239, 68, 68, 0.4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444', fontWeight: 800, fontSize: '1.1rem' }}>
+                <AlertTriangle size={22} />
+                <span>Final Confirmation Required (Step 2 of 2)</span>
+              </div>
+              <button onClick={() => setDeleteModalStep(0)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ fontSize: '0.9rem', lineHeight: 1.5, opacity: 0.9, marginBottom: '1.25rem' }}>
+              <p style={{ marginTop: 0, color: '#ef4444', fontWeight: 700 }}>
+                🚨 Final Warning: This action is permanent and cannot be undone!
+              </p>
+              <p>
+                To confirm permanent deletion, please type <strong style={{ color: 'var(--accent-color)' }}>{user?.username}</strong> or <strong style={{ color: '#ef4444' }}>DELETE</strong> in the box below:
+              </p>
+              <input
+                type="text"
+                placeholder={`Type "${user?.username}" or "DELETE"`}
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid #ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.95rem',
+                  boxSizing: 'border-box',
+                  marginTop: '0.5rem'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button type="button" onClick={() => setDeleteModalStep(0)} className="btn-secondary" disabled={isDeleting}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting || (deleteConfirmText.trim() !== user?.username && deleteConfirmText.trim() !== 'DELETE')}
+                onClick={handleDeleteAccount}
+                style={{
+                  background: (deleteConfirmText.trim() === user?.username || deleteConfirmText.trim() === 'DELETE') ? '#ef4444' : 'rgba(239, 68, 68, 0.3)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 'var(--border-radius-btn)',
+                  padding: '0.6rem 1.2rem',
+                  fontWeight: 800,
+                  cursor: (deleteConfirmText.trim() === user?.username || deleteConfirmText.trim() === 'DELETE') ? 'pointer' : 'not-allowed',
+                  opacity: (deleteConfirmText.trim() === user?.username || deleteConfirmText.trim() === 'DELETE') ? 1 : 0.5
+                }}
+              >
+                {isDeleting ? 'Deleting Account...' : 'Confirm Permanent Account Deletion'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ImageCropModal
         isOpen={cropModal.isOpen}

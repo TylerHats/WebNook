@@ -4,16 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Sparkles, Image, Palette, ArrowRight, CheckCircle2, Upload, Heart, Check } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
-
-const ONBOARDING_THEMES = [
-  { id: 'glassmorphism', name: 'Glassmorphism', desc: 'Vibrant frosted glass & subtle glow', colors: ['#6366f1', '#a855f7', '#ec4899'] },
-  { id: 'neumorphism', name: 'Neumorphic Clean', desc: 'Soft extruded shadows & modern feel', colors: ['#e0e5ec', '#a3b1c6', '#6d7f9c'] },
-  { id: 'cyberpunk', name: 'Cyberpunk Neon', desc: 'Futuristic neon pink & electric blue', colors: ['#ff007f', '#00f0ff', '#7000ff'] },
-  { id: 'retro90s', name: '90s Retro Arcade', desc: 'Nostalgic pixel vibes & bright accents', colors: ['#ff9900', '#33cc33', '#ff0066'] },
-  { id: 'y2k', name: 'Y2K Metallic Gloss', desc: 'Early 2000s chrome, silver & cyan', colors: ['#c0c0c0', '#00ffff', '#ff69b4'] },
-  { id: 'dark_minimal', name: 'Minimal Dark', desc: 'Sleek dark mode & sharp contrast', colors: ['#18181b', '#27272a', '#6366f1'] },
-  { id: 'cottagecore', name: 'Cozy Cottagecore', desc: 'Warm botanical tones & soft sage', colors: ['#87a96b', '#d8c3a5', '#e8d8c8'] }
-];
+import { ALL_THEMES } from '../themes/registry';
 
 export const UserOnboardingPage: React.FC = () => {
   const { user, token } = useAuth();
@@ -24,7 +15,7 @@ export const UserOnboardingPage: React.FC = () => {
 
   // Step 1: Media Files & Crop Modal
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string>(user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80');
+  const [avatarPreview, setAvatarPreview] = useState<string>(user?.avatar_url || '/branding/default_avatar.svg');
 
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string>(user?.banner_url || '');
@@ -273,8 +264,9 @@ export const UserOnboardingPage: React.FC = () => {
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '0.2rem' }}>
-              {ONBOARDING_THEMES.map(t => {
+              {ALL_THEMES.map(t => {
                 const isSelected = selectedTheme === t.id;
+                const colors = [t.palette.bg, t.palette.cardBg, t.palette.accent, t.palette.text, t.palette.border];
                 return (
                   <div
                     key={t.id}
@@ -290,13 +282,16 @@ export const UserOnboardingPage: React.FC = () => {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{t.name}</span>
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        {t.badge && <span>{t.badge}</span>}
+                        <span>{t.name}</span>
+                      </span>
                       {isSelected && <Check size={16} color="var(--accent-color)" />}
                     </div>
-                    <p style={{ fontSize: '0.73rem', opacity: 0.65, margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>{t.desc}</p>
+                    <p style={{ fontSize: '0.73rem', opacity: 0.65, margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>{t.description}</p>
                     <div style={{ display: 'flex', gap: '0.35rem' }}>
-                      {t.colors.map((c, idx) => (
-                        <div key={idx} style={{ width: '16px', height: '16px', borderRadius: '50%', background: c }} />
+                      {colors.map((c, idx) => (
+                        <div key={idx} style={{ width: '14px', height: '14px', borderRadius: '50%', background: c, border: '1px solid rgba(255,255,255,0.2)' }} />
                       ))}
                     </div>
                   </div>

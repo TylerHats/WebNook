@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { PWAProvider } from './context/PWAContext';
+import { PWAInstallBanner } from './components/ui/PWAInstallBanner';
 import { Navbar } from './components/ui/Navbar';
 import { HomePage } from './pages/HomePage';
 import { NookViewPage } from './pages/NookViewPage';
@@ -81,11 +83,14 @@ const AppRoutes: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AppRoutes />
-        </BrowserRouter>
-      </ToastProvider>
+      <PWAProvider>
+        <ToastProvider>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <AppRoutes />
+            <PWAInstallBanner />
+          </BrowserRouter>
+        </ToastProvider>
+      </PWAProvider>
     </AuthProvider>
   );
 };
