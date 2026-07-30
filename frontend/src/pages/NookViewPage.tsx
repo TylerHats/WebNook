@@ -431,7 +431,7 @@ export const NookViewPage: React.FC = () => {
                   <MusicWidget
                     key={c.id}
                     title={c.title || cardTitles.music || 'My Music Playlist'}
-                    tracks={parsedMusicTracks}
+                    tracks={c.music_tracks || parsedMusicTracks}
                     autoNextPlay={autoNextPlay}
                     loopPlaylist={loopPlaylist}
                     bgMusicUrl={nookSettings?.bg_music_url}
@@ -446,7 +446,7 @@ export const NookViewPage: React.FC = () => {
                   <MoviesWidget
                     key={c.id}
                     title={c.title || cardTitles.movies || 'Movies & TV Favorites'}
-                    movies={nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : []}
+                    movies={c.favorite_movies || (nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : [])}
                   />
                 );
 
@@ -455,7 +455,7 @@ export const NookViewPage: React.FC = () => {
                   <HobbiesWidget
                     key={c.id}
                     title={c.title || cardTitles.hobbies || 'Hobbies & Passions'}
-                    hobbies={nookSettings?.hobbies_json ? (typeof nookSettings.hobbies_json === 'string' ? JSON.parse(nookSettings.hobbies_json) : nookSettings.hobbies_json) : []}
+                    hobbies={c.hobbies || (nookSettings?.hobbies_json ? (typeof nookSettings.hobbies_json === 'string' ? JSON.parse(nookSettings.hobbies_json) : nookSettings.hobbies_json) : [])}
                     isOwner={user?.id === owner.id}
                   />
                 );
@@ -475,18 +475,18 @@ export const NookViewPage: React.FC = () => {
                   <BooksWidget
                     key={c.id}
                     title={c.title || cardTitles.books || 'Reading Nook & Favorite Books'}
-                    books={nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : []}
+                    books={c.favorite_books || (nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : [])}
                     storygraphUsername={nookSettings?.storygraph_username}
                   />
                 );
 
               case 'steam':
-                return nookSettings?.steam_id64 ? (
+                return (c.steam_id64 || nookSettings?.steam_id64) ? (
                   <SteamWidget
                     key={c.id}
                     title={c.title || cardTitles.steam || 'Steam Showcase'}
-                    steamId64={nookSettings.steam_id64}
-                    displayMode={nookSettings.steam_display_mode || 'both'}
+                    steamId64={c.steam_id64 || nookSettings.steam_id64}
+                    displayMode={c.steam_display_mode || nookSettings.steam_display_mode || 'both'}
                   />
                 ) : null;
 

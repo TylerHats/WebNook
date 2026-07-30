@@ -255,32 +255,42 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
       // Also scrape main Steam profile HTML page for all games listed on profile
       if (games.length < 3) {
         try {
-          const htmlUrl = parsedInput.type === 'steamid64'
-            ? `https://steamcommunity.com/profiles/${parsedInput.value}/`
-            : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/`;
-          const profileHtml = await fetchText(htmlUrl);
+          const urlsToTry = [
+            parsedInput.type === 'steamid64'
+              ? `https://steamcommunity.com/profiles/${parsedInput.value}/`
+              : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/`,
+            parsedInput.type === 'steamid64'
+              ? `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/`
+              : `https://steamcommunity.com/profiles/${parsedInput.value}/`
+          ];
 
-          const gameNameRegex = /<div class="game_name"><a[^>]*href="[^"]*app\/(\d+)"[^>]*>(.*?)<\/a><\/div>/gi;
-          let match: RegExpExecArray | null;
+          for (const htmlUrl of urlsToTry) {
+            if (games.length >= 3) break;
+            try {
+              const profileHtml = await fetchText(htmlUrl);
+              const gameNameRegex = /<div class="game_name"><a[^>]*href="[^"]*app\/(\d+)"[^>]*>(.*?)<\/a><\/div>/gi;
+              let match: RegExpExecArray | null;
 
-          while ((match = gameNameRegex.exec(profileHtml)) !== null) {
-            const appId = parseInt(match[1], 10);
-            const nameStr = match[2].replace(/<[^>]+>/g, '').trim();
+              while ((match = gameNameRegex.exec(profileHtml)) !== null) {
+                const appId = parseInt(match[1], 10);
+                const nameStr = match[2].replace(/<[^>]+>/g, '').trim();
 
-            if (nameStr && !games.some(existing => existing.name.toLowerCase() === nameStr.toLowerCase())) {
-              const contextChunk = profileHtml.substring(Math.max(0, match.index - 600), Math.min(profileHtml.length, match.index + 600));
-              const hoursMatch = contextChunk.match(/([0-9\.,]+)\s*hrs on record/i);
-              const imgMatch = contextChunk.match(/class="game_capsule"[^>]*src="(.*?)"/) || contextChunk.match(/src="(.*?capsule.*?)"/);
+                if (nameStr && !games.some(existing => existing.name.toLowerCase() === nameStr.toLowerCase())) {
+                  const contextChunk = profileHtml.substring(Math.max(0, match.index - 600), Math.min(profileHtml.length, match.index + 600));
+                  const hoursMatch = contextChunk.match(/([0-9\.,]+)\s*hrs on record/i);
+                  const imgMatch = contextChunk.match(/class="game_capsule"[^>]*src="(.*?)"/) || contextChunk.match(/src="(.*?capsule.*?)"/);
 
-              const hoursNum = hoursMatch ? Math.round(parseFloat(hoursMatch[1].replace(',', ''))) : 0;
-              games.push({
-                appid: appId,
-                name: nameStr,
-                playtime_2weeks: 0,
-                playtime_forever: hoursNum > 0 ? hoursNum : 10,
-                icon: imgMatch ? imgMatch[1] : (appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_184x69.jpg` : '')
-              });
-            }
+                  const hoursNum = hoursMatch ? Math.round(parseFloat(hoursMatch[1].replace(',', ''))) : 0;
+                  games.push({
+                    appid: appId,
+                    name: nameStr,
+                    playtime_2weeks: 0,
+                    playtime_forever: hoursNum > 0 ? hoursNum : 10,
+                    icon: imgMatch ? imgMatch[1] : (appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_184x69.jpg` : '')
+                  });
+                }
+              }
+            } catch (singleErr) {}
           }
         } catch (hErr) {
           console.warn('Steam HTML profile scrape fallback error:', hErr);

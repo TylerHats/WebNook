@@ -261,7 +261,28 @@ export const NookCustomizerPage: React.FC = () => {
                   ? JSON.parse(data.nookSettings.card_layout_json)
                   : data.nookSettings.card_layout_json;
                 if (Array.isArray(parsedLayout) && parsedLayout.length > 0) {
-                  setCardLayout(parsedLayout);
+                  const initMovies = data.nookSettings.favorite_movies_json ? (typeof data.nookSettings.favorite_movies_json === 'string' ? JSON.parse(data.nookSettings.favorite_movies_json) : data.nookSettings.favorite_movies_json) : [];
+                  const initBooks = data.nookSettings.favorite_books_json ? (typeof data.nookSettings.favorite_books_json === 'string' ? JSON.parse(data.nookSettings.favorite_books_json) : data.nookSettings.favorite_books_json) : [];
+                  let initTracks: any[] = [];
+                  if (data.nookSettings.music_tracks_json) {
+                    const p = typeof data.nookSettings.music_tracks_json === 'string' ? JSON.parse(data.nookSettings.music_tracks_json) : data.nookSettings.music_tracks_json;
+                    initTracks = Array.isArray(p) ? p : (p?.tracks || []);
+                  }
+                  const initHobbies = data.nookSettings.hobbies_json ? (typeof data.nookSettings.hobbies_json === 'string' ? JSON.parse(data.nookSettings.hobbies_json) : data.nookSettings.hobbies_json) : [];
+
+                  const initializedLayout = parsedLayout.map((c: any) => {
+                    const cardCopy = { ...c };
+                    if (cardCopy.type === 'movies' && !cardCopy.favorite_movies) cardCopy.favorite_movies = [...initMovies];
+                    if (cardCopy.type === 'books' && !cardCopy.favorite_books) cardCopy.favorite_books = [...initBooks];
+                    if (cardCopy.type === 'music' && !cardCopy.music_tracks) cardCopy.music_tracks = [...initTracks];
+                    if (cardCopy.type === 'hobbies' && !cardCopy.hobbies) cardCopy.hobbies = [...initHobbies];
+                    if (cardCopy.type === 'steam') {
+                      if (!cardCopy.steam_id64) cardCopy.steam_id64 = data.nookSettings.steam_id64 || '';
+                      if (!cardCopy.steam_display_mode) cardCopy.steam_display_mode = data.nookSettings.steam_display_mode || 'both';
+                    }
+                    return cardCopy;
+                  });
+                  setCardLayout(initializedLayout);
                 }
               } catch (e) {}
             }
@@ -859,7 +880,13 @@ export const NookCustomizerPage: React.FC = () => {
                       id: `c_${strVal}_${Date.now()}`,
                       type: strVal as any,
                       title: labels[strVal] || 'Card',
-                      enabled: true
+                      enabled: true,
+                      favorite_movies: strVal === 'movies' ? [...favoriteMovies] : undefined,
+                      favorite_books: strVal === 'books' ? [...favoriteBooks] : undefined,
+                      music_tracks: strVal === 'music' ? [...musicTracks] : undefined,
+                      hobbies: strVal === 'hobbies' ? [...hobbies] : undefined,
+                      steam_id64: strVal === 'steam' ? steamId64 : undefined,
+                      steam_display_mode: strVal === 'steam' ? steamDisplayMode : undefined
                     };
                     setCardLayout(prev => [...prev, newCard]);
                     showToast(`Added ${labels[strVal] || 'Card'} Card!`, 'info');
@@ -975,6 +1002,125 @@ export const NookCustomizerPage: React.FC = () => {
                       <span>Remove</span>
                     </button>
                   </div>
+
+                  {/* Inline Instance Data Editor for Card #idx */}
+                  {c.type === 'steam' && (
+                    <div style={{ width: '100%', marginTop: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div>
+                        <label style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Steam Profile ID / URL:</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 76561199229320790 or vanity username"
+                          value={c.steam_id64 !== undefined ? c.steam_id64 : steamId64}
+                          onChange={e => {
+                            const updated = [...cardLayout];
+                            updated[idx].steam_id64 = e.target.value;
+                            setCardLayout(updated);
+                            if (idx === cardLayout.findIndex(item => item.type === 'steam')) setSteamId64(e.target.value);
+                          }}
+                          style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Display Mode:</label>
+                        <select
+                          value={c.steam_display_mode !== undefined ? c.steam_display_mode : steamDisplayMode}
+                          onChange={e => {
+                            const updated = [...cardLayout];
+                            updated[idx].steam_display_mode = e.target.value as any;
+                            setCardLayout(updated);
+                            if (idx === cardLayout.findIndex(item => item.type === 'steam')) setSteamDisplayMode(e.target.value as any);
+                          }}
+                          style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.82rem' }}
+                        >
+                          <option value="both">🎮 Both Recent & Top Games</option>
+                          <option value="top_games">⭐ Top 3 All-Time Games</option>
+                          <option value="recently_played">⚡ Recently Played Games</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {c.type === 'movies' && (
+                    <div style={{ width: '100%', marginTop: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 700, opacity: 0.8 }}>Movies & TV Items for this Card ({ (c.favorite_movies || favoriteMovies).length } items):</div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {(c.favorite_movies || favoriteMovies).map((m: any, mIdx: number) => (
+                          <div key={m.id || mIdx} style={{ background: 'rgba(0,0,0,0.3)', padding: '0.35rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-color)' }}>
+                            <span style={{ fontWeight: 600 }}>{m.title}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentList = [...(c.favorite_movies || favoriteMovies)];
+                                currentList.splice(mIdx, 1);
+                                const updated = [...cardLayout];
+                                updated[idx].favorite_movies = currentList;
+                                setCardLayout(updated);
+                                if (idx === cardLayout.findIndex(item => item.type === 'movies')) setFavoriteMovies(currentList);
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem' }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {c.type === 'books' && (
+                    <div style={{ width: '100%', marginTop: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 700, opacity: 0.8 }}>Books for this Card ({ (c.favorite_books || favoriteBooks).length } items):</div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {(c.favorite_books || favoriteBooks).map((b: any, bIdx: number) => (
+                          <div key={b.id || bIdx} style={{ background: 'rgba(0,0,0,0.3)', padding: '0.35rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-color)' }}>
+                            <span style={{ fontWeight: 600 }}>{b.title}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentList = [...(c.favorite_books || favoriteBooks)];
+                                currentList.splice(bIdx, 1);
+                                const updated = [...cardLayout];
+                                updated[idx].favorite_books = currentList;
+                                setCardLayout(updated);
+                                if (idx === cardLayout.findIndex(item => item.type === 'books')) setFavoriteBooks(currentList);
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem' }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {c.type === 'music' && (
+                    <div style={{ width: '100%', marginTop: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 700, opacity: 0.8 }}>Playlist Tracks for this Card ({ (c.music_tracks || musicTracks).length } tracks):</div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {(c.music_tracks || musicTracks).map((tr: any, trIdx: number) => (
+                          <div key={tr.id || trIdx} style={{ background: 'rgba(0,0,0,0.3)', padding: '0.35rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-color)' }}>
+                            <span style={{ fontWeight: 600 }}>{tr.title}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentList = [...(c.music_tracks || musicTracks)];
+                                currentList.splice(trIdx, 1);
+                                const updated = [...cardLayout];
+                                updated[idx].music_tracks = currentList;
+                                setCardLayout(updated);
+                                if (idx === cardLayout.findIndex(item => item.type === 'music')) setMusicTracks(currentList);
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem' }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

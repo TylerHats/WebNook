@@ -41,7 +41,17 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
 
   const wantRecent = displayMode === 'recently_played' || displayMode === 'both';
   const wantTop = displayMode === 'top_games' || displayMode === 'both';
-  const effectiveTopGames = topGames.length > 0 ? topGames : recentlyPlayed;
+  
+  // Combine recently played and top games to guarantee 3 items
+  const combinedRecent = [...recentlyPlayed];
+  for (const g of topGames) {
+    if (combinedRecent.length >= 3) break;
+    if (!combinedRecent.some((e: any) => e.name.toLowerCase() === g.name.toLowerCase())) {
+      combinedRecent.push(g);
+    }
+  }
+
+  const effectiveTopGames = topGames.length > 0 ? topGames : combinedRecent;
 
   return (
     <div className="nook-panel">
@@ -86,11 +96,11 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
           {wantRecent && (
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                Top 3 Recently Played (Past 2 Weeks):
+                {combinedRecent.length === 1 ? 'Recently Played Game:' : `Top ${combinedRecent.length} Recently Played Games:`}
               </div>
-              {recentlyPlayed.length > 0 ? (
+              {combinedRecent.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  {recentlyPlayed.slice(0, 3).map((g: any, idx: number) => (
+                  {combinedRecent.slice(0, 3).map((g: any, idx: number) => (
                     <div
                       key={g.appid || idx}
                       style={{
@@ -109,7 +119,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                         <span>{g.name}</span>
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 600 }}>
-                        {g.playtime_2weeks !== undefined && g.playtime_2weeks > 0 ? `${g.playtime_2weeks} hrs (past 2 wks)` : `${g.playtime_forever} hrs total`}
+                        {g.playtime_2weeks !== undefined && g.playtime_2weeks > 0 ? `${g.playtime_2weeks} hrs (past 2 wks)` : `${g.playtime_forever || 0} hrs total`}
                       </div>
                     </div>
                   ))}
@@ -122,10 +132,10 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
             </div>
           )}
 
-          {wantTop && effectiveTopGames.length > 0 && (
+          {wantTop && displayMode !== 'recently_played' && effectiveTopGames.length > 0 && (
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                Top 3 All-Time Games:
+                Top All-Time Games:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 {effectiveTopGames.slice(0, 3).map((g: any, idx: number) => (
