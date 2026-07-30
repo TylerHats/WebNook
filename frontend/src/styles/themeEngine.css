@@ -61,6 +61,8 @@ input, textarea, select {
   font-size: 1.15rem;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  text-align: left;
   gap: 0.5rem;
   color: var(--accent-color);
 }
@@ -205,7 +207,8 @@ input, textarea, select {
 .theme-win98 img[style*="border-radius: 50%"], .theme-win9x img[style*="border-radius: 50%"],
 .theme-win98 img[style*="border-radius:50%"], .theme-win9x img[style*="border-radius:50%"] {
   border-radius: 50% !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.35) !important;
+  box-shadow: none !important;
+  border: 2px solid #ffffff !important;
 }
 
 /* Retro Scanline Overlay on Panels & Embedded Players (Non-blocking clickability) */

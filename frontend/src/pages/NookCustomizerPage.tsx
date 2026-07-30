@@ -16,6 +16,7 @@ export interface NookCardConfig {
   id: string;
   type: 'bio' | 'music' | 'friends' | 'guestbook' | 'steam' | 'movies' | 'books' | 'hobbies' | 'markdown' | 'html';
   title?: string;
+  icon?: string;
   enabled: boolean;
   content_markdown?: string;
   content_html?: string;
@@ -954,9 +955,9 @@ export const NookCustomizerPage: React.FC = () => {
                       flexWrap: 'wrap'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: '1 1 300px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 auto', minWidth: 0, flexWrap: 'wrap' }}>
                       {/* Up / Down reorder controls */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0 }}>
                         <button
                           type="button"
                           disabled={isFirst}
@@ -998,11 +999,11 @@ export const NookCustomizerPage: React.FC = () => {
                         updated[idx].enabled = e.target.checked;
                         setCardLayout(updated);
                       }}
-                      style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer', flexShrink: 0 }}
                     />
 
                     {/* Card Type Badge */}
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '6px', background: c.type === 'markdown' ? 'rgba(56,189,248,0.2)' : c.type === 'html' ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.1)', color: c.type === 'markdown' ? '#38bdf8' : c.type === 'html' ? '#c084fc' : 'var(--text-main)' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.45rem', borderRadius: '6px', background: c.type === 'markdown' ? 'rgba(56,189,248,0.2)' : c.type === 'html' ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.1)', color: c.type === 'markdown' ? '#38bdf8' : c.type === 'html' ? '#c084fc' : 'var(--text-main)', flexShrink: 0 }}>
                       {c.type.toUpperCase()}
                     </span>
 
@@ -1016,7 +1017,7 @@ export const NookCustomizerPage: React.FC = () => {
                         updated[idx].title = e.target.value;
                         setCardLayout(updated);
                       }}
-                      style={{ flex: 1, minWidth: '160px', padding: '0.4rem 0.6rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}
+                      style={{ flex: '1 1 120px', minWidth: 0, padding: '0.4rem 0.6rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}
                     />
                   </div>
 
@@ -1648,6 +1649,40 @@ export const NookCustomizerPage: React.FC = () => {
                     {cardHobbies.map((h: any, hIdx: number) => (
                       <div key={h.id || hIdx} style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          {/* Up / Down Reorder buttons for Hobby */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              disabled={hIdx === 0}
+                              onClick={() => {
+                                const updated = [...cardHobbies];
+                                const temp = updated[hIdx];
+                                updated[hIdx] = updated[hIdx - 1];
+                                updated[hIdx - 1] = temp;
+                                updateCardHobbies(updated);
+                              }}
+                              style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: hIdx === 0 ? 'rgba(255,255,255,0.2)' : '#fff', cursor: hIdx === 0 ? 'default' : 'pointer', padding: '1px 4px', borderRadius: '3px', fontSize: '0.65rem' }}
+                              title="Move Hobby Up"
+                            >
+                              <ArrowUp size={11} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={hIdx === cardHobbies.length - 1}
+                              onClick={() => {
+                                const updated = [...cardHobbies];
+                                const temp = updated[hIdx];
+                                updated[hIdx] = updated[hIdx + 1];
+                                updated[hIdx + 1] = temp;
+                                updateCardHobbies(updated);
+                              }}
+                              style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: hIdx === cardHobbies.length - 1 ? 'rgba(255,255,255,0.2)' : '#fff', cursor: hIdx === cardHobbies.length - 1 ? 'default' : 'pointer', padding: '1px 4px', borderRadius: '3px', fontSize: '0.65rem' }}
+                              title="Move Hobby Down"
+                            >
+                              <ArrowDown size={11} />
+                            </button>
+                          </div>
+
                           <input
                             type="text"
                             placeholder="Emoji"
@@ -1750,6 +1785,20 @@ export const NookCustomizerPage: React.FC = () => {
                           />
                         </label>
                       </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.2rem' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.85 }}>Card Header Icon / Emoji:</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 📄, ✨, 🚀, 💻"
+                          value={c.icon || ''}
+                          onChange={e => {
+                            const updated = [...cardLayout];
+                            updated[cIdx].icon = e.target.value;
+                            setCardLayout(updated);
+                          }}
+                          style={{ width: '100px', padding: '0.35rem 0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                        />
+                      </div>
                       <textarea
                         rows={5}
                         value={c.content_markdown || ''}
@@ -1768,6 +1817,20 @@ export const NookCustomizerPage: React.FC = () => {
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.85 }}>Card Header Icon / Emoji:</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. ⚡, 🎨, 🛠️, 💻"
+                          value={c.icon || ''}
+                          onChange={e => {
+                            const updated = [...cardLayout];
+                            updated[cIdx].icon = e.target.value;
+                            setCardLayout(updated);
+                          }}
+                          style={{ width: '100px', padding: '0.35rem 0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                        />
+                      </div>
                       <label style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.8 }}>Raw HTML Code Content:</label>
                       <textarea
                         rows={5}

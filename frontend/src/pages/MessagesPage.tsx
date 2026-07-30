@@ -626,12 +626,15 @@ export const MessagesPage: React.FC = () => {
         display: 'grid',
         gridTemplateColumns: isMobile ? '1fr' : 'minmax(260px, 320px) 1fr',
         gap: '1.5rem',
-        minHeight: '650px'
+        minHeight: '650px',
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}>
         
         {/* Left Sidebar: Conversations List (Hidden on mobile if viewing active chat) */}
         {(!isMobile || !mobileShowChat) && (
-          <div className="nook-panel" style={{ display: 'flex', flexDirection: 'column', padding: '0.85rem' }}>
+          <div className="nook-panel" style={{ display: 'flex', flexDirection: 'column', padding: '0.85rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
             
             {/* Search Input */}
             <div style={{ position: 'relative', marginBottom: '0.85rem' }}>
@@ -655,7 +658,7 @@ export const MessagesPage: React.FC = () => {
             </div>
 
             {/* Category Filter Tabs */}
-            <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', width: '100%' }}>
               {(['all', 'direct', 'group', 'system'] as const).map(tab => (
                 <button
                   key={tab}

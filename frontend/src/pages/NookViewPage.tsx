@@ -57,6 +57,14 @@ export const NookViewPage: React.FC = () => {
 
   const isWin9xTheme = profileData?.nookSettings?.theme === 'win98' || profileData?.nookSettings?.theme === 'win9x';
 
+  const [isMobileScreen, setIsMobileScreen] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileScreen(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Fully Randomized Per-Image Delays & Speeds (all finish within ~2.4s)
   useEffect(() => {
     if (!isWin9xTheme) return;
@@ -496,7 +504,11 @@ export const NookViewPage: React.FC = () => {
                   <div key={c.id} className="nook-panel">
                     {c.title && (
                       <div className="nook-panel-header">
-                        <FileText size={20} color="var(--accent-color)" />
+                        {c.icon ? (
+                          <span style={{ fontSize: '1.1rem', marginRight: '0.2rem' }}>{c.icon}</span>
+                        ) : (
+                          <FileText size={20} color="var(--accent-color)" />
+                        )}
                         <span>{c.title}</span>
                       </div>
                     )}
@@ -509,7 +521,11 @@ export const NookViewPage: React.FC = () => {
                   <div key={c.id} className="nook-panel">
                     {c.title && (
                       <div className="nook-panel-header">
-                        <Code size={20} color="var(--accent-color)" />
+                        {c.icon ? (
+                          <span style={{ fontSize: '1.1rem', marginRight: '0.2rem' }}>{c.icon}</span>
+                        ) : (
+                          <Code size={20} color="var(--accent-color)" />
+                        )}
                         <span>{c.title}</span>
                       </div>
                     )}
@@ -524,26 +540,34 @@ export const NookViewPage: React.FC = () => {
 
           return (
             <div className="nook-grid">
-              {/* Left Column Widgets */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {leftCards.map(c => renderSingleCard(c))}
-              </div>
-
-              {/* Right Column Widgets */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {rightCards.map(c => renderSingleCard(c))}
-              </div>
-
-              {/* Full Width Guestbook Cards */}
-              {guestbookCards.map(c => (
-                <div key={c.id} className="nook-full-col">
-                  <GuestbookWidget
-                    nookUsername={owner.username}
-                    nookTheme={nookSettings?.theme}
-                    themeSoundsEnabled={nookSettings?.theme_sounds_enabled !== 0 && nookSettings?.theme_sounds_enabled !== false}
-                  />
+              {isMobileScreen ? (
+                /* Mobile View: Render ALL active cards in a single column in sequential top-to-bottom order */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', gridColumn: '1 / -1' }}>
+                  {gridCards.map(c => renderSingleCard(c))}
                 </div>
-              ))}
+              ) : (
+                /* Desktop View: Split into 2 columns */
+                <>
+                  {/* Left Column Widgets */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {leftCards.map(c => renderSingleCard(c))}
+                  </div>
+
+                  {/* Right Column Widgets */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {rightCards.map(c => renderSingleCard(c))}
+                  </div>
+                </>
+              )}
+
+              {/* Always Render Guestbook Notes Section at the Bottom */}
+              <div className="nook-full-col" style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
+                <GuestbookWidget
+                  nookUsername={owner.username}
+                  nookTheme={nookSettings?.theme}
+                  themeSoundsEnabled={nookSettings?.theme_sounds_enabled !== 0 && nookSettings?.theme_sounds_enabled !== false}
+                />
+              </div>
             </div>
           );
         })()}
