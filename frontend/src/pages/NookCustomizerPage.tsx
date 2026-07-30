@@ -2076,6 +2076,7 @@ export const NookCustomizerPage: React.FC = () => {
             />
           </div>
         </div>
+      </div>
 
       <ImageCropModal
         isOpen={cropModal.isOpen}
