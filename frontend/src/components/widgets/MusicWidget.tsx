@@ -231,6 +231,24 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
                 </div>
               )}
 
+              {(activeTrack.type === 'spotify' || activeTrack.type === 'apple') && (
+                <div style={{
+                  fontSize: '0.73rem',
+                  opacity: 0.85,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  background: 'rgba(0,0,0,0.2)',
+                  padding: '0.35rem 0.65rem',
+                  borderRadius: '6px',
+                  marginBottom: '0.5rem',
+                  border: '1px solid var(--border-color)'
+                }}>
+                  <span>💡</span>
+                  <span>Sign in to <strong>{activeTrack.type === 'spotify' ? 'Spotify' : 'Apple Music'}</strong> in your browser to hear full-length tracks!</span>
+                </div>
+              )}
+
               {activeTrack.type === 'spotify' && (
                 <div style={{ borderRadius: '12px', overflow: 'hidden' }}>
                   <iframe

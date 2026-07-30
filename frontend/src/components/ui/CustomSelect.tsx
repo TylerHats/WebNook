@@ -101,7 +101,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
             left: 0,
             right: 0,
             zIndex: 9999,
-            background: 'var(--panel-bg, #1e1e2e)',
+            background: 'var(--bg-panel, var(--card-bg, rgba(20, 20, 30, 0.95)))',
             backdropFilter: 'blur(16px)',
             border: '1px solid var(--border-color)',
             borderRadius: '10px',

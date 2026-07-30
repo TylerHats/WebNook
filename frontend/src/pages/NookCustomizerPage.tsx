@@ -1479,24 +1479,51 @@ export const NookCustomizerPage: React.FC = () => {
                       >
                         + Add
                       </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Favorite Movies List */}
+                    </            {/* Favorite Movies List */}
             {favoriteMovies.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '0.75rem' }}>
                 {favoriteMovies.map((m, idx) => (
                   <div key={m.id || idx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
-                    <button
-                      type="button"
-                      onClick={() => setFavoriteMovies(favoriteMovies.filter((_, i) => i !== idx))}
-                      style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.8)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '0.75rem', zIndex: 2 }}
-                    >
-                      ✕
-                    </button>
+                    <div style={{ position: 'absolute', top: '6px', right: '6px', display: 'flex', gap: '2px', zIndex: 2 }}>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => {
+                          const updated = [...favoriteMovies];
+                          const temp = updated[idx];
+                          updated[idx] = updated[idx - 1];
+                          updated[idx - 1] = temp;
+                          setFavoriteMovies(updated);
+                        }}
+                        style={{ background: 'rgba(0,0,0,0.7)', color: idx === 0 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: idx === 0 ? 'default' : 'pointer' }}
+                        title="Move Up/Left"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === favoriteMovies.length - 1}
+                        onClick={() => {
+                          const updated = [...favoriteMovies];
+                          const temp = updated[idx];
+                          updated[idx] = updated[idx + 1];
+                          updated[idx + 1] = temp;
+                          setFavoriteMovies(updated);
+                        }}
+                        style={{ background: 'rgba(0,0,0,0.7)', color: idx === favoriteMovies.length - 1 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: idx === favoriteMovies.length - 1 ? 'default' : 'pointer' }}
+                        title="Move Down/Right"
+                      >
+                        ▼
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFavoriteMovies(favoriteMovies.filter((_, i) => i !== idx))}
+                        style={{ background: 'rgba(239, 68, 68, 0.85)', color: '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: 'pointer' }}
+                        title="Remove Movie"
+                      >
+                        ✕
+                      </button>
+                    </div>
                     <img src={m.posterUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
                     <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{m.type} • {m.year}</div>
@@ -1623,7 +1650,7 @@ export const NookCustomizerPage: React.FC = () => {
                         type="button"
                         onClick={() => {
                           setFavoriteBooks(prev => [...prev, b]);
-                          showToast(`Added "${b.title}" to books!`, 'success');
+                          showToast(`Added "${b.title}" to reading nook!`, 'success');
                         }}
                         className="btn-primary"
                         style={{ width: '100%', padding: '0.2rem', fontSize: '0.72rem', marginTop: '0.4rem' }}
@@ -1641,13 +1668,46 @@ export const NookCustomizerPage: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '0.75rem' }}>
                 {favoriteBooks.map((b, idx) => (
                   <div key={b.id || idx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
-                    <button
-                      type="button"
-                      onClick={() => setFavoriteBooks(favoriteBooks.filter((_, i) => i !== idx))}
-                      style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.8)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '0.75rem', zIndex: 2 }}
-                    >
-                      ✕
-                    </button>
+                    <div style={{ position: 'absolute', top: '6px', right: '6px', display: 'flex', gap: '2px', zIndex: 2 }}>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => {
+                          const updated = [...favoriteBooks];
+                          const temp = updated[idx];
+                          updated[idx] = updated[idx - 1];
+                          updated[idx - 1] = temp;
+                          setFavoriteBooks(updated);
+                        }}
+                        style={{ background: 'rgba(0,0,0,0.7)', color: idx === 0 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: idx === 0 ? 'default' : 'pointer' }}
+                        title="Move Up/Left"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === favoriteBooks.length - 1}
+                        onClick={() => {
+                          const updated = [...favoriteBooks];
+                          const temp = updated[idx];
+                          updated[idx] = updated[idx + 1];
+                          updated[idx + 1] = temp;
+                          setFavoriteBooks(updated);
+                        }}
+                        style={{ background: 'rgba(0,0,0,0.7)', color: idx === favoriteBooks.length - 1 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: idx === favoriteBooks.length - 1 ? 'default' : 'pointer' }}
+                        title="Move Down/Right"
+                      >
+                        ▼
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFavoriteBooks(favoriteBooks.filter((_, i) => i !== idx))}
+                        style={{ background: 'rgba(239, 68, 68, 0.85)', color: '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: 'pointer' }}
+                        title="Remove Book"
+                      >
+                        ✕
+                      </button>
+                    </div>
                     <img src={b.coverUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
                     <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{b.author}</div>

@@ -484,6 +484,7 @@ export const NookViewPage: React.FC = () => {
                 return nookSettings?.steam_id64 ? (
                   <SteamWidget
                     key={c.id}
+                    title={c.title || cardTitles.steam || 'Steam Showcase'}
                     steamId64={nookSettings.steam_id64}
                     displayMode={nookSettings.steam_display_mode || 'both'}
                   />

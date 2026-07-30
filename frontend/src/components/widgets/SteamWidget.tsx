@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Gamepad2, ExternalLink, Sparkles } from 'lucide-react';
 
 interface SteamWidgetProps {
+  title?: string;
   steamId64?: string;
   displayMode?: 'none' | 'recently_played' | 'top_games' | 'both';
 }
 
 export const SteamWidget: React.FC<SteamWidgetProps> = ({
+  title = 'Steam Showcase',
   steamId64,
   displayMode = 'both'
 }) => {
@@ -46,7 +48,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Gamepad2 size={20} color="var(--accent-color)" />
-          <span>Steam Showcase</span>
+          <span>{title}</span>
         </div>
         {player?.profileUrl && (
           <a

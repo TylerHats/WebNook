@@ -288,7 +288,6 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
       }
 
       const topGamesSorted = [...games]
-        .filter(g => (g.playtime_forever || 0) > 0)
         .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
         .slice(0, 3);
 
@@ -298,6 +297,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
         .slice(0, 3);
 
       const finalRecent = recentGamesSorted.length > 0 ? recentGamesSorted : games.slice(0, 3);
+      const finalTop = topGamesSorted.length > 0 ? topGamesSorted : games.slice(0, 3);
 
       return res.json({
         player: {
@@ -308,7 +308,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           stateMessage: stateMessageMatch ? stateMessageMatch[1] : ''
         },
         recentlyPlayed: finalRecent,
-        topGames: topGamesSorted.length > 0 ? topGamesSorted : finalRecent
+        topGames: finalTop
       });
     } catch (scrapeErr) {
       console.warn('Steam XML scrape fallback error:', scrapeErr);
