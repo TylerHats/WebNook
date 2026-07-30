@@ -1479,7 +1479,13 @@ export const NookCustomizerPage: React.FC = () => {
                       >
                         + Add
                       </button>
-                    </            {/* Favorite Movies List */}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Favorite Movies List */}
             {favoriteMovies.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '0.75rem' }}>
                 {favoriteMovies.map((m, idx) => (
