@@ -41,17 +41,6 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
 
   const wantRecent = displayMode === 'recently_played' || displayMode === 'both';
   const wantTop = displayMode === 'top_games' || displayMode === 'both';
-  
-  // Combine recently played and top games to guarantee 3 items
-  const combinedRecent = [...recentlyPlayed];
-  for (const g of topGames) {
-    if (combinedRecent.length >= 3) break;
-    if (!combinedRecent.some((e: any) => e.name.toLowerCase() === g.name.toLowerCase())) {
-      combinedRecent.push(g);
-    }
-  }
-
-  const effectiveTopGames = topGames.length > 0 ? topGames : combinedRecent;
 
   return (
     <div className="nook-panel">
@@ -96,11 +85,11 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
           {wantRecent && (
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                {combinedRecent.length === 1 ? 'Recently Played Game:' : `Top ${combinedRecent.length} Recently Played Games:`}
+                {recentlyPlayed.length === 1 ? 'Recently Played Game:' : 'Recently Played Games (Past 2 Weeks):'}
               </div>
-              {combinedRecent.length > 0 ? (
+              {recentlyPlayed.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  {combinedRecent.slice(0, 3).map((g: any, idx: number) => (
+                  {recentlyPlayed.slice(0, 3).map((g: any, idx: number) => (
                     <div
                       key={g.appid || idx}
                       style={{
@@ -132,13 +121,13 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
             </div>
           )}
 
-          {wantTop && effectiveTopGames.length > 0 && (
+          {wantTop && topGames.length > 0 && (
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
                 Top All-Time Games:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {effectiveTopGames.slice(0, 3).map((g: any, idx: number) => (
+                {topGames.slice(0, 3).map((g: any, idx: number) => (
                   <div
                     key={g.appid || idx}
                     style={{

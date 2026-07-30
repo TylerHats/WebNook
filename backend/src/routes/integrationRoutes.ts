@@ -277,31 +277,36 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           ];
 
           for (const htmlUrl of urlsToTry) {
-            if (games.length >= 3) break;
             try {
               const profileHtml = await fetchText(htmlUrl);
-              const gameNameRegex = /<div class="game_name"><a[^>]*href="[^"]*app\/(\d+)"[^>]*>(.*?)<\/a><\/div>/gi;
-              let match: RegExpExecArray | null;
+              const gameBlocks = profileHtml.split('<div class="recent_game">');
 
-              while ((match = gameNameRegex.exec(profileHtml)) !== null) {
-                const appId = parseInt(match[1], 10);
-                const nameStr = match[2].replace(/<[^>]+>/g, '').trim();
+              for (let i = 1; i < gameBlocks.length; i++) {
+                const block = gameBlocks[i];
+                const nameMatch = block.match(/<div class="game_name"><a[^>]*href="[^"]*app\/(\d+)"[^>]*>(.*?)<\/a><\/div>/i);
+                const hoursMatch = block.match(/([0-9\.,]+)\s*hrs on record/i);
+                const recent2WkMatch = block.match(/([0-9\.,]+)\s*hrs in the last 2 weeks/i) || block.match(/([0-9\.,]+)\s*hrs past 2 weeks/i);
+                const imgMatch = block.match(/class="game_capsule"[^>]*src="(.*?)"/i) || block.match(/src="(.*?capsule.*?)"/i);
 
-                if (nameStr && !games.some(existing => existing.name.toLowerCase() === nameStr.toLowerCase())) {
-                  const contextChunk = profileHtml.substring(Math.max(0, match.index - 600), Math.min(profileHtml.length, match.index + 600));
-                  const hoursMatch = contextChunk.match(/([0-9\.,]+)\s*hrs on record/i);
-                  const imgMatch = contextChunk.match(/class="game_capsule"[^>]*src="(.*?)"/) || contextChunk.match(/src="(.*?capsule.*?)"/);
+                if (nameMatch) {
+                  const appId = parseInt(nameMatch[1], 10);
+                  const nameStr = nameMatch[2].replace(/<[^>]+>/g, '').trim();
 
-                  const hoursNum = hoursMatch ? Math.round(parseFloat(hoursMatch[1].replace(',', ''))) : 0;
-                  games.push({
-                    appid: appId,
-                    name: nameStr,
-                    playtime_2weeks: 0,
-                    playtime_forever: hoursNum > 0 ? hoursNum : 10,
-                    icon: imgMatch ? imgMatch[1] : (appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_184x69.jpg` : '')
-                  });
+                  if (nameStr && !games.some(existing => existing.name.toLowerCase() === nameStr.toLowerCase())) {
+                    const hoursNum = hoursMatch ? Math.round(parseFloat(hoursMatch[1].replace(',', ''))) : 0;
+                    const hours2Wk = recent2WkMatch ? parseFloat(recent2WkMatch[1].replace(',', '')) : 0;
+
+                    games.push({
+                      appid: appId,
+                      name: nameStr,
+                      playtime_2weeks: hours2Wk,
+                      playtime_forever: hoursNum,
+                      icon: imgMatch ? imgMatch[1] : (appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_184x69.jpg` : '')
+                    });
+                  }
                 }
               }
+              if (games.length >= 3) break;
             } catch (singleErr) {}
           }
         } catch (hErr) {
@@ -318,9 +323,6 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
         .sort((a, b) => (b.playtime_2weeks || 0) - (a.playtime_2weeks || 0))
         .slice(0, 3);
 
-      const finalRecent = recentGamesSorted.length > 0 ? recentGamesSorted : games.slice(0, 3);
-      const finalTop = topGamesSorted.length > 0 ? topGamesSorted : games.slice(0, 3);
-
       return res.json({
         player: {
           personaName,
@@ -329,8 +331,8 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           personaState: isOnline ? 1 : 0,
           stateMessage: stateMessageMatch ? stateMessageMatch[1] : ''
         },
-        recentlyPlayed: finalRecent,
-        topGames: finalTop
+        recentlyPlayed: recentGamesSorted,
+        topGames: topGamesSorted
       });
     } catch (scrapeErr) {
       console.warn('Steam XML scrape fallback error:', scrapeErr);
