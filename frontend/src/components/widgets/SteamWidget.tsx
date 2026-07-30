@@ -59,7 +59,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   // Determine status display details
   const isInGame = player?.inGameTitle || player?.stateMessage?.toLowerCase().includes('in-game');
   const isOnline = player?.personaState > 0 || player?.stateMessage?.toLowerCase() === 'online' || isInGame;
-  const statusColor = isInGame ? 'var(--accent-color)' : (isOnline ? '#22c55e' : '#9ca3af');
+  const statusColor = isInGame ? '#66c0f4' : (isOnline ? '#57cbde' : '#c6d4df');
 
   // Format 2-week playtime display
   const formatRecentTime = (g: any) => {
@@ -101,7 +101,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
         )}
       </div>
 
-      {/* User Info Header Banner */}
+      {/* User Info Header Banner (Steam Blue Signature Box) */}
       {player && (
         <div
           style={{
@@ -109,10 +109,11 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
             alignItems: 'center',
             gap: '0.85rem',
             marginBottom: displayMode === 'none' ? '0' : '1rem',
-            background: 'rgba(0, 0, 0, 0.2)',
+            background: 'linear-gradient(135deg, #171a21 0%, #1b2838 100%)',
             padding: '0.75rem',
             borderRadius: '10px',
-            border: '1px solid var(--border-color)'
+            border: '1px solid rgba(102, 192, 244, 0.35)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)'
           }}
         >
           <img
@@ -128,10 +129,10 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
           />
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {player.personaName}
             </div>
-            <div style={{ fontSize: '0.75rem', color: statusColor, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '2px' }}>
+            <div style={{ fontSize: '0.78rem', color: statusColor, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '2px' }}>
               <span>
                 {isInGame
                   ? `🎮 In-Game: ${player.inGameTitle || player.stateMessage.replace(/^In-Game:\s*/i, '')}`

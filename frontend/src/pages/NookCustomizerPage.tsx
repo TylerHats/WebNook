@@ -927,8 +927,7 @@ export const NookCustomizerPage: React.FC = () => {
                     { value: 'hobbies', label: '🎯 Hobbies & Passions' },
                     { value: 'movies', label: '🍿 Movies & TV Showcase' },
                     { value: 'books', label: '📖 Reading Nook & Books' },
-                    { value: 'steam', label: '🎮 Steam Gaming Showcase' },
-                    { value: 'guestbook', label: '✍️ Guestbook Notes' }
+                    { value: 'steam', label: '🎮 Steam Gaming Showcase' }
                   ]}
                   style={{ minWidth: '210px' }}
                 />
@@ -937,55 +936,66 @@ export const NookCustomizerPage: React.FC = () => {
 
             {/* Reorderable List of Cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {cardLayout.map((c, idx) => (
-                <div
-                  key={c.id}
-                  style={{
-                    background: 'rgba(0,0,0,0.25)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '10px',
-                    padding: '0.75rem 1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '0.75rem',
-                    flexWrap: 'wrap'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: '1 1 300px' }}>
-                    {/* Up / Down reorder controls */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={() => {
-                          const updated = [...cardLayout];
-                          const temp = updated[idx];
-                          updated[idx] = updated[idx - 1];
-                          updated[idx - 1] = temp;
-                          setCardLayout(updated);
-                        }}
-                        style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: idx === 0 ? 'rgba(255,255,255,0.2)' : '#fff', cursor: idx === 0 ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
-                        title="Move Card Up"
-                      >
-                        <ArrowUp size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={idx === cardLayout.length - 1}
-                        onClick={() => {
-                          const updated = [...cardLayout];
-                          const temp = updated[idx];
-                          updated[idx] = updated[idx + 1];
-                          updated[idx + 1] = temp;
-                          setCardLayout(updated);
-                        }}
-                        style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: idx === cardLayout.length - 1 ? 'rgba(255,255,255,0.2)' : '#fff', cursor: idx === cardLayout.length - 1 ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
-                        title="Move Card Down"
-                      >
-                        <ArrowDown size={13} />
-                      </button>
-                    </div>
+              {cardLayout.map((c, idx) => {
+                const isGuestbook = c.type === 'guestbook';
+                const isFirst = idx === 0;
+                const isLastReorderable = idx === cardLayout.length - 1 || cardLayout[idx + 1]?.type === 'guestbook';
+
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      background: 'rgba(0,0,0,0.25)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '0.75rem 1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: '1 1 300px' }}>
+                      {/* Up / Down reorder controls (Hidden for Guestbook) */}
+                      {!isGuestbook ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <button
+                            type="button"
+                            disabled={isFirst}
+                            onClick={() => {
+                              const updated = [...cardLayout];
+                              const temp = updated[idx];
+                              updated[idx] = updated[idx - 1];
+                              updated[idx - 1] = temp;
+                              setCardLayout(updated);
+                            }}
+                            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: isFirst ? 'rgba(255,255,255,0.2)' : '#fff', cursor: isFirst ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
+                            title="Move Card Up"
+                          >
+                            <ArrowUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isLastReorderable}
+                            onClick={() => {
+                              const updated = [...cardLayout];
+                              const temp = updated[idx];
+                              updated[idx] = updated[idx + 1];
+                              updated[idx + 1] = temp;
+                              setCardLayout(updated);
+                            }}
+                            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: isLastReorderable ? 'rgba(255,255,255,0.2)' : '#fff', cursor: isLastReorderable ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
+                            title="Move Card Down"
+                          >
+                            <ArrowDown size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.72rem', opacity: 0.65, fontStyle: 'italic', fontWeight: 600, padding: '0.2rem 0.4rem' }} title="Guestbook is always pinned to the bottom of the profile">
+                          📌 Locked to Bottom
+                        </span>
+                      )}
 
                     {/* Enable Checkbox */}
                     <input
@@ -1031,7 +1041,8 @@ export const NookCustomizerPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           </div>
 
