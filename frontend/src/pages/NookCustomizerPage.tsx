@@ -830,8 +830,9 @@ export const NookCustomizerPage: React.FC = () => {
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <CustomSelect
                   value=""
-                  onChange={(val: string) => {
-                    if (!val) return;
+                  onChange={(val: string | number) => {
+                    const strVal = String(val);
+                    if (!strVal) return;
                     const labels: Record<string, string> = {
                       bio: 'About Me',
                       music: 'My Music Playlist',
@@ -843,13 +844,13 @@ export const NookCustomizerPage: React.FC = () => {
                       guestbook: 'Guestbook Notes'
                     };
                     const newCard: NookCardConfig = {
-                      id: `c_${val}_${Date.now()}`,
-                      type: val as any,
-                      title: labels[val] || 'Card',
+                      id: `c_${strVal}_${Date.now()}`,
+                      type: strVal as any,
+                      title: labels[strVal] || 'Card',
                       enabled: true
                     };
                     setCardLayout(prev => [...prev, newCard]);
-                    showToast(`Added ${labels[val]} Card!`, 'info');
+                    showToast(`Added ${labels[strVal] || 'Card'} Card!`, 'info');
                   }}
                   placeholder="+ Add Preformatted Card..."
                   options={[
