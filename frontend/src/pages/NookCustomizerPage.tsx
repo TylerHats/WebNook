@@ -9,6 +9,7 @@ import { VisualStickerStudioModal } from '../components/nook/VisualStickerStudio
 import { MusicTrack } from '../components/widgets/MusicWidget';
 import { HobbiesWidget, HobbyItem } from '../components/widgets/HobbiesWidget';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
+import { CustomSelect } from '../components/ui/CustomSelect';
 
 export interface NookCardConfig {
   id: string;
@@ -829,7 +830,7 @@ export const NookCustomizerPage: React.FC = () => {
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <CustomSelect
                   value=""
-                  onChange={(val) => {
+                  onChange={(val: string) => {
                     if (!val) return;
                     const labels: Record<string, string> = {
                       bio: 'About Me',
@@ -878,7 +879,7 @@ export const NookCustomizerPage: React.FC = () => {
                     padding: '0.75rem 1rem',
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     gap: '0.75rem',
                     flexWrap: 'wrap'
                   }}
