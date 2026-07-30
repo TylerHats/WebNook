@@ -276,12 +276,33 @@ export const NookCustomizerPage: React.FC = () => {
                   }
                   const initHobbies = data.nookSettings.hobbies_json ? (typeof data.nookSettings.hobbies_json === 'string' ? JSON.parse(data.nookSettings.hobbies_json) : data.nookSettings.hobbies_json) : [];
 
-                  const initializedLayout = parsedLayout.map((c: any) => {
+                  const initializedLayout = parsedLayout.map((c: any, idx: number) => {
                     const cardCopy = { ...c };
-                    if (cardCopy.type === 'movies' && !cardCopy.favorite_movies) cardCopy.favorite_movies = [...initMovies];
-                    if (cardCopy.type === 'books' && !cardCopy.favorite_books) cardCopy.favorite_books = [...initBooks];
-                    if (cardCopy.type === 'music' && !cardCopy.music_tracks) cardCopy.music_tracks = [...initTracks];
-                    if (cardCopy.type === 'hobbies' && !cardCopy.hobbies) cardCopy.hobbies = [...initHobbies];
+                    const firstMoviesIdx = parsedLayout.findIndex((item: any) => item.type === 'movies');
+                    const firstBooksIdx = parsedLayout.findIndex((item: any) => item.type === 'books');
+                    const firstMusicIdx = parsedLayout.findIndex((item: any) => item.type === 'music');
+                    const firstHobbiesIdx = parsedLayout.findIndex((item: any) => item.type === 'hobbies');
+
+                    if (cardCopy.type === 'movies') {
+                      if (!cardCopy.favorite_movies) {
+                        cardCopy.favorite_movies = idx === firstMoviesIdx ? [...initMovies] : [];
+                      }
+                    }
+                    if (cardCopy.type === 'books') {
+                      if (!cardCopy.favorite_books) {
+                        cardCopy.favorite_books = idx === firstBooksIdx ? [...initBooks] : [];
+                      }
+                    }
+                    if (cardCopy.type === 'music') {
+                      if (!cardCopy.music_tracks) {
+                        cardCopy.music_tracks = idx === firstMusicIdx ? [...initTracks] : [];
+                      }
+                    }
+                    if (cardCopy.type === 'hobbies') {
+                      if (!cardCopy.hobbies) {
+                        cardCopy.hobbies = idx === firstHobbiesIdx ? [...initHobbies] : [];
+                      }
+                    }
                     if (cardCopy.type === 'steam') {
                       if (!cardCopy.steam_id64) cardCopy.steam_id64 = data.nookSettings.steam_id64 || '';
                       if (!cardCopy.steam_display_mode) cardCopy.steam_display_mode = data.nookSettings.steam_display_mode || 'both';
@@ -887,10 +908,10 @@ export const NookCustomizerPage: React.FC = () => {
                       type: strVal as any,
                       title: labels[strVal] || 'Card',
                       enabled: true,
-                      favorite_movies: strVal === 'movies' ? [...favoriteMovies] : undefined,
-                      favorite_books: strVal === 'books' ? [...favoriteBooks] : undefined,
-                      music_tracks: strVal === 'music' ? [...musicTracks] : undefined,
-                      hobbies: strVal === 'hobbies' ? [...hobbies] : undefined,
+                      favorite_movies: strVal === 'movies' ? [] : undefined,
+                      favorite_books: strVal === 'books' ? [] : undefined,
+                      music_tracks: strVal === 'music' ? [] : undefined,
+                      hobbies: strVal === 'hobbies' ? [] : undefined,
                       steam_id64: strVal === 'steam' ? steamId64 : undefined,
                       steam_display_mode: strVal === 'steam' ? steamDisplayMode : undefined
                     };
@@ -1013,920 +1034,756 @@ export const NookCustomizerPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Dedicated Custom Cards Editor Panel (Markdown & HTML Cards) */}
-          {cardLayout.some(c => c.type === 'markdown' || c.type === 'html') && (
-            <div className="nook-panel">
-              <div className="nook-panel-header">
-                <Code size={20} />
-                <span>Custom Markdown & Custom HTML Cards Editor</span>
-              </div>
-              <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
-                Edit the text, markdown markup, photo attachments, or HTML embeds for your custom cards below:
-              </p>
+          {/* Dynamic Card Showcase Panels (Dedicated Editor for EVERY Card in cardLayout) */}
+          {cardLayout.map((c, cIdx) => {
+            const cardNumLabel = `Card #${cIdx + 1}: ${c.title || c.type.toUpperCase()}`;
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {cardLayout.map((c, idx) => {
-                  if (c.type !== 'markdown' && c.type !== 'html') return null;
+            const updateCardMovies = (newMovies: any[]) => {
+              const updated = [...cardLayout];
+              updated[cIdx].favorite_movies = newMovies;
+              setCardLayout(updated);
+              if (cIdx === cardLayout.findIndex(item => item.type === 'movies')) setFavoriteMovies(newMovies);
+            };
 
-                  return (
-                    <div
-                      key={c.id}
-                      style={{
-                        background: 'rgba(0,0,0,0.2)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '12px',
-                        padding: '1.25rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.85rem'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          {c.type === 'markdown' ? <FileText size={18} color="#38bdf8" /> : <Code size={18} color="#c084fc" />}
-                          <span>{c.title || (c.type === 'markdown' ? 'Custom Markdown Card' : 'Custom HTML Card')}</span>
-                        </span>
-                        <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>Card #{idx + 1}</span>
-                      </div>
+            const updateCardBooks = (newBooks: any[]) => {
+              const updated = [...cardLayout];
+              updated[cIdx].favorite_books = newBooks;
+              setCardLayout(updated);
+              if (cIdx === cardLayout.findIndex(item => item.type === 'books')) setFavoriteBooks(newBooks);
+            };
 
-                      {c.type === 'markdown' ? (
-                        <>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.8 }}>Markdown Text Content:</label>
-                            <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.25rem 0.6rem', fontSize: '0.78rem' }}>
-                              <Upload size={14} />
-                              <span>Attach / Insert Photo...</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={async (e) => {
-                                  const f = e.target.files?.[0];
-                                  if (!f || !token) return;
-                                  const formData = new FormData();
-                                  formData.append('sticker', f);
-                                  try {
-                                    const res = await fetch('/api/nook/upload/sticker', {
-                                      method: 'POST',
-                                      headers: { Authorization: `Bearer ${token}` },
-                                      body: formData
-                                    });
-                                    const data = await res.json();
-                                    if (res.ok) {
-                                      const imageMarkdown = `\n\n![${f.name}](${data.sticker_url})\n`;
-                                      const updated = [...cardLayout];
-                                      updated[idx].content_markdown = (updated[idx].content_markdown || '') + imageMarkdown;
-                                      setCardLayout(updated);
-                                      showToast('Photo uploaded & inserted into Markdown card!', 'success');
-                                    } else {
-                                      showToast(data.error || 'Photo upload failed', 'error');
-                                    }
-                                  } catch (err) {
-                                    showToast('Error uploading photo', 'error');
-                                  }
-                                }}
-                                style={{ display: 'none' }}
-                              />
-                            </label>
-                          </div>
-                          <textarea
-                            rows={5}
-                            value={c.content_markdown || ''}
-                            onChange={e => {
-                              const updated = [...cardLayout];
-                              updated[idx].content_markdown = e.target.value;
-                              setCardLayout(updated);
-                            }}
-                            placeholder="Write markdown here... Use ### for headings, **bold**, *italic*, [link](url), or ![alt](image_url)..."
-                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontFamily: 'monospace', lineHeight: 1.5 }}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.8 }}>Raw HTML Code Content:</label>
-                          <textarea
-                            rows={5}
-                            value={c.content_html || ''}
-                            onChange={e => {
-                              const updated = [...cardLayout];
-                              updated[idx].content_html = e.target.value;
-                              setCardLayout(updated);
-                            }}
-                            placeholder="Input custom HTML markup, embeds, or styled divs here..."
-                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontFamily: 'monospace', lineHeight: 1.5 }}
-                          />
+            const updateCardMusic = (newTracks: any[]) => {
+              const updated = [...cardLayout];
+              updated[cIdx].music_tracks = newTracks;
+              setCardLayout(updated);
+              if (cIdx === cardLayout.findIndex(item => item.type === 'music')) setMusicTracks(newTracks);
+            };
 
-                          {/* Live HTML Card Preview Box */}
-                          <div style={{ marginTop: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '0.85rem' }}>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.6, marginBottom: '0.5rem' }}>HTML CARD LIVE PREVIEW:</div>
-                            <div dangerouslySetInnerHTML={{ __html: c.content_html || '' }} />
-                          </div>
-                        </>
-                      )}
+            const updateCardHobbies = (newHobbies: any[]) => {
+              const updated = [...cardLayout];
+              updated[cIdx].hobbies = newHobbies;
+              setCardLayout(updated);
+              if (cIdx === cardLayout.findIndex(item => item.type === 'hobbies')) setHobbies(newHobbies);
+            };
+
+            if (c.type === 'steam') {
+              return (
+                <div key={c.id} className="nook-panel">
+                  <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Gamepad2 size={20} />
+                      <span>🎮 Steam Gaming Showcase ({cardNumLabel})</span>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Nook Privacy Controls */}
-          <div className="nook-panel">
-            <div className="nook-panel-header">
-              <Eye size={20} />
-              <span>Nook Visibility & Privacy</span>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              {[
-                { id: 'private', label: '🔒 Private (Default - Friends Only Access)' },
-                { id: 'public', label: '🌐 Public (Anyone can view)' }
-              ].map(opt => (
-                <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
-                  <input
-                    type="radio"
-                    name="visibility"
-                    value={opt.id}
-                    checked={visibilityNook === opt.id}
-                    onChange={e => setVisibilityNook(e.target.value)}
-                  />
-                  <span>{opt.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Steam Setup Section */}
-          <div className="nook-panel">
-            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Gamepad2 size={20} style={{ flexShrink: 0 }} />
-              <span>Steam Account Integration & Game Showcase Setup</span>
-            </div>
-            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
-              Link your Steam account to display your live avatar, online status, and game showcase!
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam Profile ID / Custom Vanity URL / SteamID64</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. TylerHats or https://steamcommunity.com/id/TylerHats or 765611980..."
-                    value={steamId64}
-                    onChange={e => setSteamId64(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-                  />
+                  </div>
+                  <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
+                    Link a Steam account to display live avatar, online status, and game showcase for this card:
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam Profile ID / URL / SteamID64:</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 76561199229320790 or vanity username"
+                        value={c.steam_id64 !== undefined ? c.steam_id64 : steamId64}
+                        onChange={e => {
+                          const updated = [...cardLayout];
+                          updated[cIdx].steam_id64 = e.target.value;
+                          setCardLayout(updated);
+                          if (cIdx === cardLayout.findIndex(item => item.type === 'steam')) setSteamId64(e.target.value);
+                        }}
+                        style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Display Mode:</label>
+                      <select
+                        value={c.steam_display_mode !== undefined ? c.steam_display_mode : steamDisplayMode}
+                        onChange={e => {
+                          const updated = [...cardLayout];
+                          updated[cIdx].steam_display_mode = e.target.value as any;
+                          setCardLayout(updated);
+                          if (cIdx === cardLayout.findIndex(item => item.type === 'steam')) setSteamDisplayMode(e.target.value as any);
+                        }}
+                        style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                      >
+                        <option value="both">Top 3 Recently Played + Top 3 All-Time Games (Both)</option>
+                        <option value="recently_played">Top 3 Recently Played Games (Past 2 Weeks Only)</option>
+                        <option value="top_games">Top 3 All-Time Games (Lifetime Hours Only)</option>
+                        <option value="none">Hide Games List (Show Avatar & Status Only)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Games Showcase Display Mode</label>
-                  <select
-                    value={steamDisplayMode}
-                    onChange={e => setSteamDisplayMode(e.target.value as any)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-                  >
-                    <option value="both">Top 3 Recently Played + Top 3 All-Time Games (Both)</option>
-                    <option value="recently_played">Top 3 Recently Played Games (Past 2 Weeks Only)</option>
-                    <option value="top_games">Top 3 All-Time Games (Lifetime Hours Only)</option>
-                    <option value="none">Hide Games List (Show Avatar & Status Only)</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--accent-color)', fontSize: '0.8rem', lineHeight: 1.5 }}>
-                💡 <strong>Flexible Steam Format:</strong> You can paste your 64-bit ID, custom handle (e.g. <code style={{ background: 'rgba(0,0,0,0.3)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>TylerHats</code>), or full profile URL! WebNook automatically resolves vanity names and fetches real-time stats.
-              </div>
-            </div>
-          </div>
+              );
+            }
 
-          {/* Multi-Track Music Playlist Manager */}
-          <div className="nook-panel">
-            <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Music size={20} style={{ flexShrink: 0 }} />
-              <span>Multi-Track Music Playlist Manager ({musicTracks.length} tracks)</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Form: Add New Streaming Track (Spotify / Apple Music) */}
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Add Streaming Track (Spotify or Apple Music):</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', alignItems: 'center' }}>
-                  <select
-                    value={newTrackType}
-                    onChange={e => setNewTrackType(e.target.value as any)}
-                    style={{ padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
-                  >
-                    <option value="spotify">Spotify</option>
-                    <option value="apple">Apple Music</option>
-                  </select>
-
-                  <input
-                    type="text"
-                    placeholder="Track Title (e.g. Midnight City)"
-                    value={newTrackTitle}
-                    onChange={e => setNewTrackTitle(e.target.value)}
-                    style={{ padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
-                  />
-
-                  <input
-                    type="url"
-                    placeholder={newTrackType === 'spotify' ? 'https://open.spotify.com/track/...' : 'https://music.apple.com/...'}
-                    value={newTrackUrl}
-                    onChange={e => setNewTrackUrl(e.target.value)}
-                    style={{ padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
-                  />
-
-                  <button
-                    type="button"
-                    onClick={handleAddTrack}
-                    className="btn-primary"
-                    style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                  >
-                    <Plus size={16} />
-                    <span>Add Track</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Upload Custom MP3 Track */}
-              <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '10px', border: '1px dashed var(--border-color)' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Audio File to Playlist (MP3 / WAV / OGG)</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    placeholder="Audio Track Title"
-                    value={bgMusicTitle}
-                    onChange={e => setBgMusicTitle(e.target.value)}
-                    style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
-                  />
-                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
-                    <Upload size={16} />
-                    <span>{audioFileName || 'Choose Audio File (MP3/WAV)...'}</span>
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      onChange={e => {
-                        const f = e.target.files?.[0];
-                        if (f) {
-                          setAudioFileName(f.name);
-                          handleMusicFileUpload(f);
-                        }
-                      }}
-                      style={{ display: 'none' }}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Playlist Tracks List */}
-              {musicTracks.length > 0 ? (
-                <div>
-                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.8, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Current Playlist Draft ({musicTracks.length} tracks):</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {musicTracks.map((tr, idx) => (
-                      <div key={tr.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.25)', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.6 }}>#{idx + 1}</span>
-                          <span style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr.title}</span>
-                          <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.7, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
-                            {tr.type}
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          {idx === 0 && tr.type === 'audio' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = [...musicTracks];
-                                updated[0] = { ...updated[0], autoplay: !updated[0].autoplay };
-                                setMusicTracks(updated);
-                              }}
-                              style={{
-                                background: tr.autoplay ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)',
-                                color: tr.autoplay ? '#ffffff' : 'var(--text-main)',
-                                border: tr.autoplay ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-                                borderRadius: '4px',
-                                padding: '0.2rem 0.5rem',
-                                fontSize: '0.75rem',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                fontWeight: 600
-                              }}
-                              title={tr.autoplay ? 'Autoplay Enabled on Nook Load' : 'Enable Autoplay on Nook Load'}
-                            >
-                              <Volume2 size={13} />
-                              <span>{tr.autoplay ? 'Autoplay On' : 'Autoplay Off'}</span>
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => handleMoveTrack(idx, 'up')}
-                            disabled={idx === 0}
-                            style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: idx === 0 ? 'default' : 'pointer', opacity: idx === 0 ? 0.3 : 1 }}
-                            title="Move Up"
-                          >
-                            ▲
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMoveTrack(idx, 'down')}
-                            disabled={idx === musicTracks.length - 1}
-                            style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: idx === musicTracks.length - 1 ? 'default' : 'pointer', opacity: idx === musicTracks.length - 1 ? 0.3 : 1 }}
-                            title="Move Down"
-                          >
-                            ▼
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveTrack(idx)}
-                            style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer' }}
-                            title="Remove Track"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+            if (c.type === 'music') {
+              const cardTracks = c.music_tracks || (cIdx === cardLayout.findIndex(item => item.type === 'music') ? musicTracks : []);
+              return (
+                <div key={c.id} className="nook-panel">
+                  <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Music size={20} />
+                      <span>🎵 Profile Music Playlist ({cardNumLabel} - {cardTracks.length} tracks)</span>
+                    </div>
                   </div>
 
-                  {/* All-MP3 Playlist Playback Settings (Auto Next Play & Loop) */}
-                  {musicTracks.every(t => t.type === 'audio') && (
-                    <div style={{
-                      marginTop: '0.85rem',
-                      padding: '0.85rem 1rem',
-                      background: 'rgba(99, 102, 241, 0.1)',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.6rem'
-                    }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <Volume2 size={16} />
-                        <span>All-MP3 Playlist Audio Settings</span>
-                      </div>
-
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    {/* Add Streaming Track */}
+                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Add Streaming Track (Spotify or Apple Music):</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', alignItems: 'center' }}>
+                        <select
+                          value={newTrackType}
+                          onChange={e => setNewTrackType(e.target.value as any)}
+                          style={{ padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                        >
+                          <option value="spotify">Spotify</option>
+                          <option value="apple">Apple Music</option>
+                        </select>
                         <input
-                          type="checkbox"
-                          checked={autoNextPlay}
-                          onChange={e => setAutoNextPlay(e.target.checked)}
+                          type="text"
+                          placeholder="Track Title (e.g. Midnight City)"
+                          value={newTrackTitle}
+                          onChange={e => setNewTrackTitle(e.target.value)}
+                          style={{ padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
                         />
-                        <span>⏭️ <strong>Auto Next Play:</strong> Automatically start playing the next track when current MP3 finishes</span>
-                      </label>
-
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                         <input
-                          type="checkbox"
-                          checked={loopPlaylist}
-                          onChange={e => setLoopPlaylist(e.target.checked)}
+                          type="url"
+                          placeholder={newTrackType === 'spotify' ? 'https://open.spotify.com/track/...' : 'https://music.apple.com/...'}
+                          value={newTrackUrl}
+                          onChange={e => setNewTrackUrl(e.target.value)}
+                          style={{ padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
                         />
-                        <span>🔁 <strong>Loop Playlist:</strong> Restart and play the first track after the last track finishes</span>
-                      </label>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p style={{ fontSize: '0.8rem', opacity: 0.6, textAlign: 'center', margin: 0, padding: '0.5rem' }}>
-                  No tracks in playlist yet. Add Spotify or Apple Music tracks above!
-                </p>
-              )}
-
-              {/* Search Spotify Catalog Popover Trigger */}
-              <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--accent-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>Search Spotify Track Catalog 🔍</div>
-                  <div style={{ fontSize: '0.78rem', opacity: 0.8 }}>Find any track on Spotify and add it to your playlist automatically!</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSpotifySearch(!showSpotifySearch)}
-                  className="btn-primary"
-                  style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
-                >
-                  {showSpotifySearch ? 'Close Search' : 'Search Spotify Catalog'}
-                </button>
-              </div>
-
-              {/* Spotify Search Input & Modal Grid */}
-              {showSpotifySearch && (
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                    <input
-                      type="text"
-                      placeholder="Search song title or artist..."
-                      value={spotifySearchQ}
-                      onChange={e => setSpotifySearchQ(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleSearchSpotify()}
-                      style={{ flex: 1, minWidth: 0, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
-                    />
-                    <button type="button" onClick={handleSearchSpotify} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
-                      Search
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '200px', overflowY: 'auto' }}>
-                    {spotifyResults.map(tr => (
-                      <div key={tr.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.65rem', borderRadius: '6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <img src={tr.albumCover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'} alt="" style={{ width: '32px', height: '32px', borderRadius: '4px' }} />
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{tr.title}</div>
-                            <div style={{ fontSize: '0.72rem', opacity: 0.6 }}>{tr.artist}</div>
-                          </div>
-                        </div>
                         <button
                           type="button"
                           onClick={() => {
-                            setMusicTracks(prev => [...prev, { id: `sp_${Date.now()}`, title: `${tr.title} - ${tr.artist}`, type: 'spotify', url: tr.spotifyUrl }]);
-                            showToast(`Added "${tr.title}" to playlist!`, 'success');
+                            if (!newTrackUrl) return;
+                            const newTr: MusicTrack = {
+                              id: `tr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                              title: newTrackTitle.trim() || 'Track',
+                              type: newTrackType,
+                              url: newTrackUrl.trim()
+                            };
+                            updateCardMusic([...cardTracks, newTr]);
+                            setNewTrackTitle('');
+                            setNewTrackUrl('');
+                            showToast('Track added to playlist!', 'success');
                           }}
                           className="btn-primary"
-                          style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                          style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                         >
-                          + Add to Playlist
+                          <Plus size={16} />
+                          <span>Add Track</span>
                         </button>
+                      </div>
+                    </div>
+
+                    {/* Upload Audio File */}
+                    <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '10px', border: '1px dashed var(--border-color)' }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Upload Audio File to Playlist (MP3 / WAV)</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          placeholder="Audio Track Title"
+                          value={bgMusicTitle}
+                          onChange={e => setBgMusicTitle(e.target.value)}
+                          style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                        />
+                        <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
+                          <Upload size={16} />
+                          <span>{audioFileName || 'Choose Audio File...'}</span>
+                          <input
+                            type="file"
+                            accept="audio/*"
+                            onChange={async (e) => {
+                              const f = e.target.files?.[0];
+                              if (!f || !token) return;
+                              setAudioFileName(f.name);
+                              const formData = new FormData();
+                              formData.append('music', f);
+                              try {
+                                const res = await fetch('/api/nook/upload/music', {
+                                  method: 'POST',
+                                  headers: { Authorization: `Bearer ${token}` },
+                                  body: formData
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                  const track: MusicTrack = {
+                                    id: `tr_${Date.now()}`,
+                                    title: bgMusicTitle.trim() || f.name,
+                                    type: 'audio',
+                                    url: data.music_url,
+                                    autoplay: false
+                                  };
+                                  updateCardMusic([...cardTracks, track]);
+                                  setBgMusicTitle('');
+                                  showToast('Audio file uploaded to card playlist!', 'success');
+                                } else {
+                                  showToast(data.error || 'Audio upload failed', 'error');
+                                }
+                              } catch (err) {
+                                showToast('Error uploading audio file', 'error');
+                              }
+                            }}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Playlist Tracks Grid */}
+                    {cardTracks.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {cardTracks.map((tr: any, trIdx: number) => (
+                          <div key={tr.id || trIdx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.25)', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.6 }}>#{trIdx + 1}</span>
+                              <span style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr.title}</span>
+                              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.7, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>{tr.type}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <button
+                                type="button"
+                                disabled={trIdx === 0}
+                                onClick={() => {
+                                  const updated = [...cardTracks];
+                                  const temp = updated[trIdx];
+                                  updated[trIdx] = updated[trIdx - 1];
+                                  updated[trIdx - 1] = temp;
+                                  updateCardMusic(updated);
+                                }}
+                                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: trIdx === 0 ? 'default' : 'pointer', opacity: trIdx === 0 ? 0.3 : 1 }}
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                disabled={trIdx === cardTracks.length - 1}
+                                onClick={() => {
+                                  const updated = [...cardTracks];
+                                  const temp = updated[trIdx];
+                                  updated[trIdx] = updated[trIdx + 1];
+                                  updated[trIdx + 1] = temp;
+                                  updateCardMusic(updated);
+                                }}
+                                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: trIdx === cardTracks.length - 1 ? 'default' : 'pointer', opacity: trIdx === cardTracks.length - 1 ? 0.3 : 1 }}
+                              >
+                                ▼
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateCardMusic(cardTracks.filter((_: any, i: number) => i !== trIdx));
+                                }}
+                                style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer' }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No tracks in playlist yet. Add Spotify or Apple Music tracks above! 🎵</p>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            if (c.type === 'movies') {
+              const cardMovies = c.favorite_movies || (cIdx === cardLayout.findIndex(item => item.type === 'movies') ? favoriteMovies : []);
+              return (
+                <div key={c.id} className="nook-panel">
+                  <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span>🎬 Movies & TV Showcase ({cardNumLabel} - {cardMovies.length} items)</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowMoviesSearch(!showMoviesSearch)}
+                      className="btn-primary"
+                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                    >
+                      {showMoviesSearch ? 'Close Search' : 'Search Movies & TV Shows 🍿'}
+                    </button>
+                  </div>
+
+                  {showMoviesSearch && (
+                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <input
+                          type="text"
+                          placeholder="Search movie or TV show title..."
+                          value={moviesSearchQ}
+                          onChange={e => setMoviesSearchQ(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleSearchMovies()}
+                          style={{ flex: 1, minWidth: 0, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                        />
+                        <button type="button" onClick={handleSearchMovies} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
+                          Search
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto' }}>
+                        {moviesResults.map(m => (
+                          <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '8px', textAlign: 'center' }}>
+                            <img src={m.posterUrl} alt="" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
+                            <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateCardMovies([...cardMovies, m]);
+                                showToast(`Added "${m.title}" to this card!`, 'success');
+                              }}
+                              className="btn-primary"
+                              style={{ width: '100%', padding: '0.2rem', fontSize: '0.72rem', marginTop: '0.4rem' }}
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {cardMovies.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '0.75rem' }}>
+                      {cardMovies.map((m: any, mIdx: number) => (
+                        <div key={m.id || mIdx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
+                          <div style={{ position: 'absolute', top: '6px', right: '6px', display: 'flex', gap: '2px', zIndex: 2 }}>
+                            <button
+                              type="button"
+                              disabled={mIdx === 0}
+                              onClick={() => {
+                                const updated = [...cardMovies];
+                                const temp = updated[mIdx];
+                                updated[mIdx] = updated[mIdx - 1];
+                                updated[mIdx - 1] = temp;
+                                updateCardMovies(updated);
+                              }}
+                              style={{ background: 'rgba(0,0,0,0.7)', color: mIdx === 0 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: mIdx === 0 ? 'default' : 'pointer' }}
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              disabled={mIdx === cardMovies.length - 1}
+                              onClick={() => {
+                                const updated = [...cardMovies];
+                                const temp = updated[mIdx];
+                                updated[mIdx] = updated[mIdx + 1];
+                                updated[mIdx + 1] = temp;
+                                updateCardMovies(updated);
+                              }}
+                              style={{ background: 'rgba(0,0,0,0.7)', color: mIdx === cardMovies.length - 1 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: mIdx === cardMovies.length - 1 ? 'default' : 'pointer' }}
+                            >
+                              ▼
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateCardMovies(cardMovies.filter((_: any, i: number) => i !== mIdx));
+                              }}
+                              style={{ background: 'rgba(239, 68, 68, 0.85)', color: '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: 'pointer' }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <img src={m.posterUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
+                          <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
+                          <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!m.inProgress}
+                                onChange={e => {
+                                  const checked = e.target.checked;
+                                  updateCardMovies(cardMovies.map((item: any, i: number) => i === mIdx ? { ...item, inProgress: checked, onMyList: checked ? false : item.onMyList } : item));
+                                }}
+                              />
+                              <span>In Progress 🍿</span>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!m.onMyList}
+                                onChange={e => {
+                                  const checked = e.target.checked;
+                                  updateCardMovies(cardMovies.map((item: any, i: number) => i === mIdx ? { ...item, onMyList: checked, inProgress: checked ? false : item.inProgress } : item));
+                                }}
+                              />
+                              <span>On My List 📌</span>
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.1rem' }}>
+                              <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Rating:</span>
+                              <input
+                                type="text"
+                                placeholder="5.0"
+                                value={m.rating !== undefined && m.rating !== null ? m.rating : ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  updateCardMovies(cardMovies.map((item: any, i: number) => i === mIdx ? { ...item, rating: val } : item));
+                                }}
+                                style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No movies or TV shows added to this card yet. Search above! 🎬</p>
+                  )}
+                </div>
+              );
+            }
+
+            if (c.type === 'books') {
+              const cardBooks = c.favorite_books || (cIdx === cardLayout.findIndex(item => item.type === 'books') ? favoriteBooks : []);
+              return (
+                <div key={c.id} className="nook-panel">
+                  <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span>📖 Reading Nook ({cardNumLabel} - {cardBooks.length} books)</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowBooksSearch(!showBooksSearch)}
+                      className="btn-primary"
+                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                    >
+                      {showBooksSearch ? 'Close Search' : 'Search Books 📚'}
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>StoryGraph Username / Handle</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. tylerhats"
+                        value={storygraphUsername}
+                        onChange={e => setStorygraphUsername(e.target.value)}
+                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Import StoryGraph Library CSV</label>
+                      <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                        <FileText size={15} />
+                        <span>{csvFileName || 'Choose StoryGraph CSV File...'}</span>
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              setCsvFileName(f.name);
+                              handleStoryGraphCsvUpload(f);
+                            }
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {showBooksSearch && (
+                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <input
+                          type="text"
+                          placeholder="Search book title or author..."
+                          value={booksSearchQ}
+                          onChange={e => setBooksSearchQ(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleSearchBooks()}
+                          style={{ flex: 1, minWidth: 0, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                        />
+                        <button type="button" onClick={handleSearchBooks} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
+                          Search
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto' }}>
+                        {booksResults.map(b => (
+                          <div key={b.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '8px', textAlign: 'center' }}>
+                            <img src={b.coverUrl} alt="" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
+                            <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateCardBooks([...cardBooks, b]);
+                                showToast(`Added "${b.title}" to this card!`, 'success');
+                              }}
+                              className="btn-primary"
+                              style={{ width: '100%', padding: '0.2rem', fontSize: '0.72rem', marginTop: '0.4rem' }}
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {cardBooks.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '0.75rem' }}>
+                      {cardBooks.map((b: any, bIdx: number) => (
+                        <div key={b.id || bIdx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
+                          <div style={{ position: 'absolute', top: '6px', right: '6px', display: 'flex', gap: '2px', zIndex: 2 }}>
+                            <button
+                              type="button"
+                              disabled={bIdx === 0}
+                              onClick={() => {
+                                const updated = [...cardBooks];
+                                const temp = updated[bIdx];
+                                updated[bIdx] = updated[bIdx - 1];
+                                updated[bIdx - 1] = temp;
+                                updateCardBooks(updated);
+                              }}
+                              style={{ background: 'rgba(0,0,0,0.7)', color: bIdx === 0 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: bIdx === 0 ? 'default' : 'pointer' }}
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              disabled={bIdx === cardBooks.length - 1}
+                              onClick={() => {
+                                const updated = [...cardBooks];
+                                const temp = updated[bIdx];
+                                updated[bIdx] = updated[bIdx + 1];
+                                updated[bIdx + 1] = temp;
+                                updateCardBooks(updated);
+                              }}
+                              style={{ background: 'rgba(0,0,0,0.7)', color: bIdx === cardBooks.length - 1 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: bIdx === cardBooks.length - 1 ? 'default' : 'pointer' }}
+                            >
+                              ▼
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateCardBooks(cardBooks.filter((_: any, i: number) => i !== bIdx));
+                              }}
+                              style={{ background: 'rgba(239, 68, 68, 0.85)', color: '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: 'pointer' }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <img src={b.coverUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
+                          <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                          <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!b.inProgress}
+                                onChange={e => {
+                                  const checked = e.target.checked;
+                                  updateCardBooks(cardBooks.map((item: any, i: number) => i === bIdx ? { ...item, inProgress: checked, onMyList: checked ? false : item.onMyList } : item));
+                                }}
+                              />
+                              <span>In Progress 📖</span>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!b.onMyList}
+                                onChange={e => {
+                                  const checked = e.target.checked;
+                                  updateCardBooks(cardBooks.map((item: any, i: number) => i === bIdx ? { ...item, onMyList: checked, inProgress: checked ? false : item.inProgress } : item));
+                                }}
+                              />
+                              <span>On My List 📌</span>
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.1rem' }}>
+                              <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Rating:</span>
+                              <input
+                                type="text"
+                                placeholder="5.0"
+                                value={b.rating !== undefined && b.rating !== null ? b.rating : ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  updateCardBooks(cardBooks.map((item: any, i: number) => i === bIdx ? { ...item, rating: val } : item));
+                                }}
+                                style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No books added to this card yet. Search or import CSV above! 📖</p>
+                  )}
+                </div>
+              );
+            }
+
+            if (c.type === 'hobbies') {
+              const cardHobbies = c.hobbies || (cIdx === cardLayout.findIndex(item => item.type === 'hobbies') ? hobbies : []);
+              return (
+                <div key={c.id} className="nook-panel">
+                  <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>🎯 Hobbies & Passions ({cardNumLabel} - {cardHobbies.length} items)</span>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ padding: '0.3rem 0.65rem', fontSize: '0.8rem' }}
+                      onClick={() => {
+                        const newHobby: HobbyItem = {
+                          id: `h_${Date.now()}`,
+                          name: 'New Hobby',
+                          icon: '✨',
+                          category: 'Interest',
+                          description: 'Description of your passion'
+                        };
+                        updateCardHobbies([...cardHobbies, newHobby]);
+                      }}
+                    >
+                      + Add Custom Hobby
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '0.85rem', marginTop: '1rem' }}>
+                    {cardHobbies.map((h: any, hIdx: number) => (
+                      <div key={h.id || hIdx} style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <input
+                            type="text"
+                            placeholder="Emoji"
+                            value={h.icon || ''}
+                            onChange={e => {
+                              const val = e.target.value;
+                              updateCardHobbies(cardHobbies.map((item: any, i: number) => i === hIdx ? { ...item, icon: val } : item));
+                            }}
+                            style={{ width: '42px', padding: '0.4rem 0.2rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.9rem', textAlign: 'center', flexShrink: 0 }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Hobby Name"
+                            value={h.name}
+                            onChange={e => {
+                              const val = e.target.value;
+                              updateCardHobbies(cardHobbies.map((item: any, i: number) => i === hIdx ? { ...item, name: val } : item));
+                            }}
+                            style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.5rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontWeight: 700 }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateCardHobbies(cardHobbies.filter((_: any, i: number) => i !== hIdx));
+                            }}
+                            style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', color: '#ef4444', cursor: 'pointer', padding: '0.35rem 0.55rem', fontSize: '0.85rem', flexShrink: 0 }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Category"
+                          value={h.category || ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            updateCardHobbies(cardHobbies.map((item: any, i: number) => i === hIdx ? { ...item, category: val } : item));
+                          }}
+                          style={{ width: '100%', padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.78rem' }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Description"
+                          value={h.description || ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            updateCardHobbies(cardHobbies.map((item: any, i: number) => i === hIdx ? { ...item, description: val } : item));
+                          }}
+                          style={{ width: '100%', padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.78rem' }}
+                        />
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
+              );
+            }
 
-              {/* Spotify Playback Explanation Box */}
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.82rem', lineHeight: 1.5 }}>
-                💡 <strong>Note on Spotify & Streaming Track Playback:</strong>
-                <p style={{ marginTop: '0.3rem', opacity: 0.85 }}>
-                  Due to Spotify licensing regulations, Spotify web embeds play a <strong>30-second audio preview clip</strong> for visitors unless the visitor is logged into Spotify in their browser. For guaranteed 100% full track playback for all visitors, upload your custom MP3 file above!
-                </p>
-              </div>
-            </div>
-          </div>
+            if (c.type === 'markdown' || c.type === 'html') {
+              return (
+                <div key={c.id} className="nook-panel">
+                  <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      {c.type === 'markdown' ? <FileText size={18} color="#38bdf8" /> : <Code size={18} color="#c084fc" />}
+                      <span>{cardNumLabel}</span>
+                    </span>
+                  </div>
 
-          {/* Movies & TV Showcase Panel */}
-          <div className="nook-panel">
-            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>🎬 Movies & TV Showcase Manager ({favoriteMovies.length} items)</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowMoviesSearch(!showMoviesSearch)}
-                className="btn-primary"
-                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
-              >
-                {showMoviesSearch ? 'Close Search' : 'Search Movies & TV Shows 🍿'}
-              </button>
-            </div>
-
-            {/* Movies Search Popover */}
-            {showMoviesSearch && (
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                  <input
-                    type="text"
-                    placeholder="Search movie or TV show title..."
-                    value={moviesSearchQ}
-                    onChange={e => setMoviesSearchQ(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSearchMovies()}
-                    style={{ flex: 1, minWidth: 0, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
-                  />
-                  <button type="button" onClick={handleSearchMovies} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
-                    Search
-                  </button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto' }}>
-                  {moviesResults.map(m => (
-                    <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '8px', textAlign: 'center' }}>
-                      <img src={m.posterUrl} alt="" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
-                      <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
-                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{m.type} • {m.year}</div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFavoriteMovies(prev => [...prev, m]);
-                          showToast(`Added "${m.title}" to favorites!`, 'success');
+                  {c.type === 'markdown' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.8 }}>Markdown Text Content:</label>
+                        <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.25rem 0.6rem', fontSize: '0.78rem' }}>
+                          <Upload size={14} />
+                          <span>Attach Photo...</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const f = e.target.files?.[0];
+                              if (!f || !token) return;
+                              const formData = new FormData();
+                              formData.append('sticker', f);
+                              try {
+                                const res = await fetch('/api/nook/upload/sticker', {
+                                  method: 'POST',
+                                  headers: { Authorization: `Bearer ${token}` },
+                                  body: formData
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                  const imageMarkdown = `\n\n![${f.name}](${data.sticker_url})\n`;
+                                  const updated = [...cardLayout];
+                                  updated[cIdx].content_markdown = (updated[cIdx].content_markdown || '') + imageMarkdown;
+                                  setCardLayout(updated);
+                                  showToast('Photo inserted into Markdown card!', 'success');
+                                }
+                              } catch (err) {}
+                            }}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      </div>
+                      <textarea
+                        rows={5}
+                        value={c.content_markdown || ''}
+                        onChange={e => {
+                          const updated = [...cardLayout];
+                          updated[cIdx].content_markdown = e.target.value;
+                          setCardLayout(updated);
                         }}
-                        className="btn-primary"
-                        style={{ width: '100%', padding: '0.2rem', fontSize: '0.72rem', marginTop: '0.4rem' }}
-                      >
-                        + Add
-                      </button>
+                        placeholder="Write markdown content..."
+                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                      />
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Favorite Movies List */}
-            {favoriteMovies.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '0.75rem' }}>
-                {favoriteMovies.map((m, idx) => (
-                  <div key={m.id || idx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: '6px', right: '6px', display: 'flex', gap: '2px', zIndex: 2 }}>
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={() => {
-                          const updated = [...favoriteMovies];
-                          const temp = updated[idx];
-                          updated[idx] = updated[idx - 1];
-                          updated[idx - 1] = temp;
-                          setFavoriteMovies(updated);
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.8 }}>Raw HTML Code Content:</label>
+                      <textarea
+                        rows={5}
+                        value={c.content_html || ''}
+                        onChange={e => {
+                          const updated = [...cardLayout];
+                          updated[cIdx].content_html = e.target.value;
+                          setCardLayout(updated);
                         }}
-                        style={{ background: 'rgba(0,0,0,0.7)', color: idx === 0 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: idx === 0 ? 'default' : 'pointer' }}
-                        title="Move Up/Left"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        disabled={idx === favoriteMovies.length - 1}
-                        onClick={() => {
-                          const updated = [...favoriteMovies];
-                          const temp = updated[idx];
-                          updated[idx] = updated[idx + 1];
-                          updated[idx + 1] = temp;
-                          setFavoriteMovies(updated);
-                        }}
-                        style={{ background: 'rgba(0,0,0,0.7)', color: idx === favoriteMovies.length - 1 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: idx === favoriteMovies.length - 1 ? 'default' : 'pointer' }}
-                        title="Move Down/Right"
-                      >
-                        ▼
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFavoriteMovies(favoriteMovies.filter((_, i) => i !== idx))}
-                        style={{ background: 'rgba(239, 68, 68, 0.85)', color: '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: 'pointer' }}
-                        title="Remove Movie"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <img src={m.posterUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
-                    <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{m.type} • {m.year}</div>
-                    <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
-                        <input
-                          type="checkbox"
-                          checked={!!m.inProgress}
-                          onChange={e => {
-                            const checked = e.target.checked;
-                            setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, inProgress: checked, onMyList: checked ? false : item.onMyList } : item));
-                          }}
-                        />
-                        <span>In Progress 🍿</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
-                        <input
-                          type="checkbox"
-                          checked={!!m.onMyList}
-                          onChange={e => {
-                            const checked = e.target.checked;
-                            setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, onMyList: checked, inProgress: checked ? false : item.inProgress } : item));
-                          }}
-                        />
-                        <span>On My List 📌</span>
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: (m.inProgress || m.onMyList) ? 0.4 : 1, marginTop: '0.1rem' }}>
-                        <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
-                        <input
-                          type="text"
-                          placeholder="5.0"
-                          disabled={!!m.inProgress || !!m.onMyList}
-                          value={m.rating !== undefined && m.rating !== null ? m.rating : ''}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setFavoriteMovies(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
-                          }}
-                          style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
-                        />
+                        placeholder="Input custom HTML markup..."
+                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                      />
+                      <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '0.85rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.6, marginBottom: '0.5rem' }}>HTML CARD PREVIEW:</div>
+                        <div dangerouslySetInnerHTML={{ __html: c.content_html || '' }} />
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No movies or TV shows added yet. Search above! 🎬</p>
-            )}
-          </div>
-
-          {/* Books Showcase & Reading Nook Manager */}
-          <div className="nook-panel">
-            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>📖 Reading Nook & Favorite Books ({favoriteBooks.length} books)</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowBooksSearch(!showBooksSearch)}
-                className="btn-primary"
-                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
-              >
-                {showBooksSearch ? 'Close Search' : 'Search Books 📚'}
-              </button>
-            </div>
-
-            {/* StoryGraph Profile Handle & CSV Import */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>StoryGraph Username / Handle</label>
-                <input
-                  type="text"
-                  placeholder="e.g. tylerhats"
-                  value={storygraphUsername}
-                  onChange={e => setStorygraphUsername(e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Import StoryGraph Library CSV</label>
-                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
-                  <FileText size={15} />
-                  <span>{csvFileName || 'Choose StoryGraph CSV File...'}</span>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={e => {
-                      const f = e.target.files?.[0];
-                      if (f) {
-                        setCsvFileName(f.name);
-                        handleStoryGraphCsvUpload(f);
-                      }
-                    }}
-                    style={{ display: 'none' }}
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* Books Search Popover */}
-            {showBooksSearch && (
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                  <input
-                    type="text"
-                    placeholder="Search book title or author..."
-                    value={booksSearchQ}
-                    onChange={e => setBooksSearchQ(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSearchBooks()}
-                    style={{ flex: 1, minWidth: 0, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
-                  />
-                  <button type="button" onClick={handleSearchBooks} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
-                    Search
-                  </button>
+                  )}
                 </div>
+              );
+            }
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto' }}>
-                  {booksResults.map(b => (
-                    <div key={b.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '8px', textAlign: 'center' }}>
-                      <img src={b.coverUrl} alt="" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
-                      <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
-                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{b.author}</div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFavoriteBooks(prev => [...prev, b]);
-                          showToast(`Added "${b.title}" to reading nook!`, 'success');
-                        }}
-                        className="btn-primary"
-                        style={{ width: '100%', padding: '0.2rem', fontSize: '0.72rem', marginTop: '0.4rem' }}
-                      >
-                        + Add
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Favorite Books List */}
-            {favoriteBooks.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '0.75rem' }}>
-                {favoriteBooks.map((b, idx) => (
-                  <div key={b.id || idx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: '6px', right: '6px', display: 'flex', gap: '2px', zIndex: 2 }}>
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={() => {
-                          const updated = [...favoriteBooks];
-                          const temp = updated[idx];
-                          updated[idx] = updated[idx - 1];
-                          updated[idx - 1] = temp;
-                          setFavoriteBooks(updated);
-                        }}
-                        style={{ background: 'rgba(0,0,0,0.7)', color: idx === 0 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: idx === 0 ? 'default' : 'pointer' }}
-                        title="Move Up/Left"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        disabled={idx === favoriteBooks.length - 1}
-                        onClick={() => {
-                          const updated = [...favoriteBooks];
-                          const temp = updated[idx];
-                          updated[idx] = updated[idx + 1];
-                          updated[idx + 1] = temp;
-                          setFavoriteBooks(updated);
-                        }}
-                        style={{ background: 'rgba(0,0,0,0.7)', color: idx === favoriteBooks.length - 1 ? 'rgba(255,255,255,0.3)' : '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: idx === favoriteBooks.length - 1 ? 'default' : 'pointer' }}
-                        title="Move Down/Right"
-                      >
-                        ▼
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFavoriteBooks(favoriteBooks.filter((_, i) => i !== idx))}
-                        style={{ background: 'rgba(239, 68, 68, 0.85)', color: '#fff', border: 'none', borderRadius: '4px', padding: '1px 5px', fontSize: '0.65rem', cursor: 'pointer' }}
-                        title="Remove Book"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <img src={b.coverUrl} alt="" style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.3rem' }} />
-                    <div style={{ fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{b.author}</div>
-                    <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
-                        <input
-                          type="checkbox"
-                          checked={!!b.inProgress}
-                          onChange={e => {
-                            const checked = e.target.checked;
-                            setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, inProgress: checked, onMyList: checked ? false : item.onMyList } : item));
-                          }}
-                        />
-                        <span>In Progress 📖</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', cursor: 'pointer', userSelect: 'none' }}>
-                        <input
-                          type="checkbox"
-                          checked={!!b.onMyList}
-                          onChange={e => {
-                            const checked = e.target.checked;
-                            setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, onMyList: checked, inProgress: checked ? false : item.inProgress } : item));
-                          }}
-                        />
-                        <span>On My List 📌</span>
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: (b.inProgress || b.onMyList) ? 0.4 : 1, marginTop: '0.1rem' }}>
-                        <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Star Rating:</span>
-                        <input
-                          type="text"
-                          placeholder="5.0"
-                          disabled={!!b.inProgress || !!b.onMyList}
-                          value={b.rating !== undefined && b.rating !== null ? b.rating : ''}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setFavoriteBooks(prev => prev.map((item, i) => i === idx ? { ...item, rating: val } : item));
-                          }}
-                          style={{ width: '45px', padding: '0.1rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#facc15', fontWeight: 700 }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No books added to your reading nook yet. Search or import CSV above! 📖</p>
-            )}
-          </div>
-
-          {/* Hobbies & Passions Manager Panel */}
-          <div className="nook-panel">
-            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>🎯 Hobbies & Passions ({hobbies.length} items)</span>
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ padding: '0.3rem 0.65rem', fontSize: '0.8rem' }}
-                onClick={() => {
-                  const newHobby: HobbyItem = {
-                    id: `h_${Date.now()}`,
-                    name: 'New Hobby',
-                    icon: '✨',
-                    category: 'Interest',
-                    description: 'Description of your passion'
-                  };
-                  setHobbies([...hobbies, newHobby]);
-                }}
-              >
-                + Add Custom Hobby
-              </button>
-            </div>
-
-            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '0.85rem' }}>
-              Add hobbies, interests, and passions to showcase on your Nook:
-            </p>
-
-            {/* Quick Add Presets */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '0.78rem', opacity: 0.7, alignSelf: 'center', marginRight: '0.3rem' }}>Quick Add:</span>
-              {[
-                { name: 'Retro Gaming', icon: '🎮', category: 'Gaming' },
-                { name: 'Film Photography', icon: '📷', category: 'Creative' },
-                { name: 'Music Production', icon: '🎧', category: 'Music' },
-                { name: 'Gourmet Coffee', icon: '☕', category: 'Lifestyle' },
-                { name: 'Cooking & Baking', icon: '🍳', category: 'Food' },
-                { name: 'Anime & Manga', icon: '🌸', category: 'Media' },
-                { name: 'Art & Graphic Design', icon: '🎨', category: 'Creative' }
-              ].map(preset => (
-                <button
-                  key={preset.name}
-                  type="button"
-                  className="btn-secondary"
-                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', borderRadius: '6px' }}
-                  onClick={() => {
-                    if (hobbies.some(h => h.name === preset.name)) return;
-                    setHobbies([...hobbies, { id: `h_${Date.now()}_${Math.random()}`, ...preset, description: `Enthusiast & lover of ${preset.name}` }]);
-                  }}
-                >
-                  {preset.icon} {preset.name}
-                </button>
-              ))}
-            </div>
-
-            {/* Editable Hobbies List */}
-            {hobbies.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '0.85rem' }}>
-                {hobbies.map((h, idx) => (
-                  <div
-                    key={h.id || idx}
-                    style={{
-                      background: 'rgba(0,0,0,0.2)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '10px',
-                      padding: '0.75rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.5rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <input
-                        type="text"
-                        placeholder="Emoji"
-                        value={h.icon || ''}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setHobbies(hobbies.map((item, i) => i === idx ? { ...item, icon: val } : item));
-                        }}
-                        style={{ width: '42px', padding: '0.4rem 0.2rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.9rem', textAlign: 'center', flexShrink: 0 }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Hobby Name"
-                        value={h.name}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setHobbies(hobbies.map((item, i) => i === idx ? { ...item, name: val } : item));
-                        }}
-                        style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.5rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontWeight: 700 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setHobbies(hobbies.filter((_, i) => i !== idx))}
-                        style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', color: '#ef4444', cursor: 'pointer', padding: '0.35rem 0.55rem', fontSize: '0.85rem', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                        title="Remove Hobby"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      <input
-                        type="text"
-                        placeholder="Category (e.g. Gaming)"
-                        value={h.category || ''}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setHobbies(hobbies.map((item, i) => i === idx ? { ...item, category: val } : item));
-                        }}
-                        style={{ width: '100%', padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.78rem' }}
-                      />
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Short description..."
-                      value={h.description || ''}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setHobbies(hobbies.map((item, i) => i === idx ? { ...item, description: val } : item));
-                      }}
-                      style={{ width: '100%', padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.78rem' }}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>No hobbies added yet. Click + Add Custom Hobby or a Quick Add preset above! 🎯</p>
-            )}
-          </div>
+            return null;
+          })}
 
           {/* Visual Sticker Studio & Badges Layer */}
           <div className="nook-panel">

@@ -225,7 +225,8 @@ export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({
                       if (!str.endsWith('Z') && !str.includes('+')) {
                         str = str.replace(' ', 'T') + 'Z';
                       }
-                      return new Date(str).toLocaleDateString();
+                      const d = new Date(str);
+                      return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
                     })()}</span>
                     
                     {/* Owner Reaction Button */}
