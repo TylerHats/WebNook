@@ -1012,8 +1012,6 @@ export const NookCustomizerPage: React.FC = () => {
               ))}
             </div>
           </div>
-            </div>
-          </div>
 
           {/* Dedicated Custom Cards Editor Panel (Markdown & HTML Cards) */}
           {cardLayout.some(c => c.type === 'markdown' || c.type === 'html') && (
