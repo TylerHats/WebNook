@@ -41,50 +41,60 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
         </p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '1rem', justifyContent: 'start' }}>
-          {movieList.map((m, idx) => (
-            <div
-              key={m.id || idx}
-              style={{
-                width: '135px',
-                background: 'rgba(0,0,0,0.2)',
-                borderRadius: '10px',
-                border: '1px solid var(--border-color)',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <img
-                src={m.posterUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=300&auto=format&fit=crop&q=80'}
-                alt={m.title}
-                style={{ width: '100%', height: '175px', objectFit: 'cover' }}
-              />
-              <div style={{ padding: '0.55rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.25, marginBottom: '0.2rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {m.title}
+          {movieList.map((m, idx) => {
+            const movieUrl = m.overview || (m.title ? `https://www.themoviedb.org/search?query=${encodeURIComponent(m.title)}` : '#');
+            return (
+              <a
+                key={m.id || idx}
+                href={movieUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  width: '135px',
+                  background: 'rgba(0,0,0,0.2)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  transition: 'transform 0.2s ease, border-color 0.2s ease'
+                }}
+                className="nook-card-hover"
+              >
+                <img
+                  src={m.posterUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=300&auto=format&fit=crop&q=80'}
+                  alt={m.title}
+                  style={{ width: '100%', height: '175px', objectFit: 'cover' }}
+                />
+                <div style={{ padding: '0.55rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.25, marginBottom: '0.2rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {m.title}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>
+                      {m.type === 'TV Series' ? '📺 TV' : '🎬 Movie'} {m.year && `• ${m.year}`}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>
-                    {m.type === 'TV Series' ? '📺 TV' : '🎬 Movie'} {m.year && `• ${m.year}`}
-                  </div>
-                </div>
 
-                <div style={{ marginTop: '0.4rem' }}>
-                  {m.inProgress ? (
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.15rem 0.45rem', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      Watching... 🍿
-                    </span>
-                  ) : m.onMyList ? (
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '0.15rem 0.45rem', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      On My List 📌
-                    </span>
-                  ) : (
-                    <StarRatingDisplay rating={m.rating ?? 5} size={12} />
-                  )}
+                  <div style={{ marginTop: '0.4rem' }}>
+                    {m.inProgress ? (
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.15rem 0.45rem', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        Watching... 🍿
+                      </span>
+                    ) : m.onMyList ? (
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a855f7', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '0.15rem 0.45rem', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        On My List 📌
+                      </span>
+                    ) : (
+                      <StarRatingDisplay rating={m.rating ?? 5} size={12} />
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              </a>
+            );
+          })}
         </div>
       )}
     </div>

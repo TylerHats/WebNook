@@ -327,6 +327,9 @@ router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
 router.put('/customization', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
+    // Ensure nook row exists for this user before updating
+    await execute('INSERT OR IGNORE INTO nooks (user_id) VALUES (?)', [userId]);
+
     const {
       theme,
       custom_css,

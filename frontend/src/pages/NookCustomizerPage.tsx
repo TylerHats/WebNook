@@ -133,6 +133,9 @@ export const NookCustomizerPage: React.FC = () => {
   const [stickers, setStickers] = useState<Sticker[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
+  const [isInitialLoaded, setIsInitialLoaded] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
   useEffect(() => {
     if (user && token) {
       fetch(`/api/nook/profile/${user.username}?_t=${Date.now()}`, {
@@ -233,126 +236,12 @@ export const NookCustomizerPage: React.FC = () => {
             setStickers(data.stickers);
           }
         })
-        .catch(err => console.error(err));
+        .catch(err => console.error(err))
+        .finally(() => setIsInitialLoaded(true));
     }
   }, [user, token]);
 
-  const handleApplyPalette = (palette: { bg: string; cardBg: string; accent: string; text: string; border: string }) => {
-    setBgColor(palette.bg);
-    setCardBgColor(palette.cardBg);
-    setAccentColor(palette.accent);
-    setTextColor(palette.text);
-    setBorderColor(palette.border);
-    showToast('Theme palette applied!', 'info');
-  };
-
-  const handleAddSticker = (url: string) => {
-    const newSticker: Sticker = {
-      sticker_url: url,
-      pos_x: Math.floor(Math.random() * 60) + 20,
-      pos_y: Math.floor(Math.random() * 60) + 20,
-      scale: 1.0,
-      rotation: Math.floor(Math.random() * 30) - 15,
-      layer: 'above_cards'
-    };
-    setStickers([...stickers, newSticker]);
-    showToast('Sticker added to canvas!', 'info');
-  };
-
-  const handleCustomStickerUpload = async (file: File | null) => {
-    if (!file || !token) return;
-    const formData = new FormData();
-    formData.append('sticker', file);
-
-    try {
-      const res = await fetch('/api/nook/upload/sticker', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData
-      });
-      const data = await res.json();
-      if (res.ok) {
-        handleAddSticker(data.sticker_url);
-        showToast('Custom sticker uploaded & converted to lossless WebP!', 'success');
-      } else {
-        showToast(data.error || 'Failed to upload sticker', 'error');
-      }
-    } catch (e) {
-      showToast('Error uploading sticker file', 'error');
-    }
-  };
-
-  const handleRemoveSticker = (index: number) => {
-    setStickers(stickers.filter((_, i) => i !== index));
-  };
-
-  const handleToggleStickerLayer = (index: number) => {
-    setStickers(stickers.map((st, i) => {
-      if (i === index) {
-        const nextLayer = st.layer === 'behind_cards' ? 'above_cards' : 'behind_cards';
-        return { ...st, layer: nextLayer };
-      }
-      return st;
-    }));
-  };
-
-  const handleSearchSpotify = async () => {
-    if (!spotifySearchQ.trim()) return;
-    try {
-      const res = await fetch(`/api/integrations/spotify/search?q=${encodeURIComponent(spotifySearchQ)}`);
-      const data = await res.json();
-      setSpotifyResults(data.tracks || []);
-    } catch (e) {
-      showToast('Spotify search failed', 'error');
-    }
-  };
-
-  const handleSearchMovies = async () => {
-    if (!moviesSearchQ.trim()) return;
-    try {
-      const res = await fetch(`/api/integrations/movies/search?q=${encodeURIComponent(moviesSearchQ)}`);
-      const data = await res.json();
-      setMoviesResults(data.results || []);
-    } catch (e) {
-      showToast('Movies search failed', 'error');
-    }
-  };
-
-  const handleSearchBooks = async () => {
-    if (!booksSearchQ.trim()) return;
-    try {
-      const res = await fetch(`/api/integrations/books/search?q=${encodeURIComponent(booksSearchQ)}`);
-      const data = await res.json();
-      setBooksResults(data.books || []);
-    } catch (e) {
-      showToast('Books search failed', 'error');
-    }
-  };
-
-  const handleStoryGraphCsvUpload = async (file: File | null) => {
-    if (!file || !token) return;
-    const formData = new FormData();
-    formData.append('csv', file);
-
-    try {
-      const res = await fetch('/api/nook/import/storygraph', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData
-      });
-      const data = await res.json();
-      if (res.ok && Array.isArray(data.books)) {
-        setFavoriteBooks(prev => [...prev, ...data.books]);
-        showToast(data.message || 'StoryGraph CSV imported!', 'success');
-      } else {
-        showToast(data.error || 'Failed to import CSV', 'error');
-      }
-    } catch (e) {
-      showToast('Error importing StoryGraph CSV', 'error');
-    }
-  };
-
-  const handleSave = async () => {
+  const handleSave = async (silent = false) => {
     if (!token) return;
     setIsSaving(true);
 
@@ -413,16 +302,36 @@ export const NookCustomizerPage: React.FC = () => {
       });
 
       if (custRes.ok && stickRes.ok) {
-        showToast('Nook customized successfully!', 'success');
+        if (!silent) showToast('Nook customized successfully!', 'success');
       } else {
-        showToast('Failed to save customization', 'error');
+        if (!silent) showToast('Failed to save customization', 'error');
       }
     } catch (e) {
-      showToast('Error saving customization', 'error');
+      if (!silent) showToast('Error saving customization', 'error');
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Debounced Autosave Effect
+  useEffect(() => {
+    if (!isInitialLoaded) return;
+
+    setAutosaveStatus('saving');
+    const timer = setTimeout(async () => {
+      await handleSave(true);
+      setAutosaveStatus('saved');
+      setTimeout(() => setAutosaveStatus('idle'), 2500);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [
+    theme, visibilityNook, bgColor, cardBgColor, accentColor, textColor, borderColor,
+    steamId64, steamDisplayMode, spotifyTrackUrl, appleMusicUrl, bgMusicUrl, bgMusicTitle,
+    musicTracks, autoNextPlay, loopPlaylist, cardVisibility, cardTitles, favoriteMovies,
+    favoriteBooks, storygraphUsername, themeSoundsEnabled, themeAnimationsEnabled,
+    hobbies, customCss, stickers
+  ]);
 
   const handleMusicFileUpload = async (file: File | null) => {
     if (!file || !token) return;
@@ -560,10 +469,22 @@ export const NookCustomizerPage: React.FC = () => {
             </h1>
             <p style={{ opacity: 0.7, marginTop: '0.25rem' }}>Design your dream page with cute themes, audio, stickers, and custom CSS.</p>
           </div>
-          <button onClick={handleSave} className="btn-primary" disabled={isSaving} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0, marginTop: '0.25rem' }}>
-            <Save size={18} style={{ flexShrink: 0 }} />
-            <span>{isSaving ? 'Saving...' : 'Save Nook'}</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, marginTop: '0.25rem' }}>
+            {autosaveStatus === 'saving' && (
+              <span style={{ fontSize: '0.78rem', color: 'var(--accent-color)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Sparkles size={14} /> Autosaving...
+              </span>
+            )}
+            {autosaveStatus === 'saved' && (
+              <span style={{ fontSize: '0.78rem', color: '#22c55e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                ✓ Autosaved
+              </span>
+            )}
+            <button onClick={() => handleSave(false)} className="btn-primary" disabled={isSaving} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Save size={18} style={{ flexShrink: 0 }} />
+              <span>{isSaving ? 'Saving...' : 'Save Nook'}</span>
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
