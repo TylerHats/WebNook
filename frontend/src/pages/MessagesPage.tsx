@@ -290,20 +290,12 @@ export const MessagesPage: React.FC = () => {
   const getConvTitle = (conv: any) => {
     if (!conv) return '';
     if (conv.type === 'group') return conv.name || 'Group Chat';
+    if (conv.type === 'bug_reports' || conv.name?.includes('Bug Reports')) {
+      return 'Bug Reports & Feature Requests 🐛';
+    }
     
     const members = conv.members || [];
-    const isBugReports = conv.name === 'Bug Reports 🐛' || members.some((m: any) => m.username === 'bug_reports');
     const isSystemChat = conv.name === 'System 🤖' || members.some((m: any) => m.username === 'system' || m.role === 'system');
-
-    if (isBugReports) {
-      if (user?.role === 'admin') {
-        const clientUser = members.find((m: any) => m.role !== 'admin' && m.username !== 'bug_reports');
-        if (clientUser) {
-          return `@${clientUser.username}'s Bug Report 🐛`;
-        }
-      }
-      return 'Bug Reports & Support 🐛';
-    }
 
     if (isSystemChat) {
       return 'System Announcement 🤖';
@@ -324,19 +316,12 @@ export const MessagesPage: React.FC = () => {
       return <Users size={20} />;
     }
 
-    const members = conv.members || [];
-    const isBugReports = conv.name === 'Bug Reports 🐛' || members.some((m: any) => m.username === 'bug_reports');
-    const isSystemChat = conv.name === 'System 🤖' || members.some((m: any) => m.username === 'system' || m.role === 'system');
-
-    if (isBugReports) {
-      if (user?.role === 'admin') {
-        const clientUser = members.find((m: any) => m.role !== 'admin' && m.username !== 'bug_reports');
-        if (clientUser?.avatar_url) {
-          return <img src={clientUser.avatar_url} alt={clientUser.username} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />;
-        }
-      }
+    if (conv.type === 'bug_reports' || conv.name?.includes('Bug Reports')) {
       return <Bug size={20} color="#ef4444" />;
     }
+
+    const members = conv.members || [];
+    const isSystemChat = conv.name === 'System 🤖' || members.some((m: any) => m.username === 'system' || m.role === 'system');
 
     if (isSystemChat) {
       return <Bot size={20} color="var(--accent-color)" />;
@@ -354,7 +339,7 @@ export const MessagesPage: React.FC = () => {
     if (activeFilter === 'direct' && c.type !== 'direct') return false;
     if (activeFilter === 'group' && c.type !== 'group') return false;
     if (activeFilter === 'system') {
-      const isSys = (c.members || []).some((m: any) => m.role === 'system' || m.username === 'system' || m.username === 'bug_reports');
+      const isSys = c.type === 'bug_reports' || c.name?.includes('Bug Reports') || (c.members || []).some((m: any) => m.role === 'system' || m.username === 'system');
       if (!isSys) return false;
     }
     if (searchQuery.trim()) {
@@ -707,6 +692,7 @@ export const MessagesPage: React.FC = () => {
                   return (
                     <div
                       key={conv.id}
+                      className="conv-item"
                       onClick={() => handleSelectConv(conv.id)}
                       style={{
                         padding: '0.65rem 0.75rem',
@@ -739,15 +725,15 @@ export const MessagesPage: React.FC = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>{title}</span>
-                            {Boolean(conv.is_pinned) && <span title="Pinned Chat" style={{ display: 'inline-flex', alignItems: 'center' }}><Pin size={12} color="var(--accent-color)" /></span>}
                             {Boolean(conv.is_locked) && <span title="Locked" style={{ display: 'inline-flex', alignItems: 'center' }}><Lock size={12} color="#ef4444" /></span>}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
                             {Boolean(conv.is_muted) && <span title="Muted"><BellOff size={13} style={{ opacity: 0.5 }} /></span>}
                             <button
                               onClick={(e) => handleTogglePin(conv.id, e)}
+                              className={`conv-pin-btn ${conv.is_pinned ? 'pinned' : ''}`}
                               title={conv.is_pinned ? "Unpin Chat" : "Pin Chat"}
-                              style={{ background: 'none', border: 'none', color: conv.is_pinned ? 'var(--accent-color)' : 'inherit', opacity: conv.is_pinned ? 1 : 0.35, cursor: 'pointer', padding: '2px' }}
+                              style={{ background: 'none', border: 'none', color: conv.is_pinned ? 'var(--accent-color)' : 'inherit', cursor: 'pointer', padding: '2px' }}
                             >
                               <Pin size={13} />
                             </button>
@@ -888,7 +874,11 @@ export const MessagesPage: React.FC = () => {
                     fontWeight: 600
                   }}>
                     <ShieldAlert size={16} color="#ef4444" style={{ flexShrink: 0 }} />
-                    <span>Anything sent here will be sent directly to WebNook Administrators for review. 🛡️</span>
+                    <span>
+                      {user?.role === 'admin'
+                        ? '🛡️ Administrator View: You are viewing all submitted bug reports and feature requests. Use the Reply button on any message to send a response visible to that user.'
+                        : '💡 Anything sent here will be submitted directly to WebNook Administrators for review. Admin responses will appear as direct replies.'}
+                    </span>
                   </div>
                 )}
 
@@ -897,7 +887,7 @@ export const MessagesPage: React.FC = () => {
                   {messages.length === 0 ? (
                     <div style={{ textAlign: 'center', margin: 'auto', opacity: 0.5, fontSize: '0.9rem' }}>
                       {isBugReportsChat
-                        ? 'Submit a bug report or feedback here to notify site administrators! 🐛'
+                        ? 'Submit a bug report or feature request here to notify site administrators! 🐛'
                         : 'No messages yet. Send a message to start the conversation! ✨'}
                     </div>
                   ) : (
@@ -926,13 +916,13 @@ export const MessagesPage: React.FC = () => {
                       }
 
                       const isSelf = msg.sender_id === user?.id;
-                      const isSystem = msg.sender_role === 'system' || msg.sender_username === 'system' || msg.sender_username === 'bug_reports';
+                      const isSystem = msg.sender_role === 'system' || msg.sender_username === 'system';
 
                       const bubbleBg = isSystem 
-                        ? (msg.sender_username === 'bug_reports' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(99, 102, 241, 0.25)')
+                        ? 'rgba(99, 102, 241, 0.25)'
                         : (msg.sender_bg_color || (isSelf ? 'var(--accent-color)' : 'rgba(255, 255, 255, 0.08)'));
                       
-                      const borderAccent = msg.sender_accent_color || (msg.sender_username === 'bug_reports' ? '#ef4444' : 'var(--accent-color)');
+                      const borderAccent = msg.sender_accent_color || 'var(--accent-color)';
                       const textColor = msg.sender_text_color || '#ffffff';
 
                       return (
@@ -1049,27 +1039,33 @@ export const MessagesPage: React.FC = () => {
                           {/* Reaction Badges */}
                           {msg.reactions && msg.reactions.length > 0 && (
                             <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
-                              {msg.reactions.map((r: any) => (
-                                <span
-                                  key={r.emoji}
-                                  onClick={() => !isSystemChat && handleToggleReaction(msg.id, r.emoji)}
-                                  style={{
-                                    fontSize: '0.75rem',
-                                    padding: '0.1rem 0.4rem',
-                                    borderRadius: '10px',
-                                    background: r.user_reacted ? 'rgba(99, 102, 241, 0.3)' : 'rgba(0,0,0,0.25)',
-                                    border: r.user_reacted ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.2rem',
-                                    fontWeight: 600
-                                  }}
-                                >
-                                  <span>{r.emoji}</span>
-                                  <span>{r.count}</span>
-                                </span>
-                              ))}
+                              {msg.reactions.map((r: any) => {
+                                const usersTooltip = r.users && r.users.length > 0
+                                  ? `Reacted by: ${r.users.map((u: string) => `@${u}`).join(', ')}`
+                                  : '';
+                                return (
+                                  <span
+                                    key={r.emoji}
+                                    onClick={() => !isSystemChat && handleToggleReaction(msg.id, r.emoji)}
+                                    title={usersTooltip || (r.user_reacted ? 'Remove reaction' : 'Add reaction')}
+                                    style={{
+                                      fontSize: '0.75rem',
+                                      padding: '0.1rem 0.4rem',
+                                      borderRadius: '10px',
+                                      background: r.user_reacted ? 'rgba(99, 102, 241, 0.3)' : 'rgba(0,0,0,0.25)',
+                                      border: r.user_reacted ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.2rem',
+                                      fontWeight: 600
+                                    }}
+                                  >
+                                    <span>{r.emoji}</span>
+                                    <span>{r.count}</span>
+                                  </span>
+                                );
+                              })}
                             </div>
                           )}
                         </div>

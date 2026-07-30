@@ -132,14 +132,27 @@ router.put('/friends/top-grid', authenticateToken, async (req: AuthenticatedRequ
 
 // ======================== GUESTBOOK ========================
 
-// Get Guestbook entries for a user Nook
+import jwt from 'jsonwebtoken';
+const JWT_SECRET = process.env.JWT_SECRET || 'webnook_secret_key_change_in_prod';
+
+// Get Guestbook entries for a user Nook (with reactions)
 router.get('/guestbook/:username', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
     const owner = await queryOne<any>('SELECT id FROM users WHERE username = ?', [username.trim().toLowerCase()]);
     if (!owner) return res.status(404).json({ error: 'Nook owner not found' });
 
-    const entries = await query<any>(
+    let currentUserId = 0;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        if (decoded?.id) currentUserId = decoded.id;
+      } catch (e) {}
+    }
+
+    const rawEntries = await query<any>(
       `SELECT g.id, g.content, g.status, g.created_at, u.username, u.display_name, u.avatar_url 
        FROM guestbook_entries g 
        JOIN users u ON g.author_user_id = u.id 
@@ -147,6 +160,35 @@ router.get('/guestbook/:username', async (req: Request, res: Response) => {
        ORDER BY g.created_at DESC`,
       [owner.id]
     );
+
+    const entries = [];
+    for (const entry of rawEntries) {
+      const reactionRows = await query<any>(`
+        SELECT gr.emoji, gr.user_id, u.username
+        FROM guestbook_reactions gr
+        JOIN users u ON gr.user_id = u.id
+        WHERE gr.entry_id = ?
+        ORDER BY gr.created_at ASC
+      `, [entry.id]);
+
+      const reactionMap = new Map<string, { emoji: string; count: number; user_reacted: boolean; users: string[] }>();
+      for (const r of reactionRows) {
+        if (!reactionMap.has(r.emoji)) {
+          reactionMap.set(r.emoji, { emoji: r.emoji, count: 0, user_reacted: false, users: [] });
+        }
+        const item = reactionMap.get(r.emoji)!;
+        item.count += 1;
+        item.users.push(r.username);
+        if (r.user_id === currentUserId) {
+          item.user_reacted = true;
+        }
+      }
+
+      entries.push({
+        ...entry,
+        reactions: Array.from(reactionMap.values())
+      });
+    }
 
     return res.json({ entries });
   } catch (err) {
@@ -191,6 +233,57 @@ router.post('/guestbook/:username', authenticateToken, async (req: Authenticated
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to post guestbook entry' });
+  }
+});
+
+// Toggle Reaction on Guestbook Entry (Only Nook Owner)
+router.post('/guestbook/entry/:id/reactions', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { id } = req.params;
+    const { emoji } = req.body;
+
+    if (!emoji) return res.status(400).json({ error: 'Emoji reaction is required' });
+
+    const entry = await queryOne<any>('SELECT * FROM guestbook_entries WHERE id = ?', [id]);
+    if (!entry) return res.status(404).json({ error: 'Guestbook entry not found' });
+
+    if (entry.nook_user_id !== userId) {
+      return res.status(403).json({ error: 'Only the Nook owner can add reactions to guestbook comments on their profile.' });
+    }
+
+    const existing = await queryOne<any>('SELECT id FROM guestbook_reactions WHERE entry_id = ? AND user_id = ? AND emoji = ?', [id, userId, emoji]);
+
+    if (existing) {
+      await execute('DELETE FROM guestbook_reactions WHERE id = ?', [existing.id]);
+    } else {
+      await execute('INSERT INTO guestbook_reactions (entry_id, user_id, emoji) VALUES (?, ?, ?)', [id, userId, emoji]);
+    }
+
+    const reactionRows = await query<any>(`
+      SELECT gr.emoji, gr.user_id, u.username
+      FROM guestbook_reactions gr
+      JOIN users u ON gr.user_id = u.id
+      WHERE gr.entry_id = ?
+      ORDER BY gr.created_at ASC
+    `, [id]);
+
+    const reactionMap = new Map<string, { emoji: string; count: number; user_reacted: boolean; users: string[] }>();
+    for (const r of reactionRows) {
+      if (!reactionMap.has(r.emoji)) {
+        reactionMap.set(r.emoji, { emoji: r.emoji, count: 0, user_reacted: false, users: [] });
+      }
+      const item = reactionMap.get(r.emoji)!;
+      item.count += 1;
+      item.users.push(r.username);
+      if (r.user_id === userId) {
+        item.user_reacted = true;
+      }
+    }
+
+    return res.json({ reactions: Array.from(reactionMap.values()) });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to update reaction' });
   }
 });
 

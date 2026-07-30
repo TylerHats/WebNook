@@ -56,14 +56,14 @@ export const NookViewPage: React.FC = () => {
 
   const isWin9xTheme = profileData?.nookSettings?.theme === 'win98' || profileData?.nookSettings?.theme === 'win9x';
 
-  // Randomized Per-Image Delays & Speeds on every load
+  // Fully Randomized Per-Image Delays & Speeds (all finish within ~2.4s)
   useEffect(() => {
     if (!isWin9xTheme) return;
     const timer = setTimeout(() => {
       const imgs = document.querySelectorAll('.nook-container img, .nook-banner-image');
-      imgs.forEach((img, idx) => {
-        const duration = (Math.random() * 1.4 + 1.2).toFixed(2);
-        const delay = (idx * 0.35 + Math.random() * 0.3).toFixed(2);
+      imgs.forEach((img) => {
+        const delay = (Math.random() * 1.1).toFixed(2);
+        const duration = (0.8 + Math.random() * 0.5).toFixed(2);
         (img as HTMLElement).style.animationDuration = `${duration}s`;
         (img as HTMLElement).style.animationDelay = `${delay}s`;
       });
@@ -334,7 +334,7 @@ export const NookViewPage: React.FC = () => {
               <img
                 src={owner.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
                 alt={owner.display_name}
-                style={{ width: '110px', height: '110px', borderRadius: '50%', border: '4px solid var(--bg-panel-solid)', objectFit: 'cover', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}
+                style={{ width: '110px', height: '110px', borderRadius: '50%', border: '4px solid var(--bg-panel-solid)', objectFit: 'cover', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', position: 'relative', zIndex: 5 }}
               />
               <div>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

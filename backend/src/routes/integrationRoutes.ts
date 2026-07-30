@@ -162,11 +162,15 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
       }
     }
 
-    // 2. Fallback: Scrape public Steam profile XML feed directly!
+    // 2. Fallback: Scrape public Steam profile XML feed & games list directly!
     try {
       const xmlUrl = parsedInput.type === 'steamid64'
         ? `https://steamcommunity.com/profiles/${parsedInput.value}/?xml=1`
         : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/?xml=1`;
+
+      const gamesXmlUrl = parsedInput.type === 'steamid64'
+        ? `https://steamcommunity.com/profiles/${parsedInput.value}/games/?tab=all&xml=1`
+        : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/games/?tab=all&xml=1`;
 
       const xmlText = await fetchText(xmlUrl);
 
@@ -181,24 +185,65 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
       const isOnline = onlineState.toLowerCase() !== 'offline';
 
       const games: any[] = [];
-      const gameBlocks = xmlText.split('<mostPlayedGame>');
+      try {
+        const gamesXmlText = await fetchText(gamesXmlUrl);
+        const gameBlocks = gamesXmlText.split('<game>');
 
-      for (let i = 1; i < gameBlocks.length && games.length < 5; i++) {
-        const block = gameBlocks[i];
-        const gNameMatch = block.match(/<gameName><!\[CDATA\[(.*?)\]\]><\/gameName>/) || block.match(/<gameName>(.*?)<\/gameName>/);
-        const gIconMatch = block.match(/<gameIcon><!\[CDATA\[(.*?)\]\]><\/gameIcon>/) || block.match(/<gameIcon>(.*?)<\/gameIcon>/);
-        const gHoursMatch = block.match(/<hoursOnRecord>(.*?)<\/hoursOnRecord>/);
-        const g2WeeksMatch = block.match(/<hoursPlayed>(.*?)<\/hoursPlayed>/);
+        for (let i = 1; i < gameBlocks.length; i++) {
+          const block = gameBlocks[i];
+          const appidMatch = block.match(/<appID>(.*?)<\/appID>/);
+          const gNameMatch = block.match(/<name><!\[CDATA\[(.*?)\]\]><\/name>/) || block.match(/<name>(.*?)<\/name>/);
+          const gLogoMatch = block.match(/<logo><!\[CDATA\[(.*?)\]\]><\/logo>/) || block.match(/<logo>(.*?)<\/logo>/) || block.match(/<gameIcon><!\[CDATA\[(.*?)\]\]><\/gameIcon>/) || block.match(/<gameIcon>(.*?)<\/gameIcon>/);
+          const gHoursMatch = block.match(/<hoursOnRecord>(.*?)<\/hoursOnRecord>/);
+          const g2WeeksMatch = block.match(/<hoursLast2Weeks>(.*?)<\/hoursLast2Weeks>/) || block.match(/<hoursPlayed>(.*?)<\/hoursPlayed>/);
 
-        if (gNameMatch) {
-          games.push({
-            name: gNameMatch[1],
-            playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1])) : 0,
-            playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
-            icon: gIconMatch ? gIconMatch[1] : ''
-          });
+          if (gNameMatch) {
+            games.push({
+              appid: appidMatch ? parseInt(appidMatch[1], 10) : 0,
+              name: gNameMatch[1],
+              playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1].replace(',', ''))) : 0,
+              playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
+              icon: gLogoMatch ? gLogoMatch[1] : ''
+            });
+          }
+        }
+      } catch (gErr) {
+        console.warn('Steam games list XML scrape error, falling back to profile XML games:', gErr);
+      }
+
+      // If games list tab wasn't available or empty, parse mostPlayedGame from main profile XML
+      if (games.length === 0) {
+        const gameBlocks = xmlText.split('<mostPlayedGame>');
+        for (let i = 1; i < gameBlocks.length; i++) {
+          const block = gameBlocks[i];
+          const gNameMatch = block.match(/<gameName><!\[CDATA\[(.*?)\]\]><\/gameName>/) || block.match(/<gameName>(.*?)<\/gameName>/);
+          const gIconMatch = block.match(/<gameIcon><!\[CDATA\[(.*?)\]\]><\/gameIcon>/) || block.match(/<gameIcon>(.*?)<\/gameIcon>/);
+          const gHoursMatch = block.match(/<hoursOnRecord>(.*?)<\/hoursOnRecord>/);
+          const g2WeeksMatch = block.match(/<hoursPlayed>(.*?)<\/hoursPlayed>/);
+
+          if (gNameMatch) {
+            games.push({
+              appid: 0,
+              name: gNameMatch[1],
+              playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1].replace(',', ''))) : 0,
+              playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
+              icon: gIconMatch ? gIconMatch[1] : ''
+            });
+          }
         }
       }
+
+      const topGamesSorted = [...games]
+        .filter(g => (g.playtime_forever || 0) > 0)
+        .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
+        .slice(0, 3);
+
+      const recentGamesSorted = [...games]
+        .filter(g => (g.playtime_2weeks || 0) > 0)
+        .sort((a, b) => (b.playtime_2weeks || 0) - (a.playtime_2weeks || 0))
+        .slice(0, 3);
+
+      const finalRecent = recentGamesSorted.length > 0 ? recentGamesSorted : games.slice(0, 3);
 
       return res.json({
         player: {
@@ -208,8 +253,8 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           personaState: isOnline ? 1 : 0,
           stateMessage: stateMessageMatch ? stateMessageMatch[1] : ''
         },
-        recentlyPlayed: games.slice(0, 3),
-        topGames: [...games].sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0)).slice(0, 3)
+        recentlyPlayed: finalRecent,
+        topGames: topGamesSorted
       });
     } catch (scrapeErr) {
       console.warn('Steam XML scrape fallback error:', scrapeErr);

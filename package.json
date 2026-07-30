@@ -1,6 +1,6 @@
 {
   "name": "webnook",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "A friend-group centric, customizable self-hosted social media platform inspired by MySpace.",
   "private": true,
   "scripts": {

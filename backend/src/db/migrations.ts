@@ -367,6 +367,20 @@ export async function runMigrations() {
   try {
     await execute('ALTER TABLE nooks ADD COLUMN hobbies_json TEXT DEFAULT "[]"');
   } catch (e) {}
+  try {
+    await execute(`
+      CREATE TABLE IF NOT EXISTS guestbook_reactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        emoji TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(entry_id) REFERENCES guestbook_entries(id) ON DELETE CASCADE,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(entry_id, user_id, emoji)
+      )
+    `);
+  } catch (e) {}
 
   const currentVersionRow = await queryOne<{ max_version: number }>(
     'SELECT MAX(version) as max_version FROM schema_migrations'
