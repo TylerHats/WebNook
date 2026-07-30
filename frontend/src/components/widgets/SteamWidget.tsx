@@ -40,11 +40,54 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
       });
   }, [targetIdentifier]);
 
+  const minContainerHeight = displayMode === 'none' ? '120px' : (displayMode === 'both' ? '390px' : '260px');
+
   if (loading) {
     return (
-      <div className="nook-panel" style={{ padding: '1.25rem', textAlign: 'center' }}>
-        <Sparkles size={22} className="animate-spin" color="var(--accent-color)" style={{ margin: '0 auto 0.5rem' }} />
-        <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>Loading Steam Showcase...</span>
+      <div className="nook-panel" style={{ minHeight: minContainerHeight, display: 'flex', flexDirection: 'column' }}>
+        {/* Header Bar Skeleton */}
+        <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Gamepad2 size={20} color="var(--accent-color)" />
+            <span style={{ fontWeight: 700 }}>{title}</span>
+          </div>
+          <Sparkles size={16} className="animate-spin" color="var(--accent-color)" style={{ opacity: 0.8 }} />
+        </div>
+
+        {/* User Summary Skeleton Banner */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.85rem',
+            marginBottom: displayMode === 'none' ? '0' : '1rem',
+            background: 'linear-gradient(135deg, #171a21 0%, #1b2838 100%)',
+            padding: '0.75rem',
+            borderRadius: '10px',
+            border: '1px solid rgba(102, 192, 244, 0.35)'
+          }}
+        >
+          <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.1)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ width: '110px', height: '15px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.2)', marginBottom: '8px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div style={{ width: '70px', height: '12px', borderRadius: '4px', background: 'rgba(102, 192, 244, 0.3)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          </div>
+        </div>
+
+        {/* Game List Skeleton Placeholders */}
+        {displayMode !== 'none' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', flex: 1 }}>
+            <div style={{ width: '130px', height: '12px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.15)', marginBottom: '0.2rem' }} />
+            <div style={{ height: '34px', borderRadius: '8px', background: 'rgba(0, 0, 0, 0.2)', border: '1px solid var(--border-color)' }} />
+            <div style={{ height: '34px', borderRadius: '8px', background: 'rgba(0, 0, 0, 0.2)', border: '1px solid var(--border-color)' }} />
+            {displayMode === 'both' && (
+              <>
+                <div style={{ width: '130px', height: '12px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.15)', marginTop: '0.3rem', marginBottom: '0.2rem' }} />
+                <div style={{ height: '34px', borderRadius: '8px', background: 'rgba(0, 0, 0, 0.2)', border: '1px solid var(--border-color)' }} />
+              </>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -73,7 +116,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   };
 
   return (
-    <div className="nook-panel">
+    <div className="nook-panel" style={{ minHeight: minContainerHeight }}>
       {/* Header Bar */}
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

@@ -177,27 +177,35 @@ input, textarea, select {
   }
 }
 
-/* 90s Early Internet Image Filtering & Dithering */
-.theme-win98 img:not([style*="border-radius: 50%"]):not([style*="border-radius:50%"]),
-.theme-win9x img:not([style*="border-radius: 50%"]):not([style*="border-radius:50%"]),
+/* 90s Early Internet Image Filtering, Dithering & Scanline Reveal */
+.theme-win98 img, .theme-win9x img,
 .theme-win98 .nook-banner-image, .theme-win9x .nook-banner-image {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   filter: contrast(130%) saturate(80%) sepia(12%) brightness(95%);
-  border: 1px solid #000000 !important;
   animation: win9xScanlineReveal 2.2s steps(8, end) both;
   will-change: clip-path, filter;
 }
 
-/* Circular Avatars in Win9X: keep 50% border radius without square border haze */
+/* Staggered / Randomized Loading Delays for Win9x Grid Images & Avatars */
+.theme-win98 div > a:nth-child(1) img, .theme-win9x div > a:nth-child(1) img { animation-delay: 0.1s !important; }
+.theme-win98 div > a:nth-child(2) img, .theme-win9x div > a:nth-child(2) img { animation-delay: 0.75s !important; }
+.theme-win98 div > a:nth-child(3) img, .theme-win9x div > a:nth-child(3) img { animation-delay: 0.35s !important; }
+.theme-win98 div > a:nth-child(4) img, .theme-win9x div > a:nth-child(4) img { animation-delay: 1.1s !important; }
+.theme-win98 div > a:nth-child(5) img, .theme-win9x div > a:nth-child(5) img { animation-delay: 0.55s !important; }
+.theme-win98 div > a:nth-child(6) img, .theme-win9x div > a:nth-child(6) img { animation-delay: 1.35s !important; }
+.theme-win98 div > a:nth-child(7) img, .theme-win9x div > a:nth-child(7) img { animation-delay: 0.25s !important; }
+.theme-win98 div > a:nth-child(8) img, .theme-win9x div > a:nth-child(8) img { animation-delay: 0.9s !important; }
+.theme-win98 div > a:nth-child(9) img, .theme-win9x div > a:nth-child(9) img { animation-delay: 0.45s !important; }
+.theme-win98 div > a:nth-child(10) img, .theme-win9x div > a:nth-child(10) img { animation-delay: 1.25s !important; }
+.theme-win98 div > a:nth-child(11) img, .theme-win9x div > a:nth-child(11) img { animation-delay: 0.6s !important; }
+.theme-win98 div > a:nth-child(12) img, .theme-win9x div > a:nth-child(12) img { animation-delay: 1.5s !important; }
+
+/* Circular Avatars in Win9X: keep 50% border radius while retaining scanline animation */
 .theme-win98 img[style*="border-radius: 50%"], .theme-win9x img[style*="border-radius: 50%"],
 .theme-win98 img[style*="border-radius:50%"], .theme-win9x img[style*="border-radius:50%"] {
   border-radius: 50% !important;
-  border: 3px solid #ffffff !important;
   box-shadow: 0 4px 12px rgba(0,0,0,0.35) !important;
-  outline: none !important;
-  clip-path: none !important;
-  animation: none !important;
 }
 
 /* Retro Scanline Overlay on Panels & Embedded Players (Non-blocking clickability) */
