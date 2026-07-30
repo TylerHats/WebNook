@@ -212,12 +212,16 @@ input, textarea, select {
 .theme-win98 div > a:nth-child(11) img, .theme-win9x div > a:nth-child(11) img { animation-delay: 0.6s !important; }
 .theme-win98 div > a:nth-child(12) img, .theme-win9x div > a:nth-child(12) img { animation-delay: 1.5s !important; }
 
-/* Circular Avatars in Win9X: keep 50% border radius while retaining scanline animation */
+/* Circular Avatars in Win9X: keep 50% border radius and eliminate square ghost shadows */
+.theme-win98 .nook-header-avatar, .theme-win9x .nook-header-avatar,
+.theme-win98 img.nook-header-avatar, .theme-win9x img.nook-header-avatar,
 .theme-win98 img[style*="border-radius: 50%"], .theme-win9x img[style*="border-radius: 50%"],
 .theme-win98 img[style*="border-radius:50%"], .theme-win9x img[style*="border-radius:50%"] {
   border-radius: 50% !important;
   box-shadow: none !important;
-  border: 2px solid #ffffff !important;
+  border: 3px solid #ffffff !important;
+  background: transparent !important;
+  outline: none !important;
 }
 
 /* Retro Scanline Overlay on Panels & Embedded Players (Non-blocking clickability) */

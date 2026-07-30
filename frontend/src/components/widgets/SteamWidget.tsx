@@ -7,6 +7,9 @@ interface SteamWidgetProps {
   steamId?: string;
   steamInput?: string;
   displayMode?: 'none' | 'recently_played' | 'top_games' | 'both';
+  excludedGames?: string[];
+  onToggleExclude?: (gameTitle: string) => void;
+  isCustomizerPreview?: boolean;
 }
 
 export const SteamWidget: React.FC<SteamWidgetProps> = ({
@@ -14,7 +17,10 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   steamId64,
   steamId,
   steamInput,
-  displayMode = 'both'
+  displayMode = 'both',
+  excludedGames = [],
+  onToggleExclude,
+  isCustomizerPreview = false
 }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -93,8 +99,16 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   }
 
   const player = data?.player;
-  const recentlyPlayed = data?.recentlyPlayed || [];
-  const topGames = data?.topGames || [];
+  const rawRecentlyPlayed = data?.recentlyPlayed || [];
+  const rawTopGames = data?.topGames || [];
+
+  const isExcluded = (gameName: string) => {
+    if (!excludedGames || excludedGames.length === 0) return false;
+    return excludedGames.some(ex => ex.trim().toLowerCase() === gameName.trim().toLowerCase());
+  };
+
+  const filteredRecentlyPlayed = rawRecentlyPlayed.filter((g: any) => !isExcluded(g.name));
+  const filteredTopGames = rawTopGames.filter((g: any) => !isExcluded(g.name));
 
   const wantRecent = displayMode === 'recently_played' || displayMode === 'both';
   const wantTop = displayMode === 'top_games' || displayMode === 'both';
@@ -189,7 +203,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
       {/* Games Lists (Recently Played & Top Games) */}
       {displayMode !== 'none' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Top 3 Recently Played Games (Past 2 Weeks) */}
+          {/* Top Recently Played Games (Past 2 Weeks) */}
           {wantRecent && (
             <div>
               <div
@@ -209,45 +223,69 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                 <span>Recently Played (Past 2 Weeks):</span>
               </div>
 
-              {recentlyPlayed.length > 0 ? (
+              {(isCustomizerPreview ? rawRecentlyPlayed : filteredRecentlyPlayed).length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                  {recentlyPlayed.slice(0, 3).map((g: any, idx: number) => (
-                    <div
-                      key={g.appid || idx}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                        fontSize: '0.85rem'
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
-                        <img
-                          src={g.icon || g.headerUrl}
-                          alt=""
-                          style={{ width: '32px', height: '20px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
-                        />
-                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</span>
+                  {(isCustomizerPreview ? rawRecentlyPlayed : filteredRecentlyPlayed.slice(0, 3)).map((g: any, idx: number) => {
+                    const excluded = isExcluded(g.name);
+                    return (
+                      <div
+                        key={g.appid || idx}
+                        onClick={() => onToggleExclude && onToggleExclude(g.name)}
+                        title={isCustomizerPreview ? (excluded ? `Click to restore "${g.name}"` : `Click to exclude "${g.name}"`) : undefined}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          background: excluded ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.2)',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '8px',
+                          border: excluded ? '1px dashed rgba(239, 68, 68, 0.4)' : '1px solid var(--border-color)',
+                          fontSize: '0.85rem',
+                          cursor: isCustomizerPreview ? 'pointer' : 'default',
+                          opacity: excluded ? 0.45 : 1,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
+                          <img
+                            src={g.icon || g.headerUrl}
+                            alt=""
+                            style={{ width: '32px', height: '20px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0, filter: excluded ? 'grayscale(80%)' : 'none' }}
+                          />
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: excluded ? 'line-through' : 'none' }}>{g.name}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, marginLeft: '0.5rem' }}>
+                          <span style={{ fontSize: '0.75rem', color: excluded ? 'rgba(255,255,255,0.4)' : 'var(--accent-color)', fontWeight: 700 }}>
+                            {formatRecentTime(g)}
+                          </span>
+                          {isCustomizerPreview && (
+                            <span style={{
+                              fontSize: '0.68rem',
+                              opacity: 0.9,
+                              background: excluded ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.25)',
+                              color: excluded ? '#4ade80' : '#f87171',
+                              border: excluded ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                              padding: '0.1rem 0.45rem',
+                              borderRadius: '4px',
+                              fontWeight: 700
+                            }}>
+                              {excluded ? 'Filtered 🚫 Restore' : 'Exclude ✕'}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 700, flexShrink: 0, marginLeft: '0.5rem' }}>
-                        {formatRecentTime(g)}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div style={{ background: 'rgba(0, 0, 0, 0.15)', padding: '0.65rem', borderRadius: '6px', fontSize: '0.78rem', opacity: 0.7, textAlign: 'center' }}>
-                  No games played in the past 2 weeks 🎮
+                  {rawRecentlyPlayed.length > 0 ? 'All recent games excluded by filters 🎮' : 'No games played in the past 2 weeks 🎮'}
                 </div>
               )}
             </div>
           )}
 
-          {/* Top 3 All-Time Games (Lifetime Played Hours) */}
+          {/* Top All-Time Games (Lifetime Played Hours) */}
           {wantTop && (
             <div>
               <div
@@ -267,43 +305,69 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                 <span>Top All-Time Games:</span>
               </div>
 
-              {topGames.length > 0 ? (
+              {(isCustomizerPreview ? rawTopGames : filteredTopGames).length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                  {topGames.slice(0, 3).map((g: any, idx: number) => (
-                    <div
-                      key={g.appid || idx}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                        fontSize: '0.85rem'
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
-                        <span style={{ fontSize: '0.75rem', opacity: 0.6, fontWeight: 800, flexShrink: 0 }}>
-                          #{idx + 1}
-                        </span>
-                        <img
-                          src={g.icon || g.headerUrl}
-                          alt=""
-                          style={{ width: '32px', height: '20px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
-                        />
-                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</span>
+                  {(isCustomizerPreview ? rawTopGames : filteredTopGames.slice(0, 3)).map((g: any, idx: number) => {
+                    const excluded = isExcluded(g.name);
+                    return (
+                      <div
+                        key={g.appid || idx}
+                        onClick={() => onToggleExclude && onToggleExclude(g.name)}
+                        title={isCustomizerPreview ? (excluded ? `Click to restore "${g.name}"` : `Click to exclude "${g.name}"`) : undefined}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          background: excluded ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.2)',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '8px',
+                          border: excluded ? '1px dashed rgba(239, 68, 68, 0.4)' : '1px solid var(--border-color)',
+                          fontSize: '0.85rem',
+                          cursor: isCustomizerPreview ? 'pointer' : 'default',
+                          opacity: excluded ? 0.45 : 1,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
+                          <span style={{ fontSize: '0.75rem', opacity: excluded ? 0.3 : 0.6, fontWeight: 800, flexShrink: 0 }}>
+                            #{idx + 1}
+                          </span>
+                          <img
+                            src={g.icon || g.headerUrl}
+                            alt=""
+                            style={{ width: '32px', height: '20px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0, filter: excluded ? 'grayscale(80%)' : 'none' }}
+                          />
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: excluded ? 'line-through' : 'none' }}>{g.name}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, marginLeft: '0.5rem' }}>
+                          <span style={{ fontSize: '0.75rem', opacity: excluded ? 0.4 : 0.75, fontWeight: 700 }}>
+                            {g.playtime_forever || 0} hrs total
+                          </span>
+                          {isCustomizerPreview && (
+                            <span style={{
+                              fontSize: '0.68rem',
+                              opacity: 0.9,
+                              background: excluded ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.25)',
+                              color: excluded ? '#4ade80' : '#f87171',
+                              border: excluded ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                              padding: '0.1rem 0.45rem',
+                              borderRadius: '4px',
+                              fontWeight: 700
+                            }}>
+                              {excluded ? 'Filtered 🚫 Restore' : 'Exclude ✕'}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.75rem', opacity: 0.75, fontWeight: 700, flexShrink: 0, marginLeft: '0.5rem' }}>
-                        {g.playtime_forever || 0} hrs total
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div style={{ background: 'rgba(0, 0, 0, 0.15)', padding: '0.65rem', borderRadius: '6px', fontSize: '0.78rem', opacity: 0.7, textAlign: 'center', lineHeight: 1.4 }}>
                   {player?.isPrivateGames ? (
                     <span>🔒 Lifetime games list hidden by Steam account privacy settings.<br/><span style={{ fontSize: '0.72rem', opacity: 0.8 }}>Set "Game details" to Public on Steam to display all-time top games.</span></span>
+                  ) : rawTopGames.length > 0 ? (
+                    <span>All lifetime games excluded by filters 🎮</span>
                   ) : (
                     <span>No lifetime game hours recorded 🎮</span>
                   )}

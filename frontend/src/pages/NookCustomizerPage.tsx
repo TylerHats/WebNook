@@ -15,6 +15,7 @@ import { ThemeBookshelfPicker } from '../components/nook/ThemeBookshelfPicker';
 import { ThemeDefinition, ThemePalette } from '../themes/types';
 import { playThemeSound } from '../utils/themeSoundEngine';
 import { ThemeAnimationOverlay } from '../components/nook/ThemeAnimationOverlay';
+import { SteamWidget } from '../components/widgets/SteamWidget';
 
 export interface NookCardConfig {
   id: string;
@@ -31,6 +32,7 @@ export interface NookCardConfig {
   hobbies?: any[];
   steam_id64?: string;
   steam_display_mode?: 'none' | 'recently_played' | 'top_games' | 'both';
+  steam_excluded_games?: string[];
 }
 
 const DEFAULT_CARD_LAYOUT: NookCardConfig[] = [
@@ -71,6 +73,12 @@ export const NookCustomizerPage: React.FC = () => {
   const [accentColor, setAccentColor] = useState('#6366f1');
   const [textColor, setTextColor] = useState('#ffffff');
   const [borderColor, setBorderColor] = useState('rgba(255,255,255,0.1)');
+
+  const [savedBgColor, setSavedBgColor] = useState('#12131C');
+  const [savedCardBgColor, setSavedCardBgColor] = useState('rgba(255,255,255,0.06)');
+  const [savedAccentColor, setSavedAccentColor] = useState('#6366f1');
+  const [savedTextColor, setSavedTextColor] = useState('#ffffff');
+  const [savedBorderColor, setSavedBorderColor] = useState('rgba(255,255,255,0.1)');
 
   // Steam & Music integration state
   const [steamId64, setSteamId64] = useState('');
@@ -183,9 +191,15 @@ export const NookCustomizerPage: React.FC = () => {
             setTheme(data.nookSettings.theme || 'glassmorphism');
             setSavedTheme(data.nookSettings.theme || 'glassmorphism');
             setVisibilityNook(data.nookSettings.visibility_nook || 'private');
-            setBgColor(data.nookSettings.bg_color || '#12131C');
-            setAccentColor(data.nookSettings.accent_color || '#6366f1');
-            setTextColor(data.nookSettings.text_color || '#ffffff');
+            const initBg = data.nookSettings.bg_color || '#12131C';
+            const initAccent = data.nookSettings.accent_color || '#6366f1';
+            const initText = data.nookSettings.text_color || '#ffffff';
+            setBgColor(initBg);
+            setSavedBgColor(initBg);
+            setAccentColor(initAccent);
+            setSavedAccentColor(initAccent);
+            setTextColor(initText);
+            setSavedTextColor(initText);
             setBgMusicUrl(data.nookSettings.bg_music_url || '');
             setBgMusicTitle(data.nookSettings.bg_music_title || '');
             setSteamId64(data.nookSettings.steam_id64 || '');
@@ -263,8 +277,14 @@ export const NookCustomizerPage: React.FC = () => {
                 const parsedColors = typeof data.nookSettings.card_colors_json === 'string'
                   ? JSON.parse(data.nookSettings.card_colors_json)
                   : data.nookSettings.card_colors_json;
-                if (parsedColors.cardBg) setCardBgColor(parsedColors.cardBg);
-                if (parsedColors.border) setBorderColor(parsedColors.border);
+                if (parsedColors.cardBg) {
+                  setCardBgColor(parsedColors.cardBg);
+                  setSavedCardBgColor(parsedColors.cardBg);
+                }
+                if (parsedColors.border) {
+                  setBorderColor(parsedColors.border);
+                  setSavedBorderColor(parsedColors.border);
+                }
               } catch (e) {}
             }
 
@@ -508,6 +528,12 @@ export const NookCustomizerPage: React.FC = () => {
       });
 
       if (custRes.ok && stickRes.ok) {
+        setSavedTheme(activeThemeToPersist);
+        setSavedBgColor(bgColor);
+        setSavedCardBgColor(cardBgColor);
+        setSavedAccentColor(accentColor);
+        setSavedTextColor(textColor);
+        setSavedBorderColor(borderColor);
         if (!silent) showToast('Nook customized successfully!', 'success');
       } else {
         if (!silent) showToast('Failed to save customization', 'error');
@@ -522,11 +548,16 @@ export const NookCustomizerPage: React.FC = () => {
   const handleCommitTheme = async (targetThemeId: string, palette: ThemePalette) => {
     setSavedTheme(targetThemeId);
     setTheme(targetThemeId);
+    setSavedBgColor(palette.bg);
+    setSavedCardBgColor(palette.cardBg);
+    setSavedAccentColor(palette.accent);
+    setSavedTextColor(palette.text);
+    setSavedBorderColor(palette.border);
     handleApplyPalette(palette);
     await handleSave(false, targetThemeId);
   };
 
-  // Debounced Autosave Effect (Theme swaps require deliberate save action)
+  // Debounced Autosave Effect (Theme & Color changes require deliberate save action)
   useEffect(() => {
     if (!isInitialLoaded) return;
 
@@ -539,12 +570,14 @@ export const NookCustomizerPage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [
-    visibilityNook, bgColor, cardBgColor, accentColor, textColor, borderColor,
+    visibilityNook,
     steamId64, steamDisplayMode, spotifyTrackUrl, appleMusicUrl, bgMusicUrl, bgMusicTitle,
     musicTracks, autoNextPlay, loopPlaylist, cardVisibility, cardTitles, favoriteMovies,
     favoriteBooks, storygraphUsername, themeSoundsEnabled, themeAnimationsEnabled,
     hobbies, customCss, stickers, cardLayout
   ]);
+
+  const hasUnsavedColors = bgColor !== savedBgColor || cardBgColor !== savedCardBgColor || accentColor !== savedAccentColor || textColor !== savedTextColor || borderColor !== savedBorderColor;
 
   const handleMusicFileUpload = async (file: File | null) => {
     if (!file || !token) return;
@@ -769,6 +802,7 @@ export const NookCustomizerPage: React.FC = () => {
               <ThemeBookshelfPicker
                 currentSavedThemeId={savedTheme}
                 stagedThemeId={theme}
+                hasUnsavedColors={hasUnsavedColors}
                 onStageTheme={(selectedThemeObj) => {
                   setTheme(selectedThemeObj.id);
                   handleApplyPalette(selectedThemeObj.palette);
@@ -1069,7 +1103,6 @@ export const NookCustomizerPage: React.FC = () => {
               setCardLayout(updated);
               if (cIdx === cardLayout.findIndex(item => item.type === 'music')) setMusicTracks(newTracks);
             };
-
             const updateCardHobbies = (newHobbies: any[]) => {
               const updated = [...cardLayout];
               updated[cIdx].hobbies = newHobbies;
@@ -1078,17 +1111,34 @@ export const NookCustomizerPage: React.FC = () => {
             };
 
             if (c.type === 'steam') {
+              const cardExcludedGames: string[] = c.steam_excluded_games || [];
+
+              const toggleGameExclusion = (gameTitle: string) => {
+                const cleanTitle = gameTitle.trim();
+                if (!cleanTitle) return;
+                const isAlreadyExcluded = cardExcludedGames.some(ex => ex.toLowerCase() === cleanTitle.toLowerCase());
+                let updatedExclusions: string[];
+                if (isAlreadyExcluded) {
+                  updatedExclusions = cardExcludedGames.filter(ex => ex.toLowerCase() !== cleanTitle.toLowerCase());
+                  showToast(`Restored "${cleanTitle}" to Steam card`, 'info');
+                } else {
+                  updatedExclusions = [...cardExcludedGames, cleanTitle];
+                  showToast(`Excluded "${cleanTitle}" from Steam card`, 'info');
+                }
+                const updatedLayout = [...cardLayout];
+                updatedLayout[cIdx].steam_excluded_games = updatedExclusions;
+                setCardLayout(updatedLayout);
+              };
+
               return (
                 <div key={c.id} className="nook-panel">
                   <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Gamepad2 size={20} />
-                      <span>🎮 Steam Gaming Showcase ({cardNumLabel})</span>
-                    </div>
+                    <span>🎮 Steam Showcase Settings ({cardNumLabel})</span>
                   </div>
                   <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
                     Enter any Steam username/display name, 64-bit Steam ID, or Steam profile URL to show live avatar, status, and games:
                   </p>
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam Username / Profile ID / URL:</label>
@@ -1123,6 +1173,106 @@ export const NookCustomizerPage: React.FC = () => {
                         <option value="none">Hide Games List (Show Avatar & Status Only)</option>
                       </select>
                     </div>
+                  </div>
+
+                  {/* Excluded Games List Tag Pills Section */}
+                  <div style={{ marginTop: '1.25rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>🚫 Excluded Games Filter List</span>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.6, fontWeight: 400 }}>({cardExcludedGames.length} filtered)</span>
+                    </div>
+                    <p style={{ fontSize: '0.78rem', opacity: 0.75, marginBottom: '0.75rem' }}>
+                      Excluded games are hidden from your profile. Next games in line automatically fill the 3 slots! Click any game below or enter title manually:
+                    </p>
+
+                    {/* Manual Title Entry */}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      <input
+                        type="text"
+                        placeholder="Type exact game title to filter..."
+                        id={`manual_exclude_${c.id}`}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            const el = e.target as HTMLInputElement;
+                            if (el.value) {
+                              toggleGameExclusion(el.value);
+                              el.value = '';
+                            }
+                          }
+                        }}
+                        style={{ flex: 1, padding: '0.45rem 0.65rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.82rem' }}
+                      />
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => {
+                          const el = document.getElementById(`manual_exclude_${c.id}`) as HTMLInputElement;
+                          if (el && el.value) {
+                            toggleGameExclusion(el.value);
+                            el.value = '';
+                          }
+                        }}
+                        style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem' }}
+                      >
+                        + Exclude Title
+                      </button>
+                    </div>
+
+                    {/* Excluded Pills */}
+                    {cardExcludedGames.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                        {cardExcludedGames.map(title => (
+                          <span
+                            key={title}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              background: 'rgba(239, 68, 68, 0.18)',
+                              border: '1px solid rgba(239, 68, 68, 0.4)',
+                              color: '#fca5a5',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            <span>🚫 {title}</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleGameExclusion(title)}
+                              title={`Restore "${title}"`}
+                              style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: '0.8rem', padding: 0, marginLeft: '0.2rem' }}
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.75rem', opacity: 0.6, fontStyle: 'italic' }}>
+                        No games excluded yet. Click any game in the preview below to filter it.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Live Steam Card Test & Interactive Preview */}
+                  <div style={{ marginTop: '1.25rem' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: 0.9 }}>
+                      <Sparkles size={16} color="var(--accent-color)" />
+                      <span>Live Steam Card Test & Interactive Preview:</span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', opacity: 0.7, marginBottom: '0.65rem', fontStyle: 'italic' }}>
+                      💡 Tip: Click any game in the live preview below to exclude it from your profile card. The next unexcluded game in line will automatically shift up!
+                    </p>
+                    <SteamWidget
+                      title={c.title || 'Steam Showcase'}
+                      steamInput={c.steam_id64 !== undefined ? c.steam_id64 : steamId64}
+                      displayMode={c.steam_display_mode !== undefined ? c.steam_display_mode : steamDisplayMode}
+                      excludedGames={cardExcludedGames}
+                      isCustomizerPreview={true}
+                      onToggleExclude={toggleGameExclusion}
+                    />
                   </div>
                 </div>
               );

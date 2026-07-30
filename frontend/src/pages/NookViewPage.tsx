@@ -508,6 +508,7 @@ export const NookViewPage: React.FC = () => {
                     title={resolveTitle(c, 'Steam Showcase')}
                     steamId64={c.steam_id64 || nookSettings.steam_id64}
                     displayMode={c.steam_display_mode || nookSettings.steam_display_mode || 'both'}
+                    excludedGames={c.steam_excluded_games || (nookSettings?.steam_excluded_games_json ? (typeof nookSettings.steam_excluded_games_json === 'string' ? JSON.parse(nookSettings.steam_excluded_games_json) : nookSettings.steam_excluded_games_json) : [])}
                   />
                 ) : null;
 

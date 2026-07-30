@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight, Check, Sparkles, Save, Info, Bookmark } from
 interface ThemeBookshelfPickerProps {
   currentSavedThemeId: string;
   stagedThemeId: string;
+  hasUnsavedColors?: boolean;
   onStageTheme: (theme: ThemeDefinition) => void;
   onCommitTheme: (themeId: string, palette: ThemePalette) => void;
   isSaving?: boolean;
@@ -14,6 +15,7 @@ interface ThemeBookshelfPickerProps {
 export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
   currentSavedThemeId,
   stagedThemeId,
+  hasUnsavedColors = false,
   onStageTheme,
   onCommitTheme,
   isSaving = false
@@ -27,7 +29,7 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
     setExpandedCategory(cat);
   }, [currentSavedThemeId]);
 
-  const hasUnsavedThemeChange = stagedThemeId !== currentSavedThemeId;
+  const hasUnsavedThemeChange = stagedThemeId !== currentSavedThemeId || hasUnsavedColors;
   const stagedThemeObj = getThemeById(stagedThemeId);
 
   const toggleCategory = (catId: ThemeCategory) => {
