@@ -35,8 +35,7 @@ const DEFAULT_CARD_LAYOUT: NookCardConfig[] = [
   { id: 'c_hobbies', type: 'hobbies', title: 'Hobbies & Passions', enabled: true },
   { id: 'c_movies', type: 'movies', title: 'Movies & TV Favorites', enabled: true },
   { id: 'c_books', type: 'books', title: 'Reading Nook & Books', enabled: true },
-  { id: 'c_steam', type: 'steam', title: 'Steam Showcase', enabled: true },
-  { id: 'c_guestbook', type: 'guestbook', title: 'Guestbook Notes', enabled: true }
+  { id: 'c_steam', type: 'steam', title: 'Steam Showcase', enabled: true }
 ];
 
 export const NookCustomizerPage: React.FC = () => {
@@ -310,7 +309,7 @@ export const NookCustomizerPage: React.FC = () => {
                     }
                     return cardCopy;
                   });
-                  setCardLayout(initializedLayout);
+                  setCardLayout(initializedLayout.filter((c: any) => c.type !== 'guestbook'));
                 }
               } catch (e) {}
             }
@@ -937,9 +936,8 @@ export const NookCustomizerPage: React.FC = () => {
             {/* Reorderable List of Cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               {cardLayout.map((c, idx) => {
-                const isGuestbook = c.type === 'guestbook';
                 const isFirst = idx === 0;
-                const isLastReorderable = idx === cardLayout.length - 1 || cardLayout[idx + 1]?.type === 'guestbook';
+                const isLast = idx === cardLayout.length - 1;
 
                 return (
                   <div
@@ -957,45 +955,39 @@ export const NookCustomizerPage: React.FC = () => {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: '1 1 300px' }}>
-                      {/* Up / Down reorder controls (Hidden for Guestbook) */}
-                      {!isGuestbook ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <button
-                            type="button"
-                            disabled={isFirst}
-                            onClick={() => {
-                              const updated = [...cardLayout];
-                              const temp = updated[idx];
-                              updated[idx] = updated[idx - 1];
-                              updated[idx - 1] = temp;
-                              setCardLayout(updated);
-                            }}
-                            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: isFirst ? 'rgba(255,255,255,0.2)' : '#fff', cursor: isFirst ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
-                            title="Move Card Up"
-                          >
-                            <ArrowUp size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isLastReorderable}
-                            onClick={() => {
-                              const updated = [...cardLayout];
-                              const temp = updated[idx];
-                              updated[idx] = updated[idx + 1];
-                              updated[idx + 1] = temp;
-                              setCardLayout(updated);
-                            }}
-                            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: isLastReorderable ? 'rgba(255,255,255,0.2)' : '#fff', cursor: isLastReorderable ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
-                            title="Move Card Down"
-                          >
-                            <ArrowDown size={13} />
-                          </button>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '0.72rem', opacity: 0.65, fontStyle: 'italic', fontWeight: 600, padding: '0.2rem 0.4rem' }} title="Guestbook is always pinned to the bottom of the profile">
-                          📌 Locked to Bottom
-                        </span>
-                      )}
+                      {/* Up / Down reorder controls */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <button
+                          type="button"
+                          disabled={isFirst}
+                          onClick={() => {
+                            const updated = [...cardLayout];
+                            const temp = updated[idx];
+                            updated[idx] = updated[idx - 1];
+                            updated[idx - 1] = temp;
+                            setCardLayout(updated);
+                          }}
+                          style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: isFirst ? 'rgba(255,255,255,0.2)' : '#fff', cursor: isFirst ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
+                          title="Move Card Up"
+                        >
+                          <ArrowUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast}
+                          onClick={() => {
+                            const updated = [...cardLayout];
+                            const temp = updated[idx];
+                            updated[idx] = updated[idx + 1];
+                            updated[idx + 1] = temp;
+                            setCardLayout(updated);
+                          }}
+                          style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: isLast ? 'rgba(255,255,255,0.2)' : '#fff', cursor: isLast ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
+                          title="Move Card Down"
+                        >
+                          <ArrowDown size={13} />
+                        </button>
+                      </div>
 
                     {/* Enable Checkbox */}
                     <input
