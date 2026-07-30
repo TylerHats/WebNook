@@ -116,7 +116,8 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           const ownedGamesRaw = ownedRes.response?.games || [];
 
           // Sort top games by lifetime playtime
-          const topGamesSorted = [...ownedGamesRaw]
+          let topGamesSorted = [...ownedGamesRaw]
+            .filter((g: any) => (g.playtime_forever || 0) > 0)
             .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
             .slice(0, 3)
             .map((g: any) => ({
@@ -125,6 +126,21 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
               playtime_forever: Math.round((g.playtime_forever || 0) / 60),
               icon: `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg`
             }));
+
+          // If ownedGames returned empty (e.g. Steam Web API game privacy), fallback to recently played games with lifetime playtime
+          if (topGamesSorted.length === 0 && recentGamesRaw.length > 0) {
+            topGamesSorted = [...recentGamesRaw]
+              .filter((g: any) => (g.playtime_forever || 0) > 0)
+              .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
+              .slice(0, 3)
+              .map((g: any) => ({
+                appid: g.appid,
+                name: g.name,
+                playtime_2weeks: Math.round((g.playtime_2weeks || 0) / 60),
+                playtime_forever: Math.round((g.playtime_forever || 0) / 60),
+                icon: `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg`
+              }));
+          }
 
           const recentlyPlayedSorted = recentGamesRaw.slice(0, 3).map((g: any) => ({
             appid: g.appid,
@@ -162,7 +178,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
       }
     }
 
-    // 2. Fallback: Scrape public Steam profile XML feed & games list directly!
+    // 2. Fallback: Scrape public Steam profile XML feed directly!
     try {
       const xmlUrl = parsedInput.type === 'steamid64'
         ? `https://steamcommunity.com/profiles/${parsedInput.value}/?xml=1`
@@ -200,10 +216,10 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           if (gNameMatch) {
             games.push({
               appid: appidMatch ? parseInt(appidMatch[1], 10) : 0,
-              name: gNameMatch[1],
+              name: gNameMatch[1].trim(),
               playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1].replace(',', ''))) : 0,
               playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
-              icon: gLogoMatch ? gLogoMatch[1] : ''
+              icon: gLogoMatch ? gLogoMatch[1].trim() : ''
             });
           }
         }
@@ -217,17 +233,17 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
         for (let i = 1; i < gameBlocks.length; i++) {
           const block = gameBlocks[i];
           const gNameMatch = block.match(/<gameName><!\[CDATA\[(.*?)\]\]><\/gameName>/) || block.match(/<gameName>(.*?)<\/gameName>/);
-          const gIconMatch = block.match(/<gameIcon><!\[CDATA\[(.*?)\]\]><\/gameIcon>/) || block.match(/<gameIcon>(.*?)<\/gameIcon>/);
+          const gIconMatch = block.match(/<gameIcon><!\[CDATA\[(.*?)\]\]><\/gameIcon>/) || block.match(/<gameIcon>(.*?)<\/gameIcon>/) || block.match(/<gameLogo><!\[CDATA\[(.*?)\]\]><\/gameLogo>/) || block.match(/<gameLogo>(.*?)<\/gameLogo>/);
           const gHoursMatch = block.match(/<hoursOnRecord>(.*?)<\/hoursOnRecord>/);
           const g2WeeksMatch = block.match(/<hoursPlayed>(.*?)<\/hoursPlayed>/);
 
           if (gNameMatch) {
             games.push({
               appid: 0,
-              name: gNameMatch[1],
+              name: gNameMatch[1].trim(),
               playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1].replace(',', ''))) : 0,
               playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
-              icon: gIconMatch ? gIconMatch[1] : ''
+              icon: gIconMatch ? gIconMatch[1].trim() : ''
             });
           }
         }
@@ -254,7 +270,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           stateMessage: stateMessageMatch ? stateMessageMatch[1] : ''
         },
         recentlyPlayed: finalRecent,
-        topGames: topGamesSorted
+        topGames: topGamesSorted.length > 0 ? topGamesSorted : finalRecent
       });
     } catch (scrapeErr) {
       console.warn('Steam XML scrape fallback error:', scrapeErr);
