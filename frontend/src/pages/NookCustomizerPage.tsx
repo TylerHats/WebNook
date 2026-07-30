@@ -10,6 +10,7 @@ import { MusicTrack } from '../components/widgets/MusicWidget';
 import { HobbiesWidget, HobbyItem } from '../components/widgets/HobbiesWidget';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 import { CustomSelect } from '../components/ui/CustomSelect';
+import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
 
 export interface NookCardConfig {
   id: string;
@@ -1076,14 +1077,14 @@ export const NookCustomizerPage: React.FC = () => {
                     </div>
                   </div>
                   <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
-                    Link a Steam account to display live avatar, online status, and game showcase for this card:
+                    Enter any Steam username/display name, 64-bit Steam ID, or Steam profile URL to show live avatar, status, and games:
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam Profile ID / URL / SteamID64:</label>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Steam Username / Profile ID / URL:</label>
                       <input
                         type="text"
-                        placeholder="e.g. 76561199229320790 or vanity username"
+                        placeholder="e.g. TylerHats, 76561198000000000, or https://steamcommunity.com/id/TylerHats"
                         value={c.steam_id64 !== undefined ? c.steam_id64 : steamId64}
                         onChange={e => {
                           const updated = [...cardLayout];
@@ -1757,6 +1758,10 @@ export const NookCustomizerPage: React.FC = () => {
                         placeholder="Write markdown content..."
                         style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontFamily: 'monospace' }}
                       />
+                      <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '0.85rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.6, marginBottom: '0.4rem', textTransform: 'uppercase' }}>✨ Live Card Preview:</div>
+                        <MarkdownRenderer content={c.content_markdown || ''} />
+                      </div>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>

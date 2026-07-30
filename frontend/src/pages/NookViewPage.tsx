@@ -14,6 +14,7 @@ import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users, Clock, UserCheck,
 import { useToast } from '../context/ToastContext';
 
 import { playThemeSound } from '../utils/themeSoundEngine';
+import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
 
 export const NookViewPage: React.FC = () => {
   const { username } = useParams<{ username?: string }>();
@@ -499,9 +500,7 @@ export const NookViewPage: React.FC = () => {
                         <span>{c.title}</span>
                       </div>
                     )}
-                    <div style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                      {c.content_markdown}
-                    </div>
+                    <MarkdownRenderer content={c.content_markdown || ''} />
                   </div>
                 );
 

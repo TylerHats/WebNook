@@ -59,20 +59,20 @@ function postForm(urlStr: string, bodyObj: Record<string, string>, headers: Reco
  * - Profile URL: https://steamcommunity.com/id/TylerHats/ or https://steamcommunity.com/profiles/76561198000000000
  */
 function parseSteamInput(input: string): { type: 'steamid64' | 'vanity'; value: string } {
-  let raw = input.trim();
+  let raw = decodeURIComponent(input).trim();
 
-  // Strip trailing slashes
-  raw = raw.replace(/\/+$/, '');
+  // Strip trailing slashes and common query params
+  raw = raw.replace(/\?.*$/, '').replace(/\/+$/, '');
 
   if (raw.includes('/profiles/')) {
     const parts = raw.split('/profiles/');
-    const id = parts[1].split('/')[0];
+    const id = parts[1].split('/')[0].trim();
     return { type: /^\d{17}$/.test(id) ? 'steamid64' : 'vanity', value: id };
   }
 
   if (raw.includes('/id/')) {
     const parts = raw.split('/id/');
-    const vanity = parts[1].split('/')[0];
+    const vanity = parts[1].split('/')[0].trim();
     return { type: 'vanity', value: vanity };
   }
 
@@ -87,7 +87,6 @@ function parseSteamInput(input: string): { type: 'steamid64' | 'vanity'; value: 
 router.get('/steam/:steamInput', async (req: Request, res: Response) => {
   try {
     const { steamInput } = req.params;
-    const mode = (req.query.mode as string) || 'both'; // none, recently_played, top_games, both
     const parsedInput = parseSteamInput(steamInput);
 
     // 1. Check system settings for custom Steam API key
@@ -101,73 +100,76 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
         // Resolve vanity URL if needed
         if (!targetSteamId64 && parsedInput.type === 'vanity') {
           const vanityRes = await fetchJson(`https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${apiKey}&vanityurl=${encodeURIComponent(parsedInput.value)}`);
-          if (vanityRes.response && vanityRes.response.steamid) {
+          if (vanityRes.response && vanityRes.response.success === 1 && vanityRes.response.steamid) {
             targetSteamId64 = vanityRes.response.steamid;
           }
         }
 
         if (targetSteamId64) {
-          const recentRes = await fetchJson(`https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=${apiKey}&steamid=${targetSteamId64}&format=json`);
-          const ownedRes = await fetchJson(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${targetSteamId64}&include_appinfo=true&include_played_free_games=true&format=json`);
-          const playerRes = await fetchJson(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${apiKey}&steamids=${targetSteamId64}`);
+          const recentRes = await fetchJson(`https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=${apiKey}&steamid=${targetSteamId64}&format=json`).catch(() => ({}));
+          const ownedRes = await fetchJson(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${targetSteamId64}&include_appinfo=true&include_played_free_games=true&format=json`).catch(() => ({}));
+          const playerRes = await fetchJson(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${apiKey}&steamids=${targetSteamId64}`).catch(() => ({}));
 
           const player = playerRes.response?.players?.[0];
           const recentGamesRaw = recentRes.response?.games || [];
           const ownedGamesRaw = ownedRes.response?.games || [];
 
-          // Sort top games by lifetime playtime
-          let topGamesSorted = [...ownedGamesRaw]
-            .filter((g: any) => (g.playtime_forever || 0) > 0)
-            .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
-            .slice(0, 3)
-            .map((g: any) => ({
+          // Format game items consistently
+          const formatGame = (g: any) => {
+            const pt2w = g.playtime_2weeks ? Math.round((g.playtime_2weeks / 60) * 10) / 10 : 0;
+            const ptEver = g.playtime_forever ? Math.round((g.playtime_forever / 60) * 10) / 10 : 0;
+            return {
               appid: g.appid,
               name: g.name,
-              playtime_forever: Math.round((g.playtime_forever || 0) / 60),
-              icon: `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg`
-            }));
+              playtime_2weeks: pt2w,
+              playtime_forever: ptEver,
+              icon: g.img_icon_url ? `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg` : `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg`,
+              headerUrl: `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg`
+            };
+          };
 
-          // If ownedGames returned empty (e.g. Steam Web API game privacy), fallback to recently played games with lifetime playtime
+          // Top 3 Recently Played (past 2 weeks)
+          const recentlyPlayedSorted = recentGamesRaw
+            .slice(0, 3)
+            .map(formatGame);
+
+          // Top 3 All-Time Games (by lifetime playtime)
+          let topGamesSorted = [...ownedGamesRaw]
+            .filter((g: any) => (g.playtime_forever || 0) > 0)
+            .sort((a: any, b: any) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
+            .slice(0, 3)
+            .map(formatGame);
+
+          // If ownedGames was empty or restricted, fallback top games to recent games sorted by lifetime playtime
           if (topGamesSorted.length === 0 && recentGamesRaw.length > 0) {
             topGamesSorted = [...recentGamesRaw]
               .filter((g: any) => (g.playtime_forever || 0) > 0)
-              .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
+              .sort((a: any, b: any) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
               .slice(0, 3)
-              .map((g: any) => ({
-                appid: g.appid,
-                name: g.name,
-                playtime_2weeks: Math.round((g.playtime_2weeks || 0) / 60),
-                playtime_forever: Math.round((g.playtime_forever || 0) / 60),
-                icon: `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg`
-              }));
+              .map(formatGame);
           }
 
-          const recentlyPlayedSorted = recentGamesRaw.slice(0, 3).map((g: any) => ({
-            appid: g.appid,
-            name: g.name,
-            playtime_2weeks: Math.round((g.playtime_2weeks || 0) / 60),
-            playtime_forever: Math.round((g.playtime_forever || 0) / 60),
-            icon: `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg`
-          }));
+          if (player) {
+            // Reset consecutive error counters on success
+            await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_consecutive_errors', '0']);
+            await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_api_status', 'connected']);
 
-          // Reset error count on success
-          await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_consecutive_errors', '0']);
-          await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_api_status', 'connected']);
-
-          return res.json({
-            player: player ? {
-              personaName: player.personaname,
-              avatar: player.avatarfull || player.avatar,
-              profileUrl: player.profileurl,
-              personaState: player.personastate
-            } : null,
-            recentlyPlayed: recentlyPlayedSorted,
-            topGames: topGamesSorted
-          });
+            return res.json({
+              player: {
+                personaName: player.personaname,
+                avatar: player.avatarfull || player.avatarmedium || player.avatar,
+                profileUrl: player.profileurl || `https://steamcommunity.com/profiles/${targetSteamId64}`,
+                personaState: player.personastate ?? 0,
+                inGameTitle: player.gameextrainfo || '',
+                stateMessage: player.gameextrainfo ? `In-Game: ${player.gameextrainfo}` : (player.personastate > 0 ? 'Online' : 'Offline')
+              },
+              recentlyPlayed: recentlyPlayedSorted,
+              topGames: topGamesSorted
+            });
+          }
         }
       } catch (apiErr: any) {
-        console.warn('Steam Web API error, falling back to public XML scrape:', apiErr?.message);
-        // Increment consecutive failure counter
+        console.warn('Steam Web API error, falling back to public XML/HTML scrape:', apiErr?.message);
         const errCountRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "steam_consecutive_errors"');
         const newCount = (parseInt(errCountRow?.value || '0', 10)) + 1;
         await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_consecutive_errors', String(newCount)]);
@@ -178,16 +180,19 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
       }
     }
 
-    // 2. Fallback: Scrape public Steam profile XML feed directly!
+    // 2. Fallback Scrape: Public Steam profile XML feed & HTML page
     try {
       let xmlUrl = parsedInput.type === 'steamid64'
         ? `https://steamcommunity.com/profiles/${parsedInput.value}/?xml=1`
         : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/?xml=1`;
 
-      let xmlText = await fetchText(xmlUrl);
+      let xmlText = '';
+      try {
+        xmlText = await fetchText(xmlUrl);
+      } catch (e) {}
 
       // If vanity endpoint returned an error or couldn't find profile, try profiles endpoint
-      if (xmlText.includes('<error>') || !xmlText.includes('<steamID>')) {
+      if (!xmlText || xmlText.includes('<error>') || !xmlText.includes('<steamID>')) {
         const altXmlUrl = `https://steamcommunity.com/profiles/${encodeURIComponent(parsedInput.value)}/?xml=1`;
         try {
           const altXml = await fetchText(altXmlUrl);
@@ -198,21 +203,23 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
         } catch (e) {}
       }
 
-      const gamesXmlUrl = xmlUrl.endsWith('/?xml=1')
-        ? xmlUrl.replace('/?xml=1', '/games/?tab=all&xml=1')
-        : `${xmlUrl}/games/?tab=all&xml=1`;
-
       const personaNameMatch = xmlText.match(/<steamID><!\[CDATA\[(.*?)\]\]><\/steamID>/) || xmlText.match(/<steamID>(.*?)<\/steamID>/);
-      const avatarMatch = xmlText.match(/<avatarFull><!\[CDATA\[(.*?)\]\]><\/avatarFull>/) || xmlText.match(/<avatarFull>(.*?)<\/avatarFull>/);
+      const avatarMatch = xmlText.match(/<avatarFull><!\[CDATA\[(.*?)\]\]><\/avatarFull>/) || xmlText.match(/<avatarFull>(.*?)<\/avatarFull>/) || xmlText.match(/<avatarIcon><!\[CDATA\[(.*?)\]\]><\/avatarIcon>/);
       const stateMatch = xmlText.match(/<onlineState>(.*?)<\/onlineState>/);
       const stateMessageMatch = xmlText.match(/<stateMessage><!\[CDATA\[(.*?)\]\]><\/stateMessage>/) || xmlText.match(/<stateMessage>(.*?)<\/stateMessage>/);
+      const steamId64Match = xmlText.match(/<steamID64>(.*?)<\/steamID64>/);
 
+      const resolvedSteamId64 = steamId64Match ? steamId64Match[1] : (parsedInput.type === 'steamid64' ? parsedInput.value : '');
       const personaName = personaNameMatch ? personaNameMatch[1] : parsedInput.value;
       const avatar = avatarMatch ? avatarMatch[1] : 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=300&auto=format&fit=crop&q=80';
-      const onlineState = stateMatch ? stateMatch[1] : 'offline';
-      const isOnline = onlineState.toLowerCase() !== 'offline';
+      const onlineStateRaw = stateMatch ? stateMatch[1].toLowerCase() : 'offline';
+      const isOnline = onlineStateRaw !== 'offline';
+      const inGame = onlineStateRaw === 'in-game';
 
       const games: any[] = [];
+
+      // Try Games XML Tab
+      const gamesXmlUrl = xmlUrl.replace(/\/\?xml=1$/, '/games/?tab=all&xml=1');
       try {
         const gamesXmlText = await fetchText(gamesXmlUrl);
         const gameBlocks = gamesXmlText.split('<game>');
@@ -226,95 +233,64 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           const g2WeeksMatch = block.match(/<hoursLast2Weeks>(.*?)<\/hoursLast2Weeks>/) || block.match(/<hoursPlayed>(.*?)<\/hoursPlayed>/);
 
           if (gNameMatch) {
+            const appid = appidMatch ? parseInt(appidMatch[1], 10) : 0;
+            const pt2w = g2WeeksMatch ? parseFloat(g2WeeksMatch[1].replace(',', '')) : 0;
+            const ptEver = gHoursMatch ? parseFloat(gHoursMatch[1].replace(',', '')) : 0;
+            const iconUrl = gLogoMatch ? gLogoMatch[1].trim() : (appid ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg` : '');
+
             games.push({
-              appid: appidMatch ? parseInt(appidMatch[1], 10) : 0,
+              appid,
               name: gNameMatch[1].trim(),
-              playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1].replace(',', ''))) : 0,
-              playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
-              icon: gLogoMatch ? gLogoMatch[1].trim() : ''
+              playtime_2weeks: Math.round(pt2w * 10) / 10,
+              playtime_forever: Math.round(ptEver * 10) / 10,
+              icon: iconUrl,
+              headerUrl: appid ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg` : iconUrl
             });
           }
         }
-      } catch (gErr) {
-        console.warn('Steam games list XML scrape error, falling back to profile XML games:', gErr);
-      }
+      } catch (gErr) {}
 
-      // If games list tab wasn't available or empty, parse mostPlayedGame from main profile XML
-      if (games.length < 3) {
-        const gameBlocks = xmlText.split('<mostPlayedGame>');
-        for (let i = 1; i < gameBlocks.length; i++) {
-          const block = gameBlocks[i];
-          const gNameMatch = block.match(/<gameName><!\[CDATA\[(.*?)\]\]><\/gameName>/) || block.match(/<gameName>(.*?)<\/gameName>/);
-          const gIconMatch = block.match(/<gameIcon><!\[CDATA\[(.*?)\]\]><\/gameIcon>/) || block.match(/<gameIcon>(.*?)<\/gameIcon>/) || block.match(/<gameLogo><!\[CDATA\[(.*?)\]\]><\/gameLogo>/) || block.match(/<gameLogo>(.*?)<\/gameLogo>/);
-          const gHoursMatch = block.match(/<hoursOnRecord>(.*?)<\/hoursOnRecord>/);
-          const g2WeeksMatch = block.match(/<hoursPlayed>(.*?)<\/hoursPlayed>/);
-
-          if (gNameMatch) {
-            const gName = gNameMatch[1].trim();
-            if (!games.some(existing => existing.name.toLowerCase() === gName.toLowerCase())) {
-              games.push({
-                appid: 0,
-                name: gName,
-                playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1].replace(',', ''))) : 0,
-                playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
-                icon: gIconMatch ? gIconMatch[1].trim() : ''
-              });
-            }
-          }
-        }
-      }
-
-      // Also scrape main Steam profile HTML page for all games listed on profile
+      // Fallback HTML profile scrape if games list was incomplete
       if (games.length < 3) {
         try {
-          const urlsToTry = [
-            parsedInput.type === 'steamid64'
-              ? `https://steamcommunity.com/profiles/${parsedInput.value}/`
-              : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/`,
-            parsedInput.type === 'steamid64'
-              ? `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/`
-              : `https://steamcommunity.com/profiles/${parsedInput.value}/`
-          ];
+          const profileHtmlUrl = resolvedSteamId64
+            ? `https://steamcommunity.com/profiles/${resolvedSteamId64}/`
+            : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/`;
 
-          for (const htmlUrl of urlsToTry) {
-            try {
-              const profileHtml = await fetchText(htmlUrl);
-              const gameBlocks = profileHtml.split('<div class="recent_game">');
+          const profileHtml = await fetchText(profileHtmlUrl);
+          const gameBlocks = profileHtml.split('<div class="recent_game">');
 
-              for (let i = 1; i < gameBlocks.length; i++) {
-                const block = gameBlocks[i];
-                const nameMatch = block.match(/<div class="game_name"><a[^>]*href="[^"]*app\/(\d+)"[^>]*>(.*?)<\/a><\/div>/i);
-                const hoursMatch = block.match(/([0-9\.,]+)\s*hrs on record/i);
-                const recent2WkMatch = block.match(/([0-9\.,]+)\s*hrs in the last 2 weeks/i) || block.match(/([0-9\.,]+)\s*hrs past 2 weeks/i);
-                const imgMatch = block.match(/class="game_capsule"[^>]*src="(.*?)"/i) || block.match(/src="(.*?capsule.*?)"/i);
+          for (let i = 1; i < gameBlocks.length; i++) {
+            const block = gameBlocks[i];
+            const nameMatch = block.match(/<div class="game_name"><a[^>]*href="[^"]*app\/(\d+)"[^>]*>(.*?)<\/a><\/div>/i);
+            const hoursMatch = block.match(/([0-9\.,]+)\s*hrs on record/i);
+            const recent2WkMatch = block.match(/([0-9\.,]+)\s*hrs in the last 2 weeks/i) || block.match(/([0-9\.,]+)\s*hrs past 2 weeks/i);
+            const imgMatch = block.match(/class="game_capsule"[^>]*src="(.*?)"/i) || block.match(/src="(.*?capsule.*?)"/i);
 
-                if (nameMatch) {
-                  const appId = parseInt(nameMatch[1], 10);
-                  const nameStr = nameMatch[2].replace(/<[^>]+>/g, '').trim();
+            if (nameMatch) {
+              const appId = parseInt(nameMatch[1], 10);
+              const nameStr = nameMatch[2].replace(/<[^>]+>/g, '').trim();
 
-                  if (nameStr && !games.some(existing => existing.name.toLowerCase() === nameStr.toLowerCase())) {
-                    const hoursNum = hoursMatch ? Math.round(parseFloat(hoursMatch[1].replace(',', ''))) : 0;
-                    const hours2Wk = recent2WkMatch ? parseFloat(recent2WkMatch[1].replace(',', '')) : 0;
+              if (nameStr && !games.some(existing => existing.name.toLowerCase() === nameStr.toLowerCase())) {
+                const hoursNum = hoursMatch ? parseFloat(hoursMatch[1].replace(',', '')) : 0;
+                const hours2Wk = recent2WkMatch ? parseFloat(recent2WkMatch[1].replace(',', '')) : 0;
 
-                    games.push({
-                      appid: appId,
-                      name: nameStr,
-                      playtime_2weeks: hours2Wk,
-                      playtime_forever: hoursNum,
-                      icon: imgMatch ? imgMatch[1] : (appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_184x69.jpg` : '')
-                    });
-                  }
-                }
+                games.push({
+                  appid: appId,
+                  name: nameStr,
+                  playtime_2weeks: Math.round(hours2Wk * 10) / 10,
+                  playtime_forever: Math.round(hoursNum * 10) / 10,
+                  icon: imgMatch ? imgMatch[1] : (appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg` : ''),
+                  headerUrl: appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg` : ''
+                });
               }
-              if (games.length >= 3) break;
-            } catch (singleErr) {}
+            }
           }
-        } catch (hErr) {
-          console.warn('Steam HTML profile scrape fallback error:', hErr);
-        }
+        } catch (hErr) {}
       }
 
       const topGamesSorted = [...games]
+        .filter(g => (g.playtime_forever || 0) > 0)
         .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
         .slice(0, 3);
 
@@ -323,13 +299,18 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
         .sort((a, b) => (b.playtime_2weeks || 0) - (a.playtime_2weeks || 0))
         .slice(0, 3);
 
+      const profileUrl = resolvedSteamId64
+        ? `https://steamcommunity.com/profiles/${resolvedSteamId64}`
+        : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}`;
+
       return res.json({
         player: {
           personaName,
           avatar,
-          profileUrl: parsedInput.type === 'steamid64' ? `https://steamcommunity.com/profiles/${parsedInput.value}` : `https://steamcommunity.com/id/${parsedInput.value}`,
-          personaState: isOnline ? 1 : 0,
-          stateMessage: stateMessageMatch ? stateMessageMatch[1] : ''
+          profileUrl,
+          personaState: inGame ? 1 : (isOnline ? 1 : 0),
+          inGameTitle: inGame && stateMessageMatch ? stateMessageMatch[1] : '',
+          stateMessage: stateMessageMatch ? stateMessageMatch[1] : (isOnline ? 'Online' : 'Offline')
         },
         recentlyPlayed: recentGamesSorted,
         topGames: topGamesSorted
@@ -338,21 +319,23 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
       console.warn('Steam XML scrape fallback error:', scrapeErr);
     }
 
-    // Default Fallback Preview
+    // Default Fallback Preview when no data is available
     return res.json({
       player: {
-        personaName: parsedInput.value,
+        personaName: parsedInput.value || 'Steam Gamer',
         avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=300&auto=format&fit=crop&q=80',
-        personaState: 1
+        profileUrl: `https://steamcommunity.com/`,
+        personaState: 1,
+        stateMessage: 'Online'
       },
       recentlyPlayed: [
-        { appid: 1086000, name: "Baldur's Gate 3", playtime_2weeks: 18, playtime_forever: 142 },
-        { appid: 1091500, name: 'Cyberpunk 2077', playtime_2weeks: 9, playtime_forever: 98 }
+        { appid: 1086000, name: "Baldur's Gate 3", playtime_2weeks: 18, playtime_forever: 142, icon: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1086000/header.jpg' },
+        { appid: 1091500, name: 'Cyberpunk 2077', playtime_2weeks: 9.5, playtime_forever: 98, icon: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1091500/header.jpg' }
       ],
       topGames: [
-        { appid: 1086000, name: "Baldur's Gate 3", playtime_forever: 142 },
-        { appid: 1091500, name: 'Cyberpunk 2077', playtime_forever: 98 },
-        { appid: 1145360, name: 'Hades II', playtime_forever: 45 }
+        { appid: 1086000, name: "Baldur's Gate 3", playtime_forever: 142, icon: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1086000/header.jpg' },
+        { appid: 1091500, name: 'Cyberpunk 2077', playtime_forever: 98, icon: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1091500/header.jpg' },
+        { appid: 1145360, name: 'Hades II', playtime_forever: 45, icon: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1145360/header.jpg' }
       ]
     });
   } catch (err) {
