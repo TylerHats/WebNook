@@ -10,7 +10,7 @@ import { HobbiesWidget } from '../components/widgets/HobbiesWidget';
 import { GuestbookWidget } from '../components/nook/GuestbookWidget';
 import { StickerCanvas } from '../components/nook/StickerCanvas';
 import { ThemeAnimationOverlay } from '../components/nook/ThemeAnimationOverlay';
-import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users, Clock, UserCheck, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users, Clock, UserCheck, CheckCircle2, FileText, Code } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 import { playThemeSound } from '../utils/themeSoundEngine';
@@ -380,86 +380,173 @@ export const NookViewPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Nook Grid Widgets */}
-        <div className="nook-grid">
-          {/* Left Column Widgets */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {cardVis.bio !== false && owner.bio && (
-              <div className="nook-panel">
-                <div className="nook-panel-header">
-                  <Heart size={20} />
-                  <span>{cardTitles.bio || `About ${owner.display_name || owner.username}`}</span>
-                </div>
-                <p style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{owner.bio}</p>
+        {/* Dynamic Reorderable Nook Grid Cards */}
+        {(() => {
+          const DEFAULT_LAYOUT = [
+            { id: 'c_bio', type: 'bio', title: 'About Me', enabled: true },
+            { id: 'c_music', type: 'music', title: 'My Music Playlist', enabled: true },
+            { id: 'c_friends', type: 'friends', title: 'Top Friends', enabled: true },
+            { id: 'c_hobbies', type: 'hobbies', title: 'Hobbies & Passions', enabled: true },
+            { id: 'c_movies', type: 'movies', title: 'Movies & TV Favorites', enabled: true },
+            { id: 'c_books', type: 'books', title: 'Reading Nook & Books', enabled: true },
+            { id: 'c_steam', type: 'steam', title: 'Steam Showcase', enabled: true },
+            { id: 'c_guestbook', type: 'guestbook', title: 'Guestbook Notes', enabled: true }
+          ];
+
+          let cardLayout: any[] = DEFAULT_LAYOUT;
+          if (nookSettings?.card_layout_json) {
+            try {
+              const parsed = typeof nookSettings.card_layout_json === 'string'
+                ? JSON.parse(nookSettings.card_layout_json)
+                : nookSettings.card_layout_json;
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                cardLayout = parsed;
+              }
+            } catch (e) {}
+          }
+
+          const activeCards = cardLayout.filter(c => c.enabled !== false);
+          const gridCards = activeCards.filter(c => c.type !== 'guestbook');
+          const guestbookCards = activeCards.filter(c => c.type === 'guestbook');
+
+          const leftCards = gridCards.filter((_, idx) => idx % 2 === 0);
+          const rightCards = gridCards.filter((_, idx) => idx % 2 !== 0);
+
+          const renderSingleCard = (c: any) => {
+            if (!c) return null;
+            switch (c.type) {
+              case 'bio':
+                return owner.bio ? (
+                  <div key={c.id} className="nook-panel">
+                    <div className="nook-panel-header">
+                      <Heart size={20} />
+                      <span>{c.title || cardTitles.bio || `About ${owner.display_name || owner.username}`}</span>
+                    </div>
+                    <p style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{owner.bio}</p>
+                  </div>
+                ) : null;
+
+              case 'music':
+                return (
+                  <MusicWidget
+                    key={c.id}
+                    title={c.title || cardTitles.music || 'My Music Playlist'}
+                    tracks={parsedMusicTracks}
+                    autoNextPlay={autoNextPlay}
+                    loopPlaylist={loopPlaylist}
+                    bgMusicUrl={nookSettings?.bg_music_url}
+                    bgMusicTitle={nookSettings?.bg_music_title}
+                    spotifyTrackUrl={nookSettings?.spotify_track_url}
+                    appleMusicUrl={nookSettings?.apple_music_url}
+                  />
+                );
+
+              case 'movies':
+                return (
+                  <MoviesWidget
+                    key={c.id}
+                    title={c.title || cardTitles.movies || 'Movies & TV Favorites'}
+                    movies={nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : []}
+                  />
+                );
+
+              case 'hobbies':
+                return (
+                  <HobbiesWidget
+                    key={c.id}
+                    title={c.title || cardTitles.hobbies || 'Hobbies & Passions'}
+                    hobbies={nookSettings?.hobbies_json ? (typeof nookSettings.hobbies_json === 'string' ? JSON.parse(nookSettings.hobbies_json) : nookSettings.hobbies_json) : []}
+                    isOwner={user?.id === owner.id}
+                  />
+                );
+
+              case 'friends':
+                return (
+                  <TopFriendsGrid
+                    key={c.id}
+                    title={c.title || cardTitles.friends || 'Top Friends'}
+                    topFriends={topFriends}
+                    ownerUsername={owner.display_name || owner.username}
+                  />
+                );
+
+              case 'books':
+                return (
+                  <BooksWidget
+                    key={c.id}
+                    title={c.title || cardTitles.books || 'Reading Nook & Favorite Books'}
+                    books={nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : []}
+                    storygraphUsername={nookSettings?.storygraph_username}
+                  />
+                );
+
+              case 'steam':
+                return nookSettings?.steam_id64 ? (
+                  <SteamWidget
+                    key={c.id}
+                    steamId64={nookSettings.steam_id64}
+                    displayMode={nookSettings.steam_display_mode || 'both'}
+                  />
+                ) : null;
+
+              case 'markdown':
+                return (
+                  <div key={c.id} className="nook-panel">
+                    {c.title && (
+                      <div className="nook-panel-header">
+                        <FileText size={20} color="var(--accent-color)" />
+                        <span>{c.title}</span>
+                      </div>
+                    )}
+                    <div style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                      {c.content_markdown}
+                    </div>
+                  </div>
+                );
+
+              case 'html':
+                return (
+                  <div key={c.id} className="nook-panel">
+                    {c.title && (
+                      <div className="nook-panel-header">
+                        <Code size={20} color="var(--accent-color)" />
+                        <span>{c.title}</span>
+                      </div>
+                    )}
+                    <div dangerouslySetInnerHTML={{ __html: c.content_html || '' }} />
+                  </div>
+                );
+
+              default:
+                return null;
+            }
+          };
+
+          return (
+            <div className="nook-grid">
+              {/* Left Column Widgets */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {leftCards.map(c => renderSingleCard(c))}
               </div>
-            )}
 
-            {cardVis.music !== false && (
-              <MusicWidget
-                title={cardTitles.music || 'My Music Playlist'}
-                tracks={parsedMusicTracks}
-                autoNextPlay={autoNextPlay}
-                loopPlaylist={loopPlaylist}
-                bgMusicUrl={nookSettings?.bg_music_url}
-                bgMusicTitle={nookSettings?.bg_music_title}
-                spotifyTrackUrl={nookSettings?.spotify_track_url}
-                appleMusicUrl={nookSettings?.apple_music_url}
-              />
-            )}
+              {/* Right Column Widgets */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {rightCards.map(c => renderSingleCard(c))}
+              </div>
 
-            {cardVis.movies !== false && (
-              <MoviesWidget
-                title={cardTitles.movies || 'Movies & TV Favorites'}
-                movies={nookSettings?.favorite_movies_json ? (typeof nookSettings.favorite_movies_json === 'string' ? JSON.parse(nookSettings.favorite_movies_json) : nookSettings.favorite_movies_json) : []}
-              />
-            )}
-
-            {cardVis.hobbies !== false && (
-              <HobbiesWidget
-                title={cardTitles.hobbies || 'Hobbies & Passions'}
-                hobbies={nookSettings?.hobbies_json ? (typeof nookSettings.hobbies_json === 'string' ? JSON.parse(nookSettings.hobbies_json) : nookSettings.hobbies_json) : []}
-                isOwner={user?.id === owner.id}
-              />
-            )}
-          </div>
-
-          {/* Right Column Widgets */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {cardVis.friends !== false && (
-              <TopFriendsGrid
-                title={cardTitles.friends || 'Top Friends'}
-                topFriends={topFriends}
-                ownerUsername={owner.display_name || owner.username}
-              />
-            )}
-
-            {cardVis.books !== false && (
-              <BooksWidget
-                title={cardTitles.books || 'Reading Nook & Favorite Books'}
-                books={nookSettings?.favorite_books_json ? (typeof nookSettings.favorite_books_json === 'string' ? JSON.parse(nookSettings.favorite_books_json) : nookSettings.favorite_books_json) : []}
-                storygraphUsername={nookSettings?.storygraph_username}
-              />
-            )}
-
-            {cardVis.steam !== false && nookSettings?.steam_id64 && (
-              <SteamWidget
-                steamId64={nookSettings.steam_id64}
-                displayMode={nookSettings.steam_display_mode || 'both'}
-              />
-            )}
-          </div>
-
-          {/* Full Width Guestbook Widget */}
-          {cardVis.guestbook !== false && (
-            <div className="nook-full-col">
-              <GuestbookWidget
-                nookUsername={owner.username}
-                nookTheme={nookSettings?.theme}
-                themeSoundsEnabled={nookSettings?.theme_sounds_enabled !== 0 && nookSettings?.theme_sounds_enabled !== false}
-              />
+              {/* Full Width Guestbook Cards */}
+              {guestbookCards.map(c => (
+                <div key={c.id} className="nook-full-col">
+                  <GuestbookWidget
+                    nookUsername={owner.username}
+                    nookTheme={nookSettings?.theme}
+                    themeSoundsEnabled={nookSettings?.theme_sounds_enabled !== 0 && nookSettings?.theme_sounds_enabled !== false}
+                  />
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          );
+        })()}
       </div>
 
       {/* Layer 2: Above Cards Sticker Overlay */}

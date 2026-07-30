@@ -368,6 +368,9 @@ export async function runMigrations() {
     await execute('ALTER TABLE nooks ADD COLUMN hobbies_json TEXT DEFAULT "[]"');
   } catch (e) {}
   try {
+    await execute('ALTER TABLE nooks ADD COLUMN card_layout_json TEXT DEFAULT "[]"');
+  } catch (e) {}
+  try {
     await execute(`
       CREATE TABLE IF NOT EXISTS guestbook_reactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

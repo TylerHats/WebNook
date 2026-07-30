@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare, Volume2, Upload, FileText } from 'lucide-react';
+import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare, Volume2, Upload, FileText, ArrowUp, ArrowDown } from 'lucide-react';
 import { StickerCanvas, Sticker } from '../components/nook/StickerCanvas';
 import { PRESET_STICKERS } from '../constants/presetStickers';
 
@@ -10,12 +10,34 @@ import { MusicTrack } from '../components/widgets/MusicWidget';
 import { HobbiesWidget, HobbyItem } from '../components/widgets/HobbiesWidget';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 
+export interface NookCardConfig {
+  id: string;
+  type: 'bio' | 'music' | 'friends' | 'guestbook' | 'steam' | 'movies' | 'books' | 'hobbies' | 'markdown' | 'html';
+  title?: string;
+  enabled: boolean;
+  content_markdown?: string;
+  content_html?: string;
+  photo_urls?: string[];
+}
+
+const DEFAULT_CARD_LAYOUT: NookCardConfig[] = [
+  { id: 'c_bio', type: 'bio', title: 'About Me', enabled: true },
+  { id: 'c_music', type: 'music', title: 'My Music Playlist', enabled: true },
+  { id: 'c_friends', type: 'friends', title: 'Top Friends', enabled: true },
+  { id: 'c_hobbies', type: 'hobbies', title: 'Hobbies & Passions', enabled: true },
+  { id: 'c_movies', type: 'movies', title: 'Movies & TV Favorites', enabled: true },
+  { id: 'c_books', type: 'books', title: 'Reading Nook & Books', enabled: true },
+  { id: 'c_steam', type: 'steam', title: 'Steam Showcase', enabled: true },
+  { id: 'c_guestbook', type: 'guestbook', title: 'Guestbook Notes', enabled: true }
+];
+
 export const NookCustomizerPage: React.FC = () => {
   const { user, token } = useAuth();
   const { showToast } = useToast();
 
   const [theme, setTheme] = useState('glassmorphism');
   const [visibilityNook, setVisibilityNook] = useState('private');
+  const [cardLayout, setCardLayout] = useState<NookCardConfig[]>(DEFAULT_CARD_LAYOUT);
 
   // Image Crop Modal state
   const [cropModal, setCropModal] = useState<{
@@ -398,6 +420,7 @@ export const NookCustomizerPage: React.FC = () => {
           favorite_movies_json: cleanedMovies,
           favorite_books_json: cleanedBooks,
           hobbies_json: hobbies,
+          card_layout_json: cardLayout,
           storygraph_username: storygraphUsername,
           theme_sounds_enabled: themeSoundsEnabled,
           theme_animations_enabled: themeAnimationsEnabled,
@@ -444,7 +467,7 @@ export const NookCustomizerPage: React.FC = () => {
     steamId64, steamDisplayMode, spotifyTrackUrl, appleMusicUrl, bgMusicUrl, bgMusicTitle,
     musicTracks, autoNextPlay, loopPlaylist, cardVisibility, cardTitles, favoriteMovies,
     favoriteBooks, storygraphUsername, themeSoundsEnabled, themeAnimationsEnabled,
-    hobbies, customCss, stickers
+    hobbies, customCss, stickers, cardLayout
   ]);
 
   const handleMusicFileUpload = async (file: File | null) => {
@@ -746,62 +769,318 @@ export const NookCustomizerPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Card Enablement Toggles Section */}
+          {/* Nook Card & Widget Ordering Manager */}
           <div className="nook-panel">
-            <div className="nook-panel-header">
-              <CheckSquare size={20} />
-              <span>Nook Card & Widget Enablement Toggles</span>
-            </div>
-            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
-              Select which cards and features to display on your public Nook page:
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-              {[
-                { key: 'bio', label: 'Bio & About Me Card' },
-                { key: 'music', label: 'Profile Anthem & Music Player' },
-                { key: 'friends', label: 'Top Friends Grid' },
-                { key: 'hobbies', label: 'Hobbies & Passions Card' },
-                { key: 'guestbook', label: 'Guestbook Notes' },
-                { key: 'steam', label: 'Steam Gaming Showcase' },
-                { key: 'movies', label: 'Movies & TV Showcase' },
-                { key: 'books', label: 'Reading Nook & Books Showcase' }
-              ].map(c => (
-                <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={cardVisibility[c.key] !== false}
-                    onChange={e => setCardVisibility({ ...cardVisibility, [c.key]: e.target.checked })}
-                  />
-                  <span>{c.label}</span>
-                </label>
-              ))}
+            <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Layers size={20} color="var(--accent-color)" />
+                <span>Nook Card Layout & Order Manager</span>
+              </div>
+              <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>({cardLayout.length} Cards Total)</span>
             </div>
 
-            {/* Custom Card Titles Editor */}
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Customize Card Header Titles:</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
-                {[
-                  { key: 'bio', label: 'Bio Header Title', defaultVal: 'About Me' },
-                  { key: 'music', label: 'Music Header Title', defaultVal: 'My Music Playlist' },
-                  { key: 'friends', label: 'Friends Header Title', defaultVal: 'Top Friends' },
-                  { key: 'hobbies', label: 'Hobbies Header Title', defaultVal: 'Hobbies & Passions' },
-                  { key: 'movies', label: 'Movies Header Title', defaultVal: 'Movies & TV Favorites' },
-                  { key: 'books', label: 'Books Header Title', defaultVal: 'Reading Nook & Books' }
-                ].map(item => (
-                  <div key={item.key}>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.2rem', opacity: 0.8 }}>{item.label}</label>
-                    <input
-                      type="text"
-                      value={cardTitles[item.key] ?? item.defaultVal}
-                      onChange={e => setCardTitles({ ...cardTitles, [item.key]: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                ))}
+            <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
+              Drag or use <strong>Up ▲ / Down ▼</strong> buttons to reorder your cards in the exact sequence they display on your Nook. You can add custom Markdown/HTML cards or duplicate preformatted cards anytime!
+            </p>
+
+            {/* Quick Add Card Buttons */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  const newCard: NookCardConfig = {
+                    id: `c_md_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                    type: 'markdown',
+                    title: 'My Custom Note',
+                    enabled: true,
+                    content_markdown: '### ✨ Welcome to my Nook!\nWrite your custom markdown text or upload photos here...'
+                  };
+                  setCardLayout(prev => [...prev, newCard]);
+                  showToast('Added Custom Markdown Card!', 'info');
+                }}
+                style={{ padding: '0.45rem 0.8rem', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <FileText size={16} />
+                <span>+ Add Custom Markdown Card</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  const newCard: NookCardConfig = {
+                    id: `c_html_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                    type: 'html',
+                    title: 'My Custom HTML Embed',
+                    enabled: true,
+                    content_html: '<div style="padding: 1rem; text-align: center; background: rgba(99,102,241,0.1); border-radius: 8px;">\n  <h3 style="margin:0; color:#6366f1;">✨ Custom HTML Card</h3>\n  <p>Input raw HTML, embeds, or custom widgets here!</p>\n</div>'
+                  };
+                  setCardLayout(prev => [...prev, newCard]);
+                  showToast('Added Custom HTML Card!', 'info');
+                }}
+                style={{ padding: '0.45rem 0.8rem', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+              >
+                <Code size={16} />
+                <span>+ Add Custom HTML Card</span>
+              </button>
+
+              {/* Add Preformatted Card Dropdown */}
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <CustomSelect
+                  value=""
+                  onChange={(val) => {
+                    if (!val) return;
+                    const labels: Record<string, string> = {
+                      bio: 'About Me',
+                      music: 'My Music Playlist',
+                      friends: 'Top Friends',
+                      hobbies: 'Hobbies & Passions',
+                      movies: 'Movies & TV Favorites',
+                      books: 'Reading Nook & Books',
+                      steam: 'Steam Showcase',
+                      guestbook: 'Guestbook Notes'
+                    };
+                    const newCard: NookCardConfig = {
+                      id: `c_${val}_${Date.now()}`,
+                      type: val as any,
+                      title: labels[val] || 'Card',
+                      enabled: true
+                    };
+                    setCardLayout(prev => [...prev, newCard]);
+                    showToast(`Added ${labels[val]} Card!`, 'info');
+                  }}
+                  placeholder="+ Add Preformatted Card..."
+                  options={[
+                    { value: 'bio', label: '📝 About Me / Bio Card' },
+                    { value: 'music', label: '🎵 Profile Anthem & Music Player' },
+                    { value: 'friends', label: '👥 Top Friends Grid' },
+                    { value: 'hobbies', label: '🎯 Hobbies & Passions' },
+                    { value: 'movies', label: '🍿 Movies & TV Showcase' },
+                    { value: 'books', label: '📖 Reading Nook & Books' },
+                    { value: 'steam', label: '🎮 Steam Gaming Showcase' },
+                    { value: 'guestbook', label: '✍️ Guestbook Notes' }
+                  ]}
+                  style={{ minWidth: '210px' }}
+                />
               </div>
             </div>
+
+            {/* Reorderable List of Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {cardLayout.map((c, idx) => (
+                <div
+                  key={c.id}
+                  style={{
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '10px',
+                    padding: '0.75rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'space-between',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: '1 1 300px' }}>
+                    {/* Up / Down reorder controls */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => {
+                          const updated = [...cardLayout];
+                          const temp = updated[idx];
+                          updated[idx] = updated[idx - 1];
+                          updated[idx - 1] = temp;
+                          setCardLayout(updated);
+                        }}
+                        style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: idx === 0 ? 'rgba(255,255,255,0.2)' : '#fff', cursor: idx === 0 ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
+                        title="Move Card Up"
+                      >
+                        <ArrowUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === cardLayout.length - 1}
+                        onClick={() => {
+                          const updated = [...cardLayout];
+                          const temp = updated[idx];
+                          updated[idx] = updated[idx + 1];
+                          updated[idx + 1] = temp;
+                          setCardLayout(updated);
+                        }}
+                        style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: idx === cardLayout.length - 1 ? 'rgba(255,255,255,0.2)' : '#fff', cursor: idx === cardLayout.length - 1 ? 'default' : 'pointer', padding: '2px 5px', borderRadius: '4px', fontSize: '0.7rem' }}
+                        title="Move Card Down"
+                      >
+                        <ArrowDown size={13} />
+                      </button>
+                    </div>
+
+                    {/* Enable Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={c.enabled !== false}
+                      onChange={e => {
+                        const updated = [...cardLayout];
+                        updated[idx].enabled = e.target.checked;
+                        setCardLayout(updated);
+                      }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                    />
+
+                    {/* Card Type Badge */}
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '6px', background: c.type === 'markdown' ? 'rgba(56,189,248,0.2)' : c.type === 'html' ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.1)', color: c.type === 'markdown' ? '#38bdf8' : c.type === 'html' ? '#c084fc' : 'var(--text-main)' }}>
+                      {c.type.toUpperCase()}
+                    </span>
+
+                    {/* Card Title Input */}
+                    <input
+                      type="text"
+                      placeholder="Card Title Header..."
+                      value={c.title || ''}
+                      onChange={e => {
+                        const updated = [...cardLayout];
+                        updated[idx].title = e.target.value;
+                        setCardLayout(updated);
+                      }}
+                      style={{ flex: 1, minWidth: '160px', padding: '0.4rem 0.6rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {/* Delete Card Button */}
+                    <button
+                      type="button"
+                      onClick={() => setCardLayout(cardLayout.filter((_, i) => i !== idx))}
+                      style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', borderRadius: '6px', padding: '0.35rem 0.6rem', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                      title="Remove Card"
+                    >
+                      <Trash2 size={14} />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Dedicated Custom Cards Editor Panel (Markdown & HTML Cards) */}
+          {cardLayout.some(c => c.type === 'markdown' || c.type === 'html') && (
+            <div className="nook-panel">
+              <div className="nook-panel-header">
+                <Code size={20} />
+                <span>Custom Markdown & Custom HTML Cards Editor</span>
+              </div>
+              <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1.25rem' }}>
+                Edit the text, markdown markup, photo attachments, or HTML embeds for your custom cards below:
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {cardLayout.map((c, idx) => {
+                  if (c.type !== 'markdown' && c.type !== 'html') return null;
+
+                  return (
+                    <div
+                      key={c.id}
+                      style={{
+                        background: 'rgba(0,0,0,0.2)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '12px',
+                        padding: '1.25rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.85rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          {c.type === 'markdown' ? <FileText size={18} color="#38bdf8" /> : <Code size={18} color="#c084fc" />}
+                          <span>{c.title || (c.type === 'markdown' ? 'Custom Markdown Card' : 'Custom HTML Card')}</span>
+                        </span>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>Card #{idx + 1}</span>
+                      </div>
+
+                      {c.type === 'markdown' ? (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.8 }}>Markdown Text Content:</label>
+                            <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.25rem 0.6rem', fontSize: '0.78rem' }}>
+                              <Upload size={14} />
+                              <span>Attach / Insert Photo...</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                  const f = e.target.files?.[0];
+                                  if (!f || !token) return;
+                                  const formData = new FormData();
+                                  formData.append('sticker', f);
+                                  try {
+                                    const res = await fetch('/api/nook/upload/sticker', {
+                                      method: 'POST',
+                                      headers: { Authorization: `Bearer ${token}` },
+                                      body: formData
+                                    });
+                                    const data = await res.json();
+                                    if (res.ok) {
+                                      const imageMarkdown = `\n\n![${f.name}](${data.sticker_url})\n`;
+                                      const updated = [...cardLayout];
+                                      updated[idx].content_markdown = (updated[idx].content_markdown || '') + imageMarkdown;
+                                      setCardLayout(updated);
+                                      showToast('Photo uploaded & inserted into Markdown card!', 'success');
+                                    } else {
+                                      showToast(data.error || 'Photo upload failed', 'error');
+                                    }
+                                  } catch (err) {
+                                    showToast('Error uploading photo', 'error');
+                                  }
+                                }}
+                                style={{ display: 'none' }}
+                              />
+                            </label>
+                          </div>
+                          <textarea
+                            rows={5}
+                            value={c.content_markdown || ''}
+                            onChange={e => {
+                              const updated = [...cardLayout];
+                              updated[idx].content_markdown = e.target.value;
+                              setCardLayout(updated);
+                            }}
+                            placeholder="Write markdown here... Use ### for headings, **bold**, *italic*, [link](url), or ![alt](image_url)..."
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontFamily: 'monospace', lineHeight: 1.5 }}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <label style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.8 }}>Raw HTML Code Content:</label>
+                          <textarea
+                            rows={5}
+                            value={c.content_html || ''}
+                            onChange={e => {
+                              const updated = [...cardLayout];
+                              updated[idx].content_html = e.target.value;
+                              setCardLayout(updated);
+                            }}
+                            placeholder="Input custom HTML markup, embeds, or styled divs here..."
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontFamily: 'monospace', lineHeight: 1.5 }}
+                          />
+
+                          {/* Live HTML Card Preview Box */}
+                          <div style={{ marginTop: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '0.85rem' }}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.6, marginBottom: '0.5rem' }}>HTML CARD LIVE PREVIEW:</div>
+                            <div dangerouslySetInnerHTML={{ __html: c.content_html || '' }} />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Nook Privacy Controls */}
           <div className="nook-panel">

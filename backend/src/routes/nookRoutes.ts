@@ -353,6 +353,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
       favorite_movies_json,
       favorite_books_json,
       hobbies_json,
+      card_layout_json,
       storygraph_username,
       spotify_personal_mode,
       theme_sounds_enabled,
@@ -367,6 +368,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
     const favMoviesString = typeof favorite_movies_json === 'object' ? JSON.stringify(favorite_movies_json) : favorite_movies_json;
     const favBooksString = typeof favorite_books_json === 'object' ? JSON.stringify(favorite_books_json) : favorite_books_json;
     const hobbiesString = typeof hobbies_json === 'object' ? JSON.stringify(hobbies_json) : hobbies_json;
+    const cardLayoutString = typeof card_layout_json === 'object' ? JSON.stringify(card_layout_json) : card_layout_json;
 
     await execute(
       `UPDATE nooks SET 
@@ -392,6 +394,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         favorite_movies_json = COALESCE(?, favorite_movies_json),
         favorite_books_json = COALESCE(?, favorite_books_json),
         hobbies_json = COALESCE(?, hobbies_json),
+        card_layout_json = COALESCE(?, card_layout_json),
         storygraph_username = COALESCE(?, storygraph_username),
         spotify_personal_mode = COALESCE(?, spotify_personal_mode),
         theme_sounds_enabled = COALESCE(?, theme_sounds_enabled),
@@ -421,6 +424,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         favMoviesString,
         favBooksString,
         hobbiesString,
+        cardLayoutString,
         storygraph_username,
         spotify_personal_mode,
         theme_sounds_enabled !== undefined ? (theme_sounds_enabled ? 1 : 0) : null,
