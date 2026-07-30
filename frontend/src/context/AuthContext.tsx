@@ -15,6 +15,8 @@ export interface User {
   is_email_verified?: boolean;
   onboarding_completed?: boolean;
   privacy_default?: string;
+  reaction_picker_json?: string;
+  default_reaction?: string;
 }
 
 interface AuthContextType {
