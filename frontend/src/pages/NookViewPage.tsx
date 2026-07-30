@@ -520,7 +520,7 @@ export const NookViewPage: React.FC = () => {
                         {c.icon ? (
                           <span style={{ fontSize: '1.1rem', marginRight: '0.2rem' }}>{c.icon}</span>
                         ) : (
-                          <FileText size={20} color="var(--accent-color)" />
+                          <FileText size={20} />
                         )}
                         <span>{c.title}</span>
                       </div>
@@ -537,7 +537,7 @@ export const NookViewPage: React.FC = () => {
                         {c.icon ? (
                           <span style={{ fontSize: '1.1rem', marginRight: '0.2rem' }}>{c.icon}</span>
                         ) : (
-                          <Code size={20} color="var(--accent-color)" />
+                          <Code size={20} />
                         )}
                         <span>{c.title}</span>
                       </div>

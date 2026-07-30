@@ -175,7 +175,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
     <div className="nook-panel" style={{ position: 'relative' }}>
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Music size={20} color="var(--accent-color)" />
+          <Music size={20} />
           <span>{title} ({playlist.length})</span>
         </div>
       </div>

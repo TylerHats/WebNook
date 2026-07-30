@@ -29,7 +29,7 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
     <div className="nook-panel">
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Clapperboard size={20} color="var(--accent-color)" />
+          <Clapperboard size={20} />
           <span>{title}</span>
         </div>
         <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>({movieList.length})</span>

@@ -57,7 +57,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
     return (
       <div className="nook-panel" style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '1.25rem', textAlign: 'center' }}>
         <div className="nook-panel-header" style={{ width: '100%', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Gamepad2 size={20} color="var(--accent-color)" />
+          <Gamepad2 size={20} />
           <span style={{ fontWeight: 700 }}>{title}</span>
         </div>
         <div style={{ opacity: 0.7, fontSize: '0.85rem' }}>
@@ -73,7 +73,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
         {/* Header Bar Skeleton */}
         <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Gamepad2 size={20} color="var(--accent-color)" />
+            <Gamepad2 size={20} />
             <span style={{ fontWeight: 700 }}>{title}</span>
           </div>
           <Sparkles size={16} className="animate-spin" color="var(--accent-color)" style={{ opacity: 0.8 }} />
@@ -156,7 +156,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
       {/* Header Bar */}
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Gamepad2 size={20} color="var(--accent-color)" />
+          <Gamepad2 size={20} />
           <span style={{ fontWeight: 700 }}>{title}</span>
         </div>
         {player?.profileUrl && (

@@ -1901,7 +1901,7 @@ export const NookCustomizerPage: React.FC = () => {
                 <div key={c.id} className="nook-panel">
                   <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      {c.type === 'markdown' ? <FileText size={18} color="#38bdf8" /> : <Code size={18} color="#c084fc" />}
+                      {c.type === 'markdown' ? <FileText size={18} /> : <Code size={18} />}
                       <span>{cardNumLabel}</span>
                     </span>
                   </div>

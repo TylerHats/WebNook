@@ -224,6 +224,13 @@ input, textarea, select {
   outline: none !important;
 }
 
+/* Win9X Panel Header Icons: Force light white style to match titlebar text */
+.theme-win98 .nook-panel-header svg,
+.theme-win9x .nook-panel-header svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
 /* Retro Scanline Overlay on Panels & Embedded Players (Non-blocking clickability) */
 .theme-win98 .nook-panel::after, .theme-win9x .nook-panel::after {
   content: '';

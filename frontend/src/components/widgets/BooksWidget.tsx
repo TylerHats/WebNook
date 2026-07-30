@@ -31,7 +31,7 @@ export const BooksWidget: React.FC<BooksWidgetProps> = ({
     <div className="nook-panel">
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <BookOpen size={20} color="var(--accent-color)" />
+          <BookOpen size={20} />
           <span>{title}</span>
         </div>
         {storygraphUsername && (
