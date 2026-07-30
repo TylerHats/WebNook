@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { 
   MessageSquare, Plus, Bell, BellOff, Send, Users, User, 
   Bold, Italic, Code, Link as LinkIcon, List, Eye, Search, X, Bot, 
