@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { Bell, Check, X, UserPlus, MessageSquare, Heart, Sparkles } from 'lucide-react';
+import { Bell, Check, X, UserPlus, MessageSquare, Heart, Sparkles, Trash2 } from 'lucide-react';
 
 export const NotificationDropdown: React.FC = () => {
   const { token } = useAuth();
@@ -60,6 +60,21 @@ export const NotificationDropdown: React.FC = () => {
       setUnreadCount(0);
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (e) {}
+  };
+
+  const handleClearAll = async () => {
+    if (!token) return;
+    try {
+      await fetch('/api/notifications/clear-all', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications([]);
+      setUnreadCount(0);
+      showToast('All notifications cleared', 'info');
+    } catch (e) {
+      showToast('Failed to clear notifications', 'error');
+    }
   };
 
   const handleRespondFriendRequest = async (requestId: number, action: 'accept' | 'reject') => {
@@ -171,14 +186,26 @@ export const NotificationDropdown: React.FC = () => {
               </button>
             </div>
 
-            {activeTab === 'notices' && unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllRead}
-                style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Mark read
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              {activeTab === 'notices' && unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Mark read
+                </button>
+              )}
+              {activeTab === 'notices' && (notifications || []).length > 0 && (
+                <button
+                  onClick={handleClearAll}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                  title="Clear All Notifications"
+                >
+                  <Trash2 size={13} />
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Tab 1: Notices Content */}
@@ -202,7 +229,18 @@ export const NotificationDropdown: React.FC = () => {
                     }}
                   >
                     <div style={{ fontWeight: 700, marginBottom: '0.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{n.title}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {n.sender_username && (
+                          <Link
+                            to={`/nook/${n.sender_username}`}
+                            onClick={() => setIsOpen(false)}
+                            style={{ textDecoration: 'none', color: 'var(--accent-color)', fontWeight: 700 }}
+                          >
+                            @{n.sender_username}
+                          </Link>
+                        )}
+                        <span>{n.title}</span>
+                      </span>
                       <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <p style={{ margin: 0, opacity: 0.85, lineHeight: 1.4, fontSize: '0.8rem' }}>{n.message}</p>
@@ -263,17 +301,23 @@ export const NotificationDropdown: React.FC = () => {
                       border: '1px solid var(--border-color)'
                     }}
                   >
-                    <img
-                      src={r.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                      alt={r.username}
-                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {r.display_name || r.username}
+                    <Link
+                      to={`/nook/${r.username}`}
+                      onClick={() => setIsOpen(false)}
+                      style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, overflow: 'hidden' }}
+                    >
+                      <img
+                        src={r.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                        alt={r.username}
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                      <div style={{ flex: 1, overflow: 'hidden' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {r.display_name || r.username}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>@{r.username}</div>
                       </div>
-                      <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>@{r.username}</div>
-                    </div>
+                    </Link>
                     <div style={{ display: 'flex', gap: '0.35rem' }}>
                       <button
                         onClick={() => handleRespondFriendRequest(r.request_id, 'accept')}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { MessageSquare, Send, Trash2, Smile } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -205,16 +206,18 @@ export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({
                 position: 'relative'
               }}
             >
-              <img
-                src={entry.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                alt={entry.display_name}
-                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-              />
+              <Link to={`/nook/${entry.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <img
+                  src={entry.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                  alt={entry.display_name}
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
+                />
+              </Link>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                  <Link to={`/nook/${entry.username}`} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 700, fontSize: '0.85rem' }}>
                     {entry.display_name} <span style={{ opacity: 0.5, fontWeight: 400 }}>@{entry.username}</span>
-                  </span>
+                  </Link>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
                     <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>{new Date(entry.created_at).toLocaleDateString()}</span>
                     

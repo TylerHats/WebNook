@@ -91,6 +91,16 @@ router.post('/read-all', authenticateToken, async (req: AuthenticatedRequest, re
   }
 });
 
+// Clear / Delete All Notifications
+router.delete('/clear-all', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    await execute('DELETE FROM notifications WHERE user_id = ?', [req.user!.id]);
+    return res.json({ message: 'All notifications cleared' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to clear notifications' });
+  }
+});
+
 // Inline Accept or Reject Friend Request from Notification Popover
 router.post('/respond-friend', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {

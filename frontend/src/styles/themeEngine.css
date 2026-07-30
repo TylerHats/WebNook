@@ -178,7 +178,8 @@ input, textarea, select {
 }
 
 /* 90s Early Internet Image Filtering & Dithering */
-.theme-win98 img, .theme-win9x img,
+.theme-win98 img:not([style*="border-radius: 50%"]):not([style*="border-radius:50%"]),
+.theme-win9x img:not([style*="border-radius: 50%"]):not([style*="border-radius:50%"]),
 .theme-win98 .nook-banner-image, .theme-win9x .nook-banner-image {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
@@ -192,7 +193,11 @@ input, textarea, select {
 .theme-win98 img[style*="border-radius: 50%"], .theme-win9x img[style*="border-radius: 50%"],
 .theme-win98 img[style*="border-radius:50%"], .theme-win9x img[style*="border-radius:50%"] {
   border-radius: 50% !important;
-  border: none !important;
+  border: 3px solid #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35) !important;
+  outline: none !important;
+  clip-path: none !important;
+  animation: none !important;
 }
 
 /* Retro Scanline Overlay on Panels & Embedded Players (Non-blocking clickability) */

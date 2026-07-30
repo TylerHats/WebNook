@@ -228,7 +228,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
       }
 
       // If games list tab wasn't available or empty, parse mostPlayedGame from main profile XML
-      if (games.length === 0) {
+      if (games.length < 3) {
         const gameBlocks = xmlText.split('<mostPlayedGame>');
         for (let i = 1; i < gameBlocks.length; i++) {
           const block = gameBlocks[i];
@@ -238,14 +238,53 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           const g2WeeksMatch = block.match(/<hoursPlayed>(.*?)<\/hoursPlayed>/);
 
           if (gNameMatch) {
-            games.push({
-              appid: 0,
-              name: gNameMatch[1].trim(),
-              playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1].replace(',', ''))) : 0,
-              playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
-              icon: gIconMatch ? gIconMatch[1].trim() : ''
-            });
+            const gName = gNameMatch[1].trim();
+            if (!games.some(existing => existing.name.toLowerCase() === gName.toLowerCase())) {
+              games.push({
+                appid: 0,
+                name: gName,
+                playtime_2weeks: g2WeeksMatch ? Math.round(parseFloat(g2WeeksMatch[1].replace(',', ''))) : 0,
+                playtime_forever: gHoursMatch ? Math.round(parseFloat(gHoursMatch[1].replace(',', ''))) : 0,
+                icon: gIconMatch ? gIconMatch[1].trim() : ''
+              });
+            }
           }
+        }
+      }
+
+      // Also scrape main Steam profile HTML page for all games listed under class="recent_game"
+      if (games.length < 3) {
+        try {
+          const htmlUrl = parsedInput.type === 'steamid64'
+            ? `https://steamcommunity.com/profiles/${parsedInput.value}/`
+            : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/`;
+          const profileHtml = await fetchText(htmlUrl);
+          const htmlBlocks = profileHtml.split('class="recent_game"');
+
+          for (let i = 1; i < htmlBlocks.length; i++) {
+            const b = htmlBlocks[i];
+            const nameMatch = b.match(/class="game_name"><a[^>]*>(.*?)<\/a>/);
+            const appMatch = b.match(/app\/(\d+)/);
+            const imgMatch = b.match(/class="game_capsule"[^>]*src="(.*?)"/) || b.match(/src="(.*?capsule.*?)"/);
+            const hoursMatch = b.match(/([0-9\.,]+)\s*hrs on record/i);
+
+            if (nameMatch && nameMatch[1]) {
+              const nameStr = nameMatch[1].replace(/<[^>]+>/g, '').trim();
+              if (!games.some(existing => existing.name.toLowerCase() === nameStr.toLowerCase())) {
+                const appId = appMatch ? parseInt(appMatch[1], 10) : 0;
+                const hoursNum = hoursMatch ? Math.round(parseFloat(hoursMatch[1].replace(',', ''))) : 0;
+                games.push({
+                  appid: appId,
+                  name: nameStr,
+                  playtime_2weeks: 0,
+                  playtime_forever: hoursNum > 0 ? hoursNum : 10,
+                  icon: imgMatch ? imgMatch[1] : (appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_184x69.jpg` : '')
+                });
+              }
+            }
+          }
+        } catch (hErr) {
+          console.warn('Steam HTML profile scrape fallback error:', hErr);
         }
       }
 
