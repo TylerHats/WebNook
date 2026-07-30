@@ -6,13 +6,31 @@ import http from 'http';
 
 const router = Router();
 
-// Helper HTTP/HTTPS text getter
-function fetchText(url: string, headers: Record<string, string> = {}): Promise<string> {
+// Helper HTTP/HTTPS text getter with browser User-Agent & relative redirect support
+function fetchText(urlStr: string, headers: Record<string, string> = {}): Promise<string> {
   return new Promise((resolve, reject) => {
-    const client = url.startsWith('https') ? https : http;
-    const req = client.get(url, { headers }, (res) => {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(urlStr);
+    } catch (e) {
+      return reject(e);
+    }
+
+    const defaultHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      ...headers
+    };
+
+    const client = parsedUrl.protocol === 'https:' ? https : http;
+    const req = client.get(parsedUrl, { headers: defaultHeaders }, (res) => {
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchText(res.headers.location, headers).then(resolve).catch(reject);
+        let redirectUrl = res.headers.location;
+        if (redirectUrl.startsWith('/')) {
+          redirectUrl = `${parsedUrl.protocol}//${parsedUrl.host}${redirectUrl}`;
+        }
+        return fetchText(redirectUrl, headers).then(resolve).catch(reject);
       }
       let data = '';
       res.on('data', chunk => data += chunk);
@@ -114,15 +132,27 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
           const recentGamesRaw = recentRes.response?.games || [];
           const ownedGamesRaw = ownedRes.response?.games || [];
 
-          // Format game items consistently
+          // Format game items consistently (including offline / disconnected playtime!)
           const formatGame = (g: any) => {
-            const pt2w = g.playtime_2weeks ? Math.round((g.playtime_2weeks / 60) * 10) / 10 : 0;
-            const ptEver = g.playtime_forever ? Math.round((g.playtime_forever / 60) * 10) / 10 : 0;
+            const raw2wMins = g.playtime_2weeks || 0;
+            const rawEverMins = (g.playtime_forever || 0) + (g.playtime_disconnected || 0);
+
+            // Compute 2-week hours accurately
+            let pt2w = 0;
+            if (raw2wMins > 0) {
+              const hoursFloat = raw2wMins / 60;
+              pt2w = hoursFloat < 0.1 ? 0.1 : Math.round(hoursFloat * 10) / 10;
+            }
+
+            const ptEver = Math.round((rawEverMins / 60) * 10) / 10;
+
             return {
               appid: g.appid,
               name: g.name,
               playtime_2weeks: pt2w,
+              playtime_2weeks_minutes: raw2wMins,
               playtime_forever: ptEver,
+              playtime_forever_minutes: rawEverMins,
               icon: g.img_icon_url ? `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg` : `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg`,
               headerUrl: `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg`
             };
@@ -130,21 +160,79 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
 
           // Top 3 Recently Played (past 2 weeks)
           const recentlyPlayedSorted = recentGamesRaw
+            .filter((g: any) => (g.playtime_2weeks || 0) > 0)
             .slice(0, 3)
             .map(formatGame);
 
-          // Top 3 All-Time Games (by lifetime playtime)
+          // Top 3 All-Time Games (by total lifetime playtime including disconnected)
+          const getGameTotalMins = (g: any) => (g.playtime_forever || 0) + (g.playtime_disconnected || 0);
+
           let topGamesSorted = [...ownedGamesRaw]
-            .filter((g: any) => (g.playtime_forever || 0) > 0)
-            .sort((a: any, b: any) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
+            .filter((g: any) => getGameTotalMins(g) > 0)
+            .sort((a: any, b: any) => getGameTotalMins(b) - getGameTotalMins(a))
             .slice(0, 3)
             .map(formatGame);
 
-          // If ownedGames was empty or restricted, fallback top games to recent games sorted by lifetime playtime
+          let isPrivateGames = ownedGamesRaw.length === 0;
+
+          // If ownedGames was empty or restricted via Web API, try scraping games from public HTML profile page
+          if (topGamesSorted.length === 0) {
+            try {
+              const htmlUrl = targetSteamId64
+                ? `https://steamcommunity.com/profiles/${targetSteamId64}/`
+                : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/`;
+              const profileHtml = await fetchText(htmlUrl);
+
+              if (profileHtml && !profileHtml.includes('This profile is private')) {
+                const gameBlocks = profileHtml.split('<div class="recent_game">');
+                const htmlGames: any[] = [];
+
+                for (let i = 1; i < gameBlocks.length; i++) {
+                  const block = gameBlocks[i];
+                  const nameMatch = block.match(/<div class="game_name"><a[^>]*href="[^"]*app\/(\d+)"[^>]*>(.*?)<\/a><\/div>/i);
+                  const hoursMatch = block.match(/([0-9\.,]+)\s*hrs on record/i);
+                  const recent2WkMatch = block.match(/([0-9\.,]+)\s*hrs in the last 2 weeks/i) || block.match(/([0-9\.,]+)\s*hrs past 2 weeks/i);
+                  const imgMatch = block.match(/class="game_capsule"[^>]*src="(.*?)"/i) || block.match(/src="(.*?capsule.*?)"/i);
+
+                  if (nameMatch) {
+                    const appId = parseInt(nameMatch[1], 10);
+                    const nameStr = nameMatch[2].replace(/<[^>]+>/g, '').trim();
+
+                    if (nameStr && !htmlGames.some(existing => existing.name.toLowerCase() === nameStr.toLowerCase())) {
+                      const hoursNum = hoursMatch ? parseFloat(hoursMatch[1].replace(',', '')) : 0;
+                      const hours2Wk = recent2WkMatch ? parseFloat(recent2WkMatch[1].replace(',', '')) : 0;
+
+                      htmlGames.push({
+                        appid: appId,
+                        name: nameStr,
+                        playtime_2weeks: Math.round(hours2Wk * 10) / 10,
+                        playtime_2weeks_minutes: Math.round(hours2Wk * 60),
+                        playtime_forever: Math.round(hoursNum * 10) / 10,
+                        playtime_forever_minutes: Math.round(hoursNum * 60),
+                        icon: imgMatch ? imgMatch[1] : (appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg` : ''),
+                        headerUrl: appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg` : ''
+                      });
+                    }
+                  }
+                }
+
+                if (htmlGames.length > 0) {
+                  topGamesSorted = [...htmlGames]
+                    .sort((a, b) => b.playtime_forever - a.playtime_forever)
+                    .slice(0, 3);
+                  isPrivateGames = false;
+                }
+              }
+            } catch (hErr) {
+              console.warn('Steam HTML fallback error during Web API flow:', hErr);
+            }
+          }
+
+          // Fallback top games to recent games sorted by lifetime playtime if topGames is still empty
           if (topGamesSorted.length === 0 && recentGamesRaw.length > 0) {
             topGamesSorted = [...recentGamesRaw]
-              .filter((g: any) => (g.playtime_forever || 0) > 0)
-              .sort((a: any, b: any) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
+              .filter((g: any) => getGameTotalMins(g) > 0)
+              .sort((a: any, b: any) => getGameTotalMins(b) - getGameTotalMins(a))
               .slice(0, 3)
               .map(formatGame);
           }
@@ -161,6 +249,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
                 profileUrl: player.profileurl || `https://steamcommunity.com/profiles/${targetSteamId64}`,
                 personaState: player.personastate ?? 0,
                 inGameTitle: player.gameextrainfo || '',
+                isPrivateGames,
                 stateMessage: player.gameextrainfo ? `In-Game: ${player.gameextrainfo}` : (player.personastate > 0 ? 'Online' : 'Offline')
               },
               recentlyPlayed: recentlyPlayedSorted,
@@ -201,6 +290,21 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
             xmlUrl = altXmlUrl;
           }
         } catch (e) {}
+      }
+
+      // If profile could not be found via XML scrape either, return explicit "Not Found" state
+      if (!xmlText || xmlText.includes('<error>') || !xmlText.includes('<steamID>')) {
+        return res.json({
+          player: {
+            personaName: parsedInput.value,
+            avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=300&auto=format&fit=crop&q=80',
+            profileUrl: `https://steamcommunity.com/search/users/#text=${encodeURIComponent(parsedInput.value)}`,
+            personaState: 0,
+            stateMessage: 'Steam Profile Not Found (Check Steam ID or URL)'
+          },
+          recentlyPlayed: [],
+          topGames: []
+        });
       }
 
       const personaNameMatch = xmlText.match(/<steamID><!\[CDATA\[(.*?)\]\]><\/steamID>/) || xmlText.match(/<steamID>(.*?)<\/steamID>/);

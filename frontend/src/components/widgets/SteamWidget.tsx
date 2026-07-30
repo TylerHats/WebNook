@@ -42,9 +42,9 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
 
   if (loading) {
     return (
-      <div className="nook-panel" style={{ padding: '1.25rem', textAlign: 'center', background: 'linear-gradient(135deg, rgba(23,37,53,0.85) 0%, rgba(16,24,34,0.9) 100%)' }}>
-        <Sparkles size={22} className="animate-spin" color="#66c0f4" style={{ margin: '0 auto 0.5rem' }} />
-        <span style={{ fontSize: '0.85rem', color: '#8f98a0' }}>Loading Steam Showcase...</span>
+      <div className="nook-panel" style={{ padding: '1.25rem', textAlign: 'center' }}>
+        <Sparkles size={22} className="animate-spin" color="var(--accent-color)" style={{ margin: '0 auto 0.5rem' }} />
+        <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>Loading Steam Showcase...</span>
       </div>
     );
   }
@@ -59,22 +59,26 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   // Determine status display details
   const isInGame = player?.inGameTitle || player?.stateMessage?.toLowerCase().includes('in-game');
   const isOnline = player?.personaState > 0 || player?.stateMessage?.toLowerCase() === 'online' || isInGame;
-  const statusColor = isInGame ? '#66c0f4' : (isOnline ? '#22c55e' : '#8f98a0');
+  const statusColor = isInGame ? 'var(--accent-color)' : (isOnline ? '#22c55e' : '#9ca3af');
+
+  // Format 2-week playtime display
+  const formatRecentTime = (g: any) => {
+    if (g.playtime_2weeks_minutes && g.playtime_2weeks_minutes < 60) {
+      return `${g.playtime_2weeks_minutes} mins (2 wks)`;
+    }
+    if (g.playtime_2weeks && g.playtime_2weeks > 0) {
+      return `${g.playtime_2weeks} hrs (2 wks)`;
+    }
+    return `< 1 hr (2 wks)`;
+  };
 
   return (
-    <div
-      className="nook-panel"
-      style={{
-        background: 'linear-gradient(135deg, rgba(23, 37, 53, 0.95) 0%, rgba(16, 24, 34, 0.98) 100%)',
-        border: '1px solid rgba(102, 192, 244, 0.25)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.37)'
-      }}
-    >
+    <div className="nook-panel">
       {/* Header Bar */}
       <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Gamepad2 size={20} color="#66c0f4" />
-          <span style={{ color: '#ffffff', fontWeight: 700, letterSpacing: '0.02em' }}>{title}</span>
+          <Gamepad2 size={20} color="var(--accent-color)" />
+          <span style={{ fontWeight: 700 }}>{title}</span>
         </div>
         {player?.profileUrl && (
           <a
@@ -82,14 +86,13 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              color: '#66c0f4',
+              color: 'var(--accent-color)',
               opacity: 0.85,
               fontSize: '0.78rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.25rem',
-              textDecoration: 'none',
-              transition: 'opacity 0.2s ease'
+              textDecoration: 'none'
             }}
           >
             <span>Profile</span>
@@ -106,47 +109,33 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
             alignItems: 'center',
             gap: '0.85rem',
             marginBottom: displayMode === 'none' ? '0' : '1rem',
-            background: 'rgba(0, 0, 0, 0.35)',
+            background: 'rgba(0, 0, 0, 0.2)',
             padding: '0.75rem',
             borderRadius: '10px',
-            border: '1px solid rgba(255, 255, 255, 0.05)'
+            border: '1px solid var(--border-color)'
           }}
         >
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <img
-              src={player.avatar}
-              alt={player.personaName}
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '8px',
-                objectFit: 'cover',
-                border: `2px solid ${statusColor}`
-              }}
-            />
-            <span
-              style={{
-                position: 'absolute',
-                bottom: '-2px',
-                right: '-2px',
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: statusColor,
-                border: '2px solid #101822'
-              }}
-            />
-          </div>
+          <img
+            src={player.avatar}
+            alt={player.personaName}
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '8px',
+              objectFit: 'cover',
+              border: `2px solid ${statusColor}`
+            }}
+          />
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {player.personaName}
             </div>
             <div style={{ fontSize: '0.75rem', color: statusColor, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '2px' }}>
               <span>
                 {isInGame
                   ? `🎮 In-Game: ${player.inGameTitle || player.stateMessage.replace(/^In-Game:\s*/i, '')}`
-                  : (isOnline ? '🟢 Online' : '⚪ Offline')}
+                  : (isOnline ? '🟢 Online' : (player.stateMessage || '⚪ Offline'))}
               </span>
             </div>
           </div>
@@ -163,7 +152,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                 style={{
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  color: '#66c0f4',
+                  opacity: 0.8,
                   marginBottom: '0.45rem',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
@@ -172,7 +161,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                   gap: '0.35rem'
                 }}
               >
-                <Clock size={13} color="#66c0f4" />
+                <Clock size={13} color="var(--accent-color)" />
                 <span>Recently Played (Past 2 Weeks):</span>
               </div>
 
@@ -185,29 +174,29 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        background: 'rgba(0, 0, 0, 0.3)',
+                        background: 'rgba(0, 0, 0, 0.2)',
                         padding: '0.5rem 0.75rem',
                         borderRadius: '8px',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        border: '1px solid var(--border-color)',
                         fontSize: '0.85rem'
                       }}
                     >
-                      <div style={{ fontWeight: 600, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
                         <img
                           src={g.icon || g.headerUrl}
                           alt=""
-                          style={{ width: '32px', height: '20px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.1)' }}
+                          style={{ width: '32px', height: '20px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
                         />
                         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#66c0f4', fontWeight: 700, flexShrink: 0, marginLeft: '0.5rem' }}>
-                        {g.playtime_2weeks > 0 ? `${g.playtime_2weeks} hrs (2 wks)` : `${g.playtime_forever || 0} hrs total`}
+                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 700, flexShrink: 0, marginLeft: '0.5rem' }}>
+                        {formatRecentTime(g)}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '0.65rem', borderRadius: '6px', fontSize: '0.78rem', color: '#8f98a0', textAlign: 'center' }}>
+                <div style={{ background: 'rgba(0, 0, 0, 0.15)', padding: '0.65rem', borderRadius: '6px', fontSize: '0.78rem', opacity: 0.7, textAlign: 'center' }}>
                   No games played in the past 2 weeks 🎮
                 </div>
               )}
@@ -221,7 +210,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                 style={{
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  color: '#a855f7',
+                  opacity: 0.8,
                   marginBottom: '0.45rem',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
@@ -230,7 +219,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                   gap: '0.35rem'
                 }}
               >
-                <Award size={13} color="#a855f7" />
+                <Award size={13} color="var(--accent-color)" />
                 <span>Top All-Time Games:</span>
               </div>
 
@@ -243,33 +232,37 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        background: 'rgba(0, 0, 0, 0.3)',
+                        background: 'rgba(0, 0, 0, 0.2)',
                         padding: '0.5rem 0.75rem',
                         borderRadius: '8px',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        border: '1px solid var(--border-color)',
                         fontSize: '0.85rem'
                       }}
                     >
-                      <div style={{ fontWeight: 600, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
-                        <span style={{ fontSize: '0.75rem', color: idx === 0 ? '#facc15' : idx === 1 ? '#cbd5e1' : '#d97706', fontWeight: 800, flexShrink: 0 }}>
+                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.6, fontWeight: 800, flexShrink: 0 }}>
                           #{idx + 1}
                         </span>
                         <img
                           src={g.icon || g.headerUrl}
                           alt=""
-                          style={{ width: '32px', height: '20px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.1)' }}
+                          style={{ width: '32px', height: '20px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
                         />
                         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#c084fc', fontWeight: 700, flexShrink: 0, marginLeft: '0.5rem' }}>
+                      <div style={{ fontSize: '0.75rem', opacity: 0.75, fontWeight: 700, flexShrink: 0, marginLeft: '0.5rem' }}>
                         {g.playtime_forever || 0} hrs total
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '0.65rem', borderRadius: '6px', fontSize: '0.78rem', color: '#8f98a0', textAlign: 'center' }}>
-                  No lifetime game hours recorded 🎮
+                <div style={{ background: 'rgba(0, 0, 0, 0.15)', padding: '0.65rem', borderRadius: '6px', fontSize: '0.78rem', opacity: 0.7, textAlign: 'center', lineHeight: 1.4 }}>
+                  {player?.isPrivateGames ? (
+                    <span>🔒 Lifetime games list hidden by Steam account privacy settings.<br/><span style={{ fontSize: '0.72rem', opacity: 0.8 }}>Set "Game details" to Public on Steam to display all-time top games.</span></span>
+                  ) : (
+                    <span>No lifetime game hours recorded 🎮</span>
+                  )}
                 </div>
               )}
             </div>
