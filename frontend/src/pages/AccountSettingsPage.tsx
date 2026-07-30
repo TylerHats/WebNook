@@ -10,7 +10,7 @@ import { ImageCropModal } from '../components/ui/ImageCropModal';
 export const AccountSettingsPage: React.FC = () => {
   const { user, token, refreshUser, logout } = useAuth();
   const { showToast } = useToast();
-  const { isInstallable, isStandalone, promptInstall } = usePWA();
+  const { isInstallable, isStandalone, promptInstall, resetDismissedBanner, isBannerDismissed } = usePWA();
   const navigate = useNavigate();
 
   const [deleteModalStep, setDeleteModalStep] = useState<0 | 1 | 2>(0);
@@ -460,20 +460,37 @@ export const AccountSettingsPage: React.FC = () => {
               </p>
 
               {isInstallable ? (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const success = await promptInstall();
-                    if (success) {
-                      showToast('WebNook App installed successfully!', 'success');
-                    }
-                  }}
-                  className="btn-primary"
-                  style={{ marginBottom: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-                >
-                  <Download size={18} />
-                  <span>Install WebNook App to Home Screen</span>
-                </button>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const success = await promptInstall();
+                      if (success) {
+                        showToast('WebNook App installed successfully!', 'success');
+                      }
+                    }}
+                    className="btn-primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <Download size={18} />
+                    <span>Install WebNook App to Home Screen</span>
+                  </button>
+
+                  {isBannerDismissed && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetDismissedBanner();
+                        showToast('PWA installation popup banner restored!', 'info');
+                      }}
+                      className="btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <Smartphone size={16} />
+                      <span>Re-enable Installation Banner Prompt</span>
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1rem', fontSize: '0.85rem' }}>
                   <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: 'var(--accent-color)' }}>📱 How to install WebNook on your phone:</div>

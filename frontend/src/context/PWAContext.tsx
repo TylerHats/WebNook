@@ -5,6 +5,7 @@ interface PWAContextType {
   isStandalone: boolean;
   promptInstall: () => Promise<boolean>;
   dismissBanner: () => void;
+  resetDismissedBanner: () => void;
   isBannerDismissed: boolean;
 }
 
@@ -13,6 +14,7 @@ const PWAContext = createContext<PWAContextType>({
   isStandalone: false,
   promptInstall: async () => false,
   dismissBanner: () => {},
+  resetDismissedBanner: () => {},
   isBannerDismissed: false
 });
 
@@ -20,7 +22,9 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(() => {
+    return localStorage.getItem('webnook_pwa_dismissed') === 'true';
+  });
 
   useEffect(() => {
     // Check if app is already running in standalone PWA mode
@@ -71,11 +75,17 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const dismissBanner = () => {
+    localStorage.setItem('webnook_pwa_dismissed', 'true');
     setIsBannerDismissed(true);
   };
 
+  const resetDismissedBanner = () => {
+    localStorage.removeItem('webnook_pwa_dismissed');
+    setIsBannerDismissed(false);
+  };
+
   return (
-    <PWAContext.Provider value={{ isInstallable, isStandalone, promptInstall, dismissBanner, isBannerDismissed }}>
+    <PWAContext.Provider value={{ isInstallable, isStandalone, promptInstall, dismissBanner, resetDismissedBanner, isBannerDismissed }}>
       {children}
     </PWAContext.Provider>
   );

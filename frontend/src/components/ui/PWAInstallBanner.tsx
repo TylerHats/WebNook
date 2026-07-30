@@ -1,13 +1,20 @@
 import React from 'react';
 import { usePWA } from '../../context/PWAContext';
+import { useToast } from '../../context/ToastContext';
 import { Download, Smartphone, X } from 'lucide-react';
 
 export const PWAInstallBanner: React.FC = () => {
   const { isInstallable, isStandalone, promptInstall, dismissBanner, isBannerDismissed } = usePWA();
+  const { showToast } = useToast();
 
   if (isStandalone || !isInstallable || isBannerDismissed) {
     return null;
   }
+
+  const handleDismiss = () => {
+    dismissBanner();
+    showToast('PWA banner dismissed. You can install anytime from Account Settings!', 'info');
+  };
 
   return (
     <div
@@ -18,7 +25,7 @@ export const PWAInstallBanner: React.FC = () => {
         transform: 'translateX(-50%)',
         zIndex: 9999,
         width: '90%',
-        maxWidth: '460px',
+        maxWidth: '480px',
         background: 'rgba(26, 30, 50, 0.95)',
         backdropFilter: 'blur(16px)',
         border: '1px solid var(--accent-color)',
@@ -38,8 +45,8 @@ export const PWAInstallBanner: React.FC = () => {
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#ffffff' }}>Install WebNook App</div>
-          <div style={{ fontSize: '0.75rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Add to home screen for full app experience
+          <div style={{ fontSize: '0.73rem', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Add to home screen • Install anytime from Settings
           </div>
         </div>
       </div>
@@ -54,9 +61,9 @@ export const PWAInstallBanner: React.FC = () => {
           <span>Install</span>
         </button>
         <button
-          onClick={dismissBanner}
+          onClick={handleDismiss}
           style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', padding: '4px' }}
-          title="Dismiss"
+          title="Dismiss permanently (Can re-enable from Settings)"
         >
           <X size={18} />
         </button>

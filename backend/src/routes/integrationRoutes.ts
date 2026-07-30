@@ -158,19 +158,19 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
             };
           };
 
-          // Top 3 Recently Played (past 2 weeks)
+          // Recently Played (past 2 weeks) - return up to 20 games so frontend filters can expand dynamically
           const recentlyPlayedSorted = recentGamesRaw
             .filter((g: any) => (g.playtime_2weeks || 0) > 0)
-            .slice(0, 3)
+            .slice(0, 20)
             .map(formatGame);
 
-          // Top 3 All-Time Games (by total lifetime playtime including disconnected)
+          // All-Time Games (by total lifetime playtime including disconnected) - return up to 20 games
           const getGameTotalMins = (g: any) => (g.playtime_forever || 0) + (g.playtime_disconnected || 0);
 
           let topGamesSorted = [...ownedGamesRaw]
             .filter((g: any) => getGameTotalMins(g) > 0)
             .sort((a: any, b: any) => getGameTotalMins(b) - getGameTotalMins(a))
-            .slice(0, 3)
+            .slice(0, 20)
             .map(formatGame);
 
           let isPrivateGames = ownedGamesRaw.length === 0;
@@ -396,12 +396,12 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
       const topGamesSorted = [...games]
         .filter(g => (g.playtime_forever || 0) > 0)
         .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
-        .slice(0, 3);
+        .slice(0, 20);
 
       const recentGamesSorted = [...games]
         .filter(g => (g.playtime_2weeks || 0) > 0)
         .sort((a, b) => (b.playtime_2weeks || 0) - (a.playtime_2weeks || 0))
-        .slice(0, 3);
+        .slice(0, 20);
 
       const profileUrl = resolvedSteamId64
         ? `https://steamcommunity.com/profiles/${resolvedSteamId64}`
