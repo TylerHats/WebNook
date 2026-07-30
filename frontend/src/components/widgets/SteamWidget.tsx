@@ -132,7 +132,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
             </div>
           )}
 
-          {wantTop && displayMode !== 'recently_played' && effectiveTopGames.length > 0 && (
+          {wantTop && effectiveTopGames.length > 0 && (
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.7, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
                 Top All-Time Games:

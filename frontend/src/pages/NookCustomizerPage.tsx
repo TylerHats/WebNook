@@ -19,6 +19,12 @@ export interface NookCardConfig {
   content_markdown?: string;
   content_html?: string;
   photo_urls?: string[];
+  favorite_movies?: any[];
+  favorite_books?: any[];
+  music_tracks?: any[];
+  hobbies?: any[];
+  steam_id64?: string;
+  steam_display_mode?: 'none' | 'recently_played' | 'top_games' | 'both';
 }
 
 const DEFAULT_CARD_LAYOUT: NookCardConfig[] = [
