@@ -10,6 +10,7 @@ export interface HobbyItem {
 }
 
 interface HobbiesWidgetProps {
+  title?: string;
   hobbies?: HobbyItem[];
   isOwner?: boolean;
   onEdit?: () => void;
@@ -23,18 +24,25 @@ const DEFAULT_HOBBIES: HobbyItem[] = [
 ];
 
 export const HobbiesWidget: React.FC<HobbiesWidgetProps> = ({
-  hobbies = DEFAULT_HOBBIES,
+  title = 'Hobbies & Passions',
+  hobbies,
   isOwner = false,
   onEdit
 }) => {
-  const displayHobbies = hobbies && hobbies.length > 0 ? hobbies : DEFAULT_HOBBIES;
+  // If no hobbies are set, only display defaults in owner customizer preview mode. Hide for visitors if empty.
+  const hasUserHobbies = Array.isArray(hobbies) && hobbies.length > 0;
+  if (!hasUserHobbies && !isOwner) {
+    return null;
+  }
+
+  const displayHobbies = hasUserHobbies ? hobbies! : DEFAULT_HOBBIES;
 
   return (
     <div className="nook-panel widget-card hobbies-widget" style={{ position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
         <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Compass size={18} color="var(--accent-color)" />
-          <span>Hobbies & Passions</span>
+          <span>{title}</span>
         </h3>
         {isOwner && onEdit && (
           <button

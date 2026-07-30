@@ -188,6 +188,13 @@ input, textarea, select {
   will-change: clip-path, filter;
 }
 
+/* Circular Avatars in Win9X: keep 50% border radius without square border haze */
+.theme-win98 img[style*="border-radius: 50%"], .theme-win9x img[style*="border-radius: 50%"],
+.theme-win98 img[style*="border-radius:50%"], .theme-win9x img[style*="border-radius:50%"] {
+  border-radius: 50% !important;
+  border: none !important;
+}
+
 /* Stagger image load delays top-to-bottom across cards */
 .theme-win98 .nook-panel:nth-child(1) img, .theme-win9x .nook-panel:nth-child(1) img { animation-delay: 0.15s; }
 .theme-win98 .nook-panel:nth-child(2) img, .theme-win9x .nook-panel:nth-child(2) img { animation-delay: 0.65s; }

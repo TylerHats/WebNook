@@ -290,14 +290,27 @@ export const MessagesPage: React.FC = () => {
   const getConvTitle = (conv: any) => {
     if (!conv) return '';
     if (conv.type === 'group') return conv.name || 'Group Chat';
-    const otherMember = (conv.members || []).find((m: any) => m.id !== user?.id);
-    if (!otherMember) return 'Direct Message';
-    if (otherMember.username === 'bug_reports') {
+    
+    const members = conv.members || [];
+    const isBugReports = conv.name === 'Bug Reports 🐛' || members.some((m: any) => m.username === 'bug_reports');
+    const isSystemChat = conv.name === 'System 🤖' || members.some((m: any) => m.username === 'system' || m.role === 'system');
+
+    if (isBugReports) {
+      if (user?.role === 'admin') {
+        const clientUser = members.find((m: any) => m.role !== 'admin' && m.username !== 'bug_reports');
+        if (clientUser) {
+          return `@${clientUser.username}'s Bug Report 🐛`;
+        }
+      }
       return 'Bug Reports & Support 🐛';
     }
-    if (otherMember.role === 'system' || otherMember.username === 'system') {
+
+    if (isSystemChat) {
       return 'System Announcement 🤖';
     }
+
+    const otherMember = members.find((m: any) => m.id !== user?.id);
+    if (!otherMember) return 'Direct Message';
     return `@${otherMember.username} (${otherMember.display_name || otherMember.username})`;
   };
 
@@ -310,13 +323,26 @@ export const MessagesPage: React.FC = () => {
       }
       return <Users size={20} />;
     }
-    const otherMember = (conv.members || []).find((m: any) => m.id !== user?.id);
-    if (otherMember?.username === 'bug_reports') {
+
+    const members = conv.members || [];
+    const isBugReports = conv.name === 'Bug Reports 🐛' || members.some((m: any) => m.username === 'bug_reports');
+    const isSystemChat = conv.name === 'System 🤖' || members.some((m: any) => m.username === 'system' || m.role === 'system');
+
+    if (isBugReports) {
+      if (user?.role === 'admin') {
+        const clientUser = members.find((m: any) => m.role !== 'admin' && m.username !== 'bug_reports');
+        if (clientUser?.avatar_url) {
+          return <img src={clientUser.avatar_url} alt={clientUser.username} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />;
+        }
+      }
       return <Bug size={20} color="#ef4444" />;
     }
-    if (otherMember?.role === 'system' || otherMember?.username === 'system') {
+
+    if (isSystemChat) {
       return <Bot size={20} color="var(--accent-color)" />;
     }
+
+    const otherMember = members.find((m: any) => m.id !== user?.id);
     if (otherMember?.avatar_url) {
       return <img src={otherMember.avatar_url} alt={otherMember.username} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />;
     }
@@ -713,15 +739,15 @@ export const MessagesPage: React.FC = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>{title}</span>
-                            {conv.is_pinned && <span title="Pinned Chat" style={{ display: 'inline-flex', alignItems: 'center' }}><Pin size={12} color="var(--accent-color)" /></span>}
-                            {conv.is_locked && <span title="Locked" style={{ display: 'inline-flex', alignItems: 'center' }}><Lock size={12} color="#ef4444" /></span>}
+                            {Boolean(conv.is_pinned) && <span title="Pinned Chat" style={{ display: 'inline-flex', alignItems: 'center' }}><Pin size={12} color="var(--accent-color)" /></span>}
+                            {Boolean(conv.is_locked) && <span title="Locked" style={{ display: 'inline-flex', alignItems: 'center' }}><Lock size={12} color="#ef4444" /></span>}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
-                            {conv.is_muted && <BellOff size={13} style={{ opacity: 0.5 }} />}
+                            {Boolean(conv.is_muted) && <span title="Muted"><BellOff size={13} style={{ opacity: 0.5 }} /></span>}
                             <button
                               onClick={(e) => handleTogglePin(conv.id, e)}
                               title={conv.is_pinned ? "Unpin Chat" : "Pin Chat"}
-                              style={{ background: 'none', border: 'none', color: conv.is_pinned ? 'var(--accent-color)' : 'inherit', opacity: conv.is_pinned ? 1 : 0.4, cursor: 'pointer', padding: '2px' }}
+                              style={{ background: 'none', border: 'none', color: conv.is_pinned ? 'var(--accent-color)' : 'inherit', opacity: conv.is_pinned ? 1 : 0.35, cursor: 'pointer', padding: '2px' }}
                             >
                               <Pin size={13} />
                             </button>

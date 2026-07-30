@@ -750,6 +750,7 @@ export const NookCustomizerPage: React.FC = () => {
                   { key: 'bio', label: 'Bio Header Title', defaultVal: 'About Me' },
                   { key: 'music', label: 'Music Header Title', defaultVal: 'My Music Playlist' },
                   { key: 'friends', label: 'Friends Header Title', defaultVal: 'Top Friends' },
+                  { key: 'hobbies', label: 'Hobbies Header Title', defaultVal: 'Hobbies & Passions' },
                   { key: 'movies', label: 'Movies Header Title', defaultVal: 'Movies & TV Favorites' },
                   { key: 'books', label: 'Books Header Title', defaultVal: 'Reading Nook & Books' }
                 ].map(item => (

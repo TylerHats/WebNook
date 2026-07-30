@@ -296,9 +296,7 @@ export const NookViewPage: React.FC = () => {
           fontWeight: 'bold',
           letterSpacing: '0.5px',
           boxShadow: 'inset 0 -1px 0 #808080',
-          position: 'sticky',
-          top: 0,
-          zIndex: 1000
+          marginBottom: '1rem'
         }}>
           <span>{dialupStatus.statusText}</span>
           <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>Netscape Navigator v4.77</span>
@@ -419,6 +417,7 @@ export const NookViewPage: React.FC = () => {
 
             {cardVis.hobbies !== false && (
               <HobbiesWidget
+                title={cardTitles.hobbies || 'Hobbies & Passions'}
                 hobbies={nookSettings?.hobbies_json ? (typeof nookSettings.hobbies_json === 'string' ? JSON.parse(nookSettings.hobbies_json) : nookSettings.hobbies_json) : []}
                 isOwner={user?.id === owner.id}
               />
