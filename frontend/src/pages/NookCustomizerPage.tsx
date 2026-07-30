@@ -240,6 +240,120 @@ export const NookCustomizerPage: React.FC = () => {
         .finally(() => setIsInitialLoaded(true));
     }
   }, [user, token]);
+  const handleApplyPalette = (palette: { bg: string; cardBg: string; accent: string; text: string; border: string }) => {
+    setBgColor(palette.bg);
+    setCardBgColor(palette.cardBg);
+    setAccentColor(palette.accent);
+    setTextColor(palette.text);
+    setBorderColor(palette.border);
+    showToast('Theme palette applied!', 'info');
+  };
+
+  const handleAddSticker = (url: string) => {
+    const newSticker: Sticker = {
+      sticker_url: url,
+      pos_x: Math.floor(Math.random() * 60) + 20,
+      pos_y: Math.floor(Math.random() * 60) + 20,
+      scale: 1.0,
+      rotation: Math.floor(Math.random() * 30) - 15,
+      layer: 'above_cards'
+    };
+    setStickers([...stickers, newSticker]);
+    showToast('Sticker added to canvas!', 'info');
+  };
+
+  const handleCustomStickerUpload = async (file: File | null) => {
+    if (!file || !token) return;
+    const formData = new FormData();
+    formData.append('sticker', file);
+
+    try {
+      const res = await fetch('/api/nook/upload/sticker', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        handleAddSticker(data.sticker_url);
+        showToast('Custom sticker uploaded & converted to lossless WebP!', 'success');
+      } else {
+        showToast(data.error || 'Failed to upload sticker', 'error');
+      }
+    } catch (e) {
+      showToast('Error uploading sticker file', 'error');
+    }
+  };
+
+  const handleRemoveSticker = (index: number) => {
+    setStickers(stickers.filter((_, i) => i !== index));
+  };
+
+  const handleToggleStickerLayer = (index: number) => {
+    setStickers(stickers.map((st, i) => {
+      if (i === index) {
+        const nextLayer = st.layer === 'behind_cards' ? 'above_cards' : 'behind_cards';
+        return { ...st, layer: nextLayer };
+      }
+      return st;
+    }));
+  };
+
+  const handleSearchSpotify = async () => {
+    if (!spotifySearchQ.trim()) return;
+    try {
+      const res = await fetch(`/api/integrations/spotify/search?q=${encodeURIComponent(spotifySearchQ)}`);
+      const data = await res.json();
+      setSpotifyResults(data.tracks || []);
+    } catch (e) {
+      showToast('Spotify search failed', 'error');
+    }
+  };
+
+  const handleSearchMovies = async () => {
+    if (!moviesSearchQ.trim()) return;
+    try {
+      const res = await fetch(`/api/integrations/movies/search?q=${encodeURIComponent(moviesSearchQ)}`);
+      const data = await res.json();
+      setMoviesResults(data.results || []);
+    } catch (e) {
+      showToast('Movies search failed', 'error');
+    }
+  };
+
+  const handleSearchBooks = async () => {
+    if (!booksSearchQ.trim()) return;
+    try {
+      const res = await fetch(`/api/integrations/books/search?q=${encodeURIComponent(booksSearchQ)}`);
+      const data = await res.json();
+      setBooksResults(data.books || []);
+    } catch (e) {
+      showToast('Books search failed', 'error');
+    }
+  };
+
+  const handleStoryGraphCsvUpload = async (file: File | null) => {
+    if (!file || !token) return;
+    const formData = new FormData();
+    formData.append('csv', file);
+
+    try {
+      const res = await fetch('/api/nook/import/storygraph', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.books)) {
+        setFavoriteBooks(prev => [...prev, ...data.books]);
+        showToast(data.message || 'StoryGraph CSV imported!', 'success');
+      } else {
+        showToast(data.error || 'Failed to import CSV', 'error');
+      }
+    } catch (e) {
+      showToast('Error importing StoryGraph CSV', 'error');
+    }
+  };
 
   const handleSave = async (silent = false) => {
     if (!token) return;
