@@ -800,35 +800,48 @@ export const MessagesPage: React.FC = () => {
                       </button>
                     )}
 
-                    {activeConv.type === 'direct' && activeConv.target_username ? (
-                      <Link to={`/nook/${activeConv.target_username}`} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {getConvAvatar(activeConv)}
+                    {(() => {
+                      const targetUser = (activeConv.members || []).find((m: any) => m.id !== user?.id)?.username || activeConv.target_username;
+                      const isSpecialChat = activeConv.type === 'bug_reports' || activeConv.name === 'System 🤖' || targetUser === 'system';
+
+                      if (targetUser && !isSpecialChat && activeConv.type !== 'group') {
+                        return (
+                          <Link
+                            to={`/nook/${targetUser}`}
+                            style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+                            title={`Visit @${targetUser}'s Nook`}
+                          >
+                            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {getConvAvatar(activeConv)}
+                            </div>
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span>{getConvTitle(activeConv)}</span>
+                                {isConvLocked && <Lock size={14} color="#ef4444" />}
+                              </h3>
+                              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 600 }}>Direct Message • Visit @{targetUser}'s Nook ↗</p>
+                            </div>
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {getConvAvatar(activeConv)}
+                          </div>
+                          <div>
+                            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span>{getConvTitle(activeConv)}</span>
+                              {isConvLocked && <Lock size={14} color="#ef4444" />}
+                            </h3>
+                            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.6 }}>
+                              {activeConv.type === 'group' ? `${(activeConv.members || []).length} Members` : (isBugReportsChat ? 'Direct Support Channel' : 'System Announcement')}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span>{getConvTitle(activeConv)}</span>
-                            {isConvLocked && <Lock size={14} color="#ef4444" />}
-                          </h3>
-                          <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.6 }}>Direct Message • View Nook</p>
-                        </div>
-                      </Link>
-                    ) : (
-                      <>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {getConvAvatar(activeConv)}
-                        </div>
-                        <div>
-                          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span>{getConvTitle(activeConv)}</span>
-                            {isConvLocked && <Lock size={14} color="#ef4444" />}
-                          </h3>
-                          <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.6 }}>
-                            {activeConv.type === 'group' ? `${(activeConv.members || []).length} Members` : (isBugReportsChat ? 'Direct Support Channel' : 'Direct Message')}
-                          </p>
-                        </div>
-                      </>
-                    )}
+                      );
+                    })()}
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
@@ -956,11 +969,26 @@ export const MessagesPage: React.FC = () => {
                           }}
                         >
                           {/* Sender info */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem', fontSize: '0.75rem', opacity: 0.7 }}>
-                            {!isSelf && msg.sender_avatar_url && (
-                              <img src={msg.sender_avatar_url} alt={msg.sender_username} style={{ width: '16px', height: '16px', borderRadius: '50%' }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem', fontSize: '0.75rem', opacity: 0.85 }}>
+                            {!isSystem ? (
+                              <Link
+                                to={`/nook/${msg.sender_username}`}
+                                style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                                title={`Visit @${msg.sender_username}'s Nook`}
+                              >
+                                {msg.sender_avatar_url && (
+                                  <img src={msg.sender_avatar_url} alt={msg.sender_username} style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
+                                )}
+                                <span style={{ fontWeight: 700 }}>@{msg.sender_username}</span>
+                              </Link>
+                            ) : (
+                              <>
+                                {msg.sender_avatar_url && (
+                                  <img src={msg.sender_avatar_url} alt={msg.sender_username} style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
+                                )}
+                                <span style={{ fontWeight: 700 }}>@{msg.sender_username}</span>
+                              </>
                             )}
-                            <span style={{ fontWeight: 700 }}>@{msg.sender_username}</span>
                             {msg.sender_theme && (
                               <span style={{ fontSize: '0.65rem', padding: '0.05rem 0.3rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', textTransform: 'capitalize' }}>
                                 {msg.sender_theme}
@@ -995,7 +1023,9 @@ export const MessagesPage: React.FC = () => {
                                 borderLeft: '3px solid var(--accent-color)',
                                 marginBottom: '0.4rem'
                               }}>
-                                <strong style={{ opacity: 0.9 }}>@{msg.reply_to.sender_username}: </strong>
+                                <Link to={`/nook/${msg.reply_to.sender_username}`} style={{ textDecoration: 'none', color: 'var(--accent-color)', fontWeight: 700 }}>
+                                  @{msg.reply_to.sender_username}:
+                                </Link>{' '}
                                 <span>"{msg.reply_to.content.length > 55 ? msg.reply_to.content.substring(0, 52) + '...' : msg.reply_to.content}"</span>
                               </div>
                             )}

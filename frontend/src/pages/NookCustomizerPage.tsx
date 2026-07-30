@@ -1460,31 +1460,21 @@ export const NookCustomizerPage: React.FC = () => {
 
             {/* Editable Hobbies List */}
             {hobbies.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '0.85rem' }}>
                 {hobbies.map((h, idx) => (
                   <div
                     key={h.id || idx}
                     style={{
                       background: 'rgba(0,0,0,0.2)',
                       border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      padding: '0.65rem',
+                      borderRadius: '10px',
+                      padding: '0.75rem',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '0.4rem',
-                      position: 'relative'
+                      gap: '0.5rem'
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setHobbies(hobbies.filter((_, i) => i !== idx))}
-                      style={{ position: 'absolute', top: '4px', right: '6px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem' }}
-                      title="Remove Hobby"
-                    >
-                      ✕
-                    </button>
-
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <input
                         type="text"
                         placeholder="Emoji"
@@ -1493,7 +1483,7 @@ export const NookCustomizerPage: React.FC = () => {
                           const val = e.target.value;
                           setHobbies(hobbies.map((item, i) => i === idx ? { ...item, icon: val } : item));
                         }}
-                        style={{ width: '45px', padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', textAlign: 'center' }}
+                        style={{ width: '42px', padding: '0.4rem 0.2rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.9rem', textAlign: 'center', flexShrink: 0 }}
                       />
                       <input
                         type="text"
@@ -1503,8 +1493,16 @@ export const NookCustomizerPage: React.FC = () => {
                           const val = e.target.value;
                           setHobbies(hobbies.map((item, i) => i === idx ? { ...item, name: val } : item));
                         }}
-                        style={{ flex: 1, padding: '0.35rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}
+                        style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.5rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem', fontWeight: 700 }}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setHobbies(hobbies.filter((_, i) => i !== idx))}
+                        style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', color: '#ef4444', cursor: 'pointer', padding: '0.35rem 0.55rem', fontSize: '0.85rem', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="Remove Hobby"
+                      >
+                        ✕
+                      </button>
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.4rem' }}>
