@@ -23,6 +23,12 @@ export const NookViewPage: React.FC = () => {
   const targetUsername = username || user?.username || 'admin';
   const [profileData, setProfileData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [dialupStatus, setDialupStatus] = useState({
+    transferredKb: 0,
+    totalKb: 248,
+    done: false,
+    statusText: '🌐 Dialing ISP (28.8 Kbps)...'
+  });
 
   const fetchProfile = () => {
     setIsLoading(true);
@@ -33,7 +39,7 @@ export const NookViewPage: React.FC = () => {
       .then(res => res.json())
       .then(data => {
         setProfileData(data);
-        if (data.owner) {
+        if (data?.owner) {
           document.title = `${data.owner.display_name || data.owner.username}'s Nook | WebNook`;
         }
         setIsLoading(false);
@@ -47,6 +53,66 @@ export const NookViewPage: React.FC = () => {
   useEffect(() => {
     fetchProfile();
   }, [targetUsername, token]);
+
+  const isWin9xTheme = profileData?.nookSettings?.theme === 'win98' || profileData?.nookSettings?.theme === 'win9x';
+
+  // Randomized Per-Image Delays & Speeds on every load
+  useEffect(() => {
+    if (!isWin9xTheme) return;
+    const timer = setTimeout(() => {
+      const imgs = document.querySelectorAll('.nook-container img, .nook-banner-image');
+      imgs.forEach((img, idx) => {
+        const duration = (Math.random() * 1.4 + 1.2).toFixed(2);
+        const delay = (idx * 0.35 + Math.random() * 0.3).toFixed(2);
+        (img as HTMLElement).style.animationDuration = `${duration}s`;
+        (img as HTMLElement).style.animationDelay = `${delay}s`;
+      });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isWin9xTheme, targetUsername, profileData]);
+
+  // Live Dial-up Transfer Counter
+  useEffect(() => {
+    if (!isWin9xTheme) return;
+    const totalKb = 220 + Math.floor(Math.random() * 90);
+    setDialupStatus({ transferredKb: 0, totalKb, done: false, statusText: '🌐 Dialing ISP (28.8 Kbps)...' });
+
+    let currentKb = 0;
+    const startTime = Date.now();
+
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      if (elapsed < 0.5) {
+        currentKb = Math.min(totalKb, Math.floor((elapsed / 0.5) * 16));
+        setDialupStatus({
+          transferredKb: currentKb,
+          totalKb,
+          done: false,
+          statusText: `🌐 Handshake established (28.8 Kbps)... [${currentKb}KB / ${totalKb}KB]`
+        });
+      } else if (currentKb < totalKb) {
+        const burst = Math.floor(Math.random() * 32) + 14;
+        currentKb = Math.min(totalKb, currentKb + burst);
+        setDialupStatus({
+          transferredKb: currentKb,
+          totalKb,
+          done: false,
+          statusText: `🌐 Transferring page & pictures top-to-bottom... [${currentKb}KB / ${totalKb}KB]`
+        });
+      } else {
+        clearInterval(interval);
+        const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        setDialupStatus({
+          transferredKb: totalKb,
+          totalKb,
+          done: true,
+          statusText: `✅ Document: Done (${totalKb}KB in ${totalTime}s) — AOL 4.0`
+        });
+      }
+    }, 350);
+
+    return () => clearInterval(interval);
+  }, [isWin9xTheme, targetUsername]);
 
   const handleGlobalClick = (e: React.MouseEvent) => {
     if (profileData?.nookSettings) {
@@ -210,73 +276,6 @@ export const NookViewPage: React.FC = () => {
       }
     } catch (e) {}
   }
-
-  const [dialupStatus, setDialupStatus] = useState({
-    transferredKb: 0,
-    totalKb: 248,
-    done: false,
-    statusText: '🌐 Dialing ISP (28.8 Kbps)...'
-  });
-
-  const isWin9xTheme = nookSettings?.theme === 'win98' || nookSettings?.theme === 'win9x';
-
-  // Randomized Per-Image Delays & Speeds on every load
-  useEffect(() => {
-    if (!isWin9xTheme) return;
-    const timer = setTimeout(() => {
-      const imgs = document.querySelectorAll('.nook-container img, .nook-banner-image');
-      imgs.forEach((img, idx) => {
-        const duration = (Math.random() * 1.4 + 1.2).toFixed(2);
-        const delay = (idx * 0.35 + Math.random() * 0.3).toFixed(2);
-        (img as HTMLElement).style.animationDuration = `${duration}s`;
-        (img as HTMLElement).style.animationDelay = `${delay}s`;
-      });
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [isWin9xTheme, targetUsername, profileData]);
-
-  // Live Dial-up Transfer Counter
-  useEffect(() => {
-    if (!isWin9xTheme) return;
-    const totalKb = 220 + Math.floor(Math.random() * 90);
-    setDialupStatus({ transferredKb: 0, totalKb, done: false, statusText: '🌐 Dialing ISP (28.8 Kbps)...' });
-
-    let currentKb = 0;
-    const startTime = Date.now();
-
-    const interval = setInterval(() => {
-      const elapsed = (Date.now() - startTime) / 1000;
-      if (elapsed < 0.5) {
-        currentKb = Math.min(totalKb, Math.floor((elapsed / 0.5) * 16));
-        setDialupStatus({
-          transferredKb: currentKb,
-          totalKb,
-          done: false,
-          statusText: `🌐 Handshake established (28.8 Kbps)... [${currentKb}KB / ${totalKb}KB]`
-        });
-      } else if (currentKb < totalKb) {
-        const burst = Math.floor(Math.random() * 32) + 14;
-        currentKb = Math.min(totalKb, currentKb + burst);
-        setDialupStatus({
-          transferredKb: currentKb,
-          totalKb,
-          done: false,
-          statusText: `🌐 Transferring page & pictures top-to-bottom... [${currentKb}KB / ${totalKb}KB]`
-        });
-      } else {
-        clearInterval(interval);
-        const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-        setDialupStatus({
-          transferredKb: totalKb,
-          totalKb,
-          done: true,
-          statusText: `✅ Document: Done (${totalKb}KB in ${totalTime}s) — AOL 4.0`
-        });
-      }
-    }, 350);
-
-    return () => clearInterval(interval);
-  }, [isWin9xTheme, targetUsername]);
 
   return (
     <div className={themeClass} style={customStyle} onClick={handleGlobalClick}>
