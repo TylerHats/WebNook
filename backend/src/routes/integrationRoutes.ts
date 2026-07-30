@@ -198,6 +198,10 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
         } catch (e) {}
       }
 
+      const gamesXmlUrl = xmlUrl.endsWith('/?xml=1')
+        ? xmlUrl.replace('/?xml=1', '/games/?tab=all&xml=1')
+        : `${xmlUrl}/games/?tab=all&xml=1`;
+
       const personaNameMatch = xmlText.match(/<steamID><!\[CDATA\[(.*?)\]\]><\/steamID>/) || xmlText.match(/<steamID>(.*?)<\/steamID>/);
       const avatarMatch = xmlText.match(/<avatarFull><!\[CDATA\[(.*?)\]\]><\/avatarFull>/) || xmlText.match(/<avatarFull>(.*?)<\/avatarFull>/);
       const stateMatch = xmlText.match(/<onlineState>(.*?)<\/onlineState>/);
