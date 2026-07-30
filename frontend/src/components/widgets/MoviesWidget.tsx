@@ -42,7 +42,8 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '1rem', justifyContent: 'start' }}>
           {movieList.map((m, idx) => {
-            const movieUrl = m.overview || (m.title ? `https://www.themoviedb.org/search?query=${encodeURIComponent(m.title)}` : '#');
+            const isFullUrl = m.overview && (m.overview.startsWith('http://') || m.overview.startsWith('https://'));
+            const movieUrl = isFullUrl ? m.overview! : (m.title ? `https://www.themoviedb.org/search?query=${encodeURIComponent(m.title)}` : '#');
             return (
               <a
                 key={m.id || idx}

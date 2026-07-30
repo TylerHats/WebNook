@@ -254,6 +254,17 @@ export const NookCustomizerPage: React.FC = () => {
                 if (parsedColors.border) setBorderColor(parsedColors.border);
               } catch (e) {}
             }
+
+            if (data.nookSettings.card_layout_json) {
+              try {
+                const parsedLayout = typeof data.nookSettings.card_layout_json === 'string'
+                  ? JSON.parse(data.nookSettings.card_layout_json)
+                  : data.nookSettings.card_layout_json;
+                if (Array.isArray(parsedLayout) && parsedLayout.length > 0) {
+                  setCardLayout(parsedLayout);
+                }
+              } catch (e) {}
+            }
           }
           if (data.stickers) {
             setStickers(data.stickers);
@@ -830,6 +841,7 @@ export const NookCustomizerPage: React.FC = () => {
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <CustomSelect
                   value=""
+                  variant="btn-primary"
                   onChange={(val: string | number) => {
                     const strVal = String(val);
                     if (!strVal) return;

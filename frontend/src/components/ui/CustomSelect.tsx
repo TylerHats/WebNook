@@ -14,6 +14,7 @@ interface CustomSelectProps {
   value: string | number;
   onChange: (val: string | number) => void;
   placeholder?: string;
+  variant?: 'default' | 'btn-primary';
   style?: React.CSSProperties;
 }
 
@@ -22,6 +23,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   value,
   onChange,
   placeholder = '-- Select Option --',
+  variant = 'default',
   style
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,11 +41,14 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const isBtnPrimary = variant === 'btn-primary';
+
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', ...style }}>
       {/* Selector Trigger Button */}
       <button
         type="button"
+        className={isBtnPrimary ? 'btn-primary' : ''}
         onClick={() => setIsOpen(!isOpen)}
         style={{
           width: '100%',
@@ -51,12 +56,13 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '0.6rem',
-          padding: '0.65rem 0.85rem',
+          padding: '0.55rem 0.85rem',
           borderRadius: '8px',
-          background: 'rgba(0, 0, 0, 0.35)',
-          border: '1px solid var(--border-color)',
-          color: 'var(--text-main)',
+          background: isBtnPrimary ? undefined : 'rgba(0, 0, 0, 0.35)',
+          border: isBtnPrimary ? undefined : '1px solid var(--border-color)',
+          color: isBtnPrimary ? '#fff' : 'var(--text-main)',
           fontSize: '0.85rem',
+          fontWeight: 600,
           cursor: 'pointer',
           textAlign: 'left',
           transition: 'all 0.2s ease',
@@ -81,7 +87,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
             </span>
           </div>
         ) : (
-          <span style={{ opacity: 0.6 }}>{placeholder}</span>
+          <span style={{ fontWeight: 600, color: 'inherit' }}>{placeholder}</span>
         )}
         <ChevronDown size={16} style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }} />
       </button>

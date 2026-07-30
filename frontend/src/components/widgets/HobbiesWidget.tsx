@@ -39,11 +39,11 @@ export const HobbiesWidget: React.FC<HobbiesWidgetProps> = ({
 
   return (
     <div className="nook-panel widget-card hobbies-widget" style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-        <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Compass size={18} color="var(--accent-color)" />
+      <div className="nook-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Compass size={20} color="var(--accent-color)" />
           <span>{title}</span>
-        </h3>
+        </div>
         {isOwner && onEdit && (
           <button
             onClick={onEdit}
