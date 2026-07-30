@@ -178,21 +178,22 @@ input, textarea, select {
 }
 
 /* 90s Early Internet Image Filtering & Dithering */
-.theme-win98 img, .theme-win9x img {
+.theme-win98 img, .theme-win9x img,
+.theme-win98 .nook-banner-image, .theme-win9x .nook-banner-image {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   filter: contrast(130%) saturate(80%) sepia(12%) brightness(95%);
   border: 1px solid #000000 !important;
-  animation: win9xScanlineReveal 2.4s steps(6, end) both;
+  animation: win9xScanlineReveal 2.2s steps(8, end) both;
   will-change: clip-path, filter;
 }
 
 /* Stagger image load delays top-to-bottom across cards */
-.theme-win98 .nook-panel:nth-child(1) img, .theme-win9x .nook-panel:nth-child(1) img { animation-delay: 0.2s; }
-.theme-win98 .nook-panel:nth-child(2) img, .theme-win9x .nook-panel:nth-child(2) img { animation-delay: 0.7s; }
-.theme-win98 .nook-panel:nth-child(3) img, .theme-win9x .nook-panel:nth-child(3) img { animation-delay: 1.3s; }
-.theme-win98 .nook-panel:nth-child(4) img, .theme-win9x .nook-panel:nth-child(4) img { animation-delay: 1.9s; }
-.theme-win98 .nook-panel:nth-child(5) img, .theme-win9x .nook-panel:nth-child(5) img { animation-delay: 2.5s; }
+.theme-win98 .nook-panel:nth-child(1) img, .theme-win9x .nook-panel:nth-child(1) img { animation-delay: 0.15s; }
+.theme-win98 .nook-panel:nth-child(2) img, .theme-win9x .nook-panel:nth-child(2) img { animation-delay: 0.65s; }
+.theme-win98 .nook-panel:nth-child(3) img, .theme-win9x .nook-panel:nth-child(3) img { animation-delay: 1.2s; }
+.theme-win98 .nook-panel:nth-child(4) img, .theme-win9x .nook-panel:nth-child(4) img { animation-delay: 1.85s; }
+.theme-win98 .nook-panel:nth-child(5) img, .theme-win9x .nook-panel:nth-child(5) img { animation-delay: 2.45s; }
 
 /* Retro Scanline Overlay on Panels & Embedded Players (Non-blocking clickability) */
 .theme-win98 .nook-panel::after, .theme-win9x .nook-panel::after {

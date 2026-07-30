@@ -211,10 +211,77 @@ export const NookViewPage: React.FC = () => {
     } catch (e) {}
   }
 
+  const [dialupStatus, setDialupStatus] = useState({
+    transferredKb: 0,
+    totalKb: 248,
+    done: false,
+    statusText: '🌐 Dialing ISP (28.8 Kbps)...'
+  });
+
+  const isWin9xTheme = nookSettings?.theme === 'win98' || nookSettings?.theme === 'win9x';
+
+  // Randomized Per-Image Delays & Speeds on every load
+  useEffect(() => {
+    if (!isWin9xTheme) return;
+    const timer = setTimeout(() => {
+      const imgs = document.querySelectorAll('.nook-container img, .nook-banner-image');
+      imgs.forEach((img, idx) => {
+        const duration = (Math.random() * 1.4 + 1.2).toFixed(2);
+        const delay = (idx * 0.35 + Math.random() * 0.3).toFixed(2);
+        (img as HTMLElement).style.animationDuration = `${duration}s`;
+        (img as HTMLElement).style.animationDelay = `${delay}s`;
+      });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isWin9xTheme, targetUsername, profileData]);
+
+  // Live Dial-up Transfer Counter
+  useEffect(() => {
+    if (!isWin9xTheme) return;
+    const totalKb = 220 + Math.floor(Math.random() * 90);
+    setDialupStatus({ transferredKb: 0, totalKb, done: false, statusText: '🌐 Dialing ISP (28.8 Kbps)...' });
+
+    let currentKb = 0;
+    const startTime = Date.now();
+
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      if (elapsed < 0.5) {
+        currentKb = Math.min(totalKb, Math.floor((elapsed / 0.5) * 16));
+        setDialupStatus({
+          transferredKb: currentKb,
+          totalKb,
+          done: false,
+          statusText: `🌐 Handshake established (28.8 Kbps)... [${currentKb}KB / ${totalKb}KB]`
+        });
+      } else if (currentKb < totalKb) {
+        const burst = Math.floor(Math.random() * 32) + 14;
+        currentKb = Math.min(totalKb, currentKb + burst);
+        setDialupStatus({
+          transferredKb: currentKb,
+          totalKb,
+          done: false,
+          statusText: `🌐 Transferring page & pictures top-to-bottom... [${currentKb}KB / ${totalKb}KB]`
+        });
+      } else {
+        clearInterval(interval);
+        const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        setDialupStatus({
+          transferredKb: totalKb,
+          totalKb,
+          done: true,
+          statusText: `✅ Document: Done (${totalKb}KB in ${totalTime}s) — AOL 4.0`
+        });
+      }
+    }, 350);
+
+    return () => clearInterval(interval);
+  }, [isWin9xTheme, targetUsername]);
+
   return (
     <div className={themeClass} style={customStyle} onClick={handleGlobalClick}>
       {/* Retro Win9X Dial-Up Connection Bar */}
-      {(nookSettings?.theme === 'win98' || nookSettings?.theme === 'win9x') && (
+      {isWin9xTheme && (
         <div style={{
           background: '#c0c0c0',
           color: '#000000',
@@ -233,7 +300,7 @@ export const NookViewPage: React.FC = () => {
           top: 0,
           zIndex: 1000
         }}>
-          <span>🌐 Connected at 28.8 Kbps (ISP: AOL 4.0) — Transferring 56KB / 120KB...</span>
+          <span>{dialupStatus.statusText}</span>
           <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>Netscape Navigator v4.77</span>
         </div>
       )}
@@ -253,7 +320,14 @@ export const NookViewPage: React.FC = () => {
         {/* Nook Header Banner & User Bio */}
         <div className="nook-panel" style={{ marginBottom: '1.5rem', position: 'relative', overflow: 'hidden', padding: 0 }}>
           {owner.banner_url ? (
-            <div style={{ height: '180px', backgroundImage: `url(${owner.banner_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+            <div style={{ height: '180px', position: 'relative', overflow: 'hidden' }}>
+              <img
+                className="nook-banner-image"
+                src={owner.banner_url}
+                alt="Nook Banner"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
           ) : (
             <div style={{ height: '180px', background: 'linear-gradient(135deg, var(--accent-color) 0%, #a855f7 100%)' }} />
           )}
