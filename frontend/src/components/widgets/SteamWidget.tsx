@@ -37,6 +37,8 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   const recentlyPlayed = data?.recentlyPlayed || [];
   const topGames = data?.topGames || [];
 
+  const wantRecent = displayMode === 'recently_played' || displayMode === 'both';
+  const wantTop = displayMode === 'top_games' || displayMode === 'both';
   const effectiveTopGames = topGames.length > 0 ? topGames : recentlyPlayed;
 
   return (
