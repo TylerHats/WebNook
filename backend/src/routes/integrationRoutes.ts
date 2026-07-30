@@ -180,15 +180,23 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
 
     // 2. Fallback: Scrape public Steam profile XML feed directly!
     try {
-      const xmlUrl = parsedInput.type === 'steamid64'
+      let xmlUrl = parsedInput.type === 'steamid64'
         ? `https://steamcommunity.com/profiles/${parsedInput.value}/?xml=1`
         : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/?xml=1`;
 
-      const gamesXmlUrl = parsedInput.type === 'steamid64'
-        ? `https://steamcommunity.com/profiles/${parsedInput.value}/games/?tab=all&xml=1`
-        : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/games/?tab=all&xml=1`;
+      let xmlText = await fetchText(xmlUrl);
 
-      const xmlText = await fetchText(xmlUrl);
+      // If vanity endpoint returned an error or couldn't find profile, try profiles endpoint
+      if (xmlText.includes('<error>') || !xmlText.includes('<steamID>')) {
+        const altXmlUrl = `https://steamcommunity.com/profiles/${encodeURIComponent(parsedInput.value)}/?xml=1`;
+        try {
+          const altXml = await fetchText(altXmlUrl);
+          if (altXml.includes('<steamID>')) {
+            xmlText = altXml;
+            xmlUrl = altXmlUrl;
+          }
+        } catch (e) {}
+      }
 
       const personaNameMatch = xmlText.match(/<steamID><!\[CDATA\[(.*?)\]\]><\/steamID>/) || xmlText.match(/<steamID>(.*?)<\/steamID>/);
       const avatarMatch = xmlText.match(/<avatarFull><!\[CDATA\[(.*?)\]\]><\/avatarFull>/) || xmlText.match(/<avatarFull>(.*?)<\/avatarFull>/);

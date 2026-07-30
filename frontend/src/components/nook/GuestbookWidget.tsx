@@ -219,7 +219,14 @@ export const GuestbookWidget: React.FC<GuestbookWidgetProps> = ({
                     {entry.display_name} <span style={{ opacity: 0.5, fontWeight: 400 }}>@{entry.username}</span>
                   </Link>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
-                    <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>{new Date(entry.created_at).toLocaleDateString()}</span>
+                    <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>{(() => {
+                      if (!entry.created_at) return '';
+                      let str = String(entry.created_at).trim();
+                      if (!str.endsWith('Z') && !str.includes('+')) {
+                        str = str.replace(' ', 'T') + 'Z';
+                      }
+                      return new Date(str).toLocaleDateString();
+                    })()}</span>
                     
                     {/* Owner Reaction Button */}
                     {isOwner && (

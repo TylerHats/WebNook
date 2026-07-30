@@ -995,7 +995,14 @@ export const MessagesPage: React.FC = () => {
                               </span>
                             )}
                             <span>•</span>
-                            <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>{(() => {
+                              if (!msg.created_at) return '';
+                              let str = String(msg.created_at).trim();
+                              if (!str.endsWith('Z') && !str.includes('+')) {
+                                str = str.replace(' ', 'T') + 'Z';
+                              }
+                              return new Date(str).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            })()}</span>
                           </div>
 
                           {/* Per-User Theme Bubble */}
