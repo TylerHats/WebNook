@@ -22,8 +22,7 @@ export const Navbar: React.FC = () => {
         if (data.app_name) setAppName(data.app_name);
         if (data.logo_url) setLogoUrl(data.logo_url);
         
-        // Dynamically set Document Title & Favicon
-        document.title = data.app_name ? `${data.app_name} - Social Platform` : 'WebNook';
+        // Dynamically set Favicon
         const favicon = document.getElementById('favicon') as HTMLLinkElement;
         if (favicon && data.logo_url) {
           favicon.href = data.logo_url;

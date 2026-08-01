@@ -19,6 +19,49 @@ import { MessagesPage } from './pages/MessagesPage';
 import { useAuth } from './context/AuthContext';
 import { Sparkles } from 'lucide-react';
 
+const DocumentTitleHandler: React.FC = () => {
+  const location = useLocation();
+  const [appName, setAppName] = useState('WebNook');
+
+  useEffect(() => {
+    fetch('/api/branding/public')
+      .then(res => res.json())
+      .then(data => {
+        if (data.app_name) setAppName(data.app_name);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const p = location.pathname;
+    if (p === '/') {
+      document.title = `${appName} - Social Platform`;
+    } else if (p === '/messages') {
+      document.title = `Messages | ${appName}`;
+    } else if (p === '/friends') {
+      document.title = `Friends | ${appName}`;
+    } else if (p === '/customize') {
+      document.title = `Customizer | ${appName}`;
+    } else if (p === '/settings') {
+      document.title = `Settings | ${appName}`;
+    } else if (p === '/admin') {
+      document.title = `Admin | ${appName}`;
+    } else if (p === '/login') {
+      document.title = `Login | ${appName}`;
+    } else if (p === '/register') {
+      document.title = `Sign Up | ${appName}`;
+    } else if (p === '/verify-email') {
+      document.title = `Verify Email | ${appName}`;
+    } else if (p === '/onboarding') {
+      document.title = `Onboarding | ${appName}`;
+    } else if (p === '/setup') {
+      document.title = `Setup | ${appName}`;
+    }
+  }, [location.pathname, appName]);
+
+  return null;
+};
+
 const AppRoutes: React.FC = () => {
   const [setupCompleted, setSetupCompleted] = useState<boolean | null>(null);
   const location = useLocation();
@@ -59,6 +102,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <DocumentTitleHandler />
       {location.pathname !== '/setup' && <Navbar />}
       <main style={{ flex: 1 }}>
         <Routes>

@@ -8,6 +8,8 @@ export interface User {
   bio?: string;
   avatar_url?: string;
   banner_url?: string;
+  avatar_original_url?: string;
+  banner_original_url?: string;
   status_message?: string;
   status_emoji?: string;
   role: 'admin' | 'user';

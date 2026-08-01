@@ -3,7 +3,7 @@ import { Crop, ZoomIn, ZoomOut, Check, X } from 'lucide-react';
 
 interface ImageCropModalProps {
   isOpen: boolean;
-  imageFile: File | null;
+  imageFile: File | string | null;
   title?: string;
   aspectRatio?: number; // 1 for square (avatar), 3 for banner (3:1), 1 for sticker
   onCropComplete: (croppedFile: File) => void;
@@ -29,12 +29,13 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
   useEffect(() => {
     if (imageFile) {
-      const url = URL.createObjectURL(imageFile);
+      const url = typeof imageFile === 'string' ? imageFile : URL.createObjectURL(imageFile);
       setImgSrc(url);
       setZoom(1);
       setPan({ x: 0, y: 0 });
 
       const img = new Image();
+      img.crossOrigin = 'anonymous';
       img.src = url;
       img.onload = () => {
         imgRef.current = img;
@@ -42,7 +43,9 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
       };
 
       return () => {
-        URL.revokeObjectURL(url);
+        if (typeof imageFile !== 'string') {
+          URL.revokeObjectURL(url);
+        }
       };
     } else {
       setImgSrc(null);
@@ -111,12 +114,16 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     }
   }, [zoom, pan]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Pointer & Touch Event Handlers for Mobile and Desktop Dragging
+  const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
     dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
     setPan({
       x: e.clientX - dragStart.current.x,
@@ -124,7 +131,31 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     });
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      const touch = e.touches[0];
+      dragStart.current = { x: touch.clientX - pan.x, y: touch.clientY - pan.y };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setPan({
+      x: touch.clientX - dragStart.current.x,
+      y: touch.clientY - dragStart.current.y
+    });
+  };
+
+  const handleTouchEnd = () => {
     setIsDragging(false);
   };
 
@@ -174,7 +205,8 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
     outputCanvas.toBlob((blob) => {
       if (!blob) return;
-      const croppedFile = new File([blob], imageFile.name || 'cropped-image.png', {
+      const fileName = typeof imageFile === 'string' ? 'cropped-image.png' : imageFile.name || 'cropped-image.png';
+      const croppedFile = new File([blob], fileName, {
         type: 'image/png'
       });
       onCropComplete(croppedFile);
@@ -188,7 +220,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0, 0, 0, 0.8)',
+      background: 'rgba(0, 0, 0, 0.85)',
       backdropFilter: 'blur(8px)',
       zIndex: 9999,
       display: 'flex',
@@ -217,15 +249,18 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
         </div>
 
         <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '0.75rem' }}>
-          Drag the image to adjust position and use the slider to zoom in or out before saving.
+          Touch/drag the image to adjust position and use the slider to zoom in or out before saving.
         </p>
 
-        {/* Interactive Canvas Viewport */}
+        {/* Interactive Canvas Viewport with Touch & Pointer Support */}
         <div
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           style={{
             width: '100%',
             height: '300px',
@@ -233,7 +268,10 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             overflow: 'hidden',
             cursor: isDragging ? 'grabbing' : 'grab',
             marginBottom: '1rem',
-            border: '1px solid rgba(255,255,255,0.1)'
+            border: '1px solid rgba(255,255,255,0.1)',
+            touchAction: 'none',
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
           }}
         >
           <canvas

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Bell, Check, X, UserPlus, MessageSquare, Heart, Sparkles, Trash2 } from 'lucide-react';
+import { formatSmartNotificationTime } from '../../utils/dateUtils';
 
 export const NotificationDropdown: React.FC = () => {
   const { token } = useAuth();
@@ -241,7 +242,7 @@ export const NotificationDropdown: React.FC = () => {
                         )}
                         <span>{n.title}</span>
                       </span>
-                      <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>{formatSmartNotificationTime(n.created_at)}</span>
                     </div>
                     <p style={{ margin: 0, opacity: 0.85, lineHeight: 1.4, fontSize: '0.8rem' }}>{n.message}</p>
                     {n.link_url && (() => {

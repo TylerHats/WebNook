@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare, Volume2, Upload, FileText, ArrowUp, ArrowDown } from 'lucide-react';
+import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare, Volume2, Upload, FileText, ArrowUp, ArrowDown, Crop } from 'lucide-react';
 import { StickerCanvas, Sticker } from '../components/nook/StickerCanvas';
 import { PRESET_STICKERS } from '../constants/presetStickers';
 
@@ -46,7 +46,7 @@ const DEFAULT_CARD_LAYOUT: NookCardConfig[] = [
 ];
 
 export const NookCustomizerPage: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const { showToast } = useToast();
 
   const [theme, setTheme] = useState('glassmorphism');
@@ -57,16 +57,18 @@ export const NookCustomizerPage: React.FC = () => {
   // Image Crop Modal state
   const [cropModal, setCropModal] = useState<{
     isOpen: boolean;
-    file: File | null;
+    file: File | string | null;
     title: string;
     aspectRatio: number;
     target: 'avatar' | 'banner' | 'sticker';
+    isRecrop?: boolean;
   }>({
     isOpen: false,
     file: null,
     title: '',
     aspectRatio: 1,
-    target: 'avatar'
+    target: 'avatar',
+    isRecrop: false
   });
   const [bgColor, setBgColor] = useState('#12131C');
   const [cardBgColor, setCardBgColor] = useState('rgba(255,255,255,0.06)');
@@ -200,6 +202,23 @@ export const NookCustomizerPage: React.FC = () => {
             setSavedAccentColor(initAccent);
             setTextColor(initText);
             setSavedTextColor(initText);
+
+            if (data.nookSettings.card_colors_json) {
+              try {
+                const parsedCardColors = typeof data.nookSettings.card_colors_json === 'string'
+                  ? JSON.parse(data.nookSettings.card_colors_json)
+                  : data.nookSettings.card_colors_json;
+                if (parsedCardColors.cardBg) {
+                  setCardBgColor(parsedCardColors.cardBg);
+                  setSavedCardBgColor(parsedCardColors.cardBg);
+                }
+                if (parsedCardColors.border) {
+                  setBorderColor(parsedCardColors.border);
+                  setSavedBorderColor(parsedCardColors.border);
+                }
+              } catch (e) {}
+            }
+
             setBgMusicUrl(data.nookSettings.bg_music_url || '');
             setBgMusicTitle(data.nookSettings.bg_music_title || '');
             setSteamId64(data.nookSettings.steam_id64 || '');
@@ -272,22 +291,6 @@ export const NookCustomizerPage: React.FC = () => {
               } catch (e) {}
             }
 
-            if (data.nookSettings.card_colors_json) {
-              try {
-                const parsedColors = typeof data.nookSettings.card_colors_json === 'string'
-                  ? JSON.parse(data.nookSettings.card_colors_json)
-                  : data.nookSettings.card_colors_json;
-                if (parsedColors.cardBg) {
-                  setCardBgColor(parsedColors.cardBg);
-                  setSavedCardBgColor(parsedColors.cardBg);
-                }
-                if (parsedColors.border) {
-                  setBorderColor(parsedColors.border);
-                  setSavedBorderColor(parsedColors.border);
-                }
-              } catch (e) {}
-            }
-
             if (data.nookSettings.card_layout_json) {
               try {
                 const parsedLayout = typeof data.nookSettings.card_layout_json === 'string'
@@ -356,6 +359,16 @@ export const NookCustomizerPage: React.FC = () => {
     setTextColor(palette.text);
     setBorderColor(palette.border);
     showToast('Theme palette applied!', 'info');
+  };
+
+  const handleDiscardStagedTheme = () => {
+    setTheme(savedTheme);
+    setBgColor(savedBgColor);
+    setCardBgColor(savedCardBgColor);
+    setAccentColor(savedAccentColor);
+    setTextColor(savedTextColor);
+    setBorderColor(savedBorderColor);
+    showToast('Reverted staged theme & colors to saved profile', 'info');
   };
 
   const handleAddSticker = (url: string) => {
@@ -469,6 +482,13 @@ export const NookCustomizerPage: React.FC = () => {
     setIsSaving(true);
 
     const activeThemeToPersist = themeToSave || savedTheme;
+    const isThemeStagedUnsaved = !themeToSave && theme !== savedTheme;
+
+    const bgToPersist = isThemeStagedUnsaved ? savedBgColor : bgColor;
+    const cardBgToPersist = isThemeStagedUnsaved ? savedCardBgColor : cardBgColor;
+    const accentToPersist = isThemeStagedUnsaved ? savedAccentColor : accentColor;
+    const textToPersist = isThemeStagedUnsaved ? savedTextColor : textColor;
+    const borderToPersist = isThemeStagedUnsaved ? savedBorderColor : borderColor;
 
     const cleanedMovies = favoriteMovies.map(m => {
       let r = m.rating;
@@ -493,9 +513,9 @@ export const NookCustomizerPage: React.FC = () => {
         body: JSON.stringify({
           theme: activeThemeToPersist,
           visibility_nook: visibilityNook,
-          bg_color: bgColor,
-          text_color: textColor,
-          accent_color: accentColor,
+          bg_color: bgToPersist,
+          text_color: textToPersist,
+          accent_color: accentToPersist,
           bg_music_url: bgMusicUrl,
           bg_music_title: bgMusicTitle,
           steam_id64: steamId64,
@@ -503,7 +523,7 @@ export const NookCustomizerPage: React.FC = () => {
           spotify_track_url: spotifyTrackUrl,
           apple_music_url: appleMusicUrl,
           card_visibility_json: cardVisibility,
-          card_colors_json: { cardBg: cardBgColor, border: borderColor },
+          card_colors_json: { cardBg: cardBgToPersist, border: borderToPersist },
           card_titles_json: cardTitles,
           music_tracks_json: { tracks: musicTracks, autoNextPlay, loopPlaylist },
           favorite_movies_json: cleanedMovies,
@@ -529,11 +549,11 @@ export const NookCustomizerPage: React.FC = () => {
 
       if (custRes.ok && stickRes.ok) {
         setSavedTheme(activeThemeToPersist);
-        setSavedBgColor(bgColor);
-        setSavedCardBgColor(cardBgColor);
-        setSavedAccentColor(accentColor);
-        setSavedTextColor(textColor);
-        setSavedBorderColor(borderColor);
+        setSavedBgColor(bgToPersist);
+        setSavedCardBgColor(cardBgToPersist);
+        setSavedAccentColor(accentToPersist);
+        setSavedTextColor(textToPersist);
+        setSavedBorderColor(borderToPersist);
         if (!silent) showToast('Nook customized successfully!', 'success');
       } else {
         if (!silent) showToast('Failed to save customization', 'error');
@@ -608,19 +628,20 @@ export const NookCustomizerPage: React.FC = () => {
     }
   };
 
-  const handleAvatarFileUpload = async (file: File | null) => {
+  const handleAvatarFileUpload = async (file: File | null, isRecrop = false) => {
     if (!file || !token) return;
     const formData = new FormData();
     formData.append('avatar', file);
     try {
-      const res = await fetch('/api/nook/upload/avatar', {
+      const res = await fetch(`/api/nook/upload/avatar?is_recrop=${isRecrop}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
       });
       const data = await res.json();
       if (res.ok) {
-        showToast('Profile avatar uploaded successfully!', 'success');
+        showToast('Profile avatar updated successfully!', 'success');
+        refreshUser();
       } else {
         showToast(data.error || 'Failed to upload avatar', 'error');
       }
@@ -629,19 +650,20 @@ export const NookCustomizerPage: React.FC = () => {
     }
   };
 
-  const handleBannerFileUpload = async (file: File | null) => {
+  const handleBannerFileUpload = async (file: File | null, isRecrop = false) => {
     if (!file || !token) return;
     const formData = new FormData();
     formData.append('banner', file);
     try {
-      const res = await fetch('/api/nook/upload/banner', {
+      const res = await fetch(`/api/nook/upload/banner?is_recrop=${isRecrop}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
       });
       const data = await res.json();
       if (res.ok) {
-        showToast('Banner image uploaded successfully!', 'success');
+        showToast('Banner image updated successfully!', 'success');
+        refreshUser();
       } else {
         showToast(data.error || 'Failed to upload banner', 'error');
       }
@@ -752,41 +774,80 @@ export const NookCustomizerPage: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>Upload Avatar Image</label>
-                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
-                  <Upload size={16} />
-                  <span>{avatarFileName || 'Choose Avatar Image...'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => {
-                      const f = e.target.files?.[0];
-                      if (f) {
-                        setAvatarFileName(f.name);
-                        setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar' });
-                      }
-                    }}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
+                    <Upload size={16} />
+                    <span>{avatarFileName || 'Choose Avatar Image...'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          setAvatarFileName(f.name);
+                          setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar', isRecrop: false });
+                        }
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+
+                  {(user?.avatar_original_url || user?.avatar_url) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const src = user.avatar_original_url || user.avatar_url;
+                        if (src) {
+                          setCropModal({ isOpen: true, file: src, title: 'Adjust Avatar Position & Crop', aspectRatio: 1, target: 'avatar', isRecrop: true });
+                        }
+                      }}
+                      className="btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}
+                    >
+                      <Crop size={16} />
+                      <span>Adjust Crop</span>
+                    </button>
+                  )}
+                </div>
               </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>Upload Banner Image</label>
-                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
-                  <Upload size={16} />
-                  <span>{bannerFileName || 'Choose Banner Image...'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => {
-                      const f = e.target.files?.[0];
-                      if (f) {
-                        setBannerFileName(f.name);
-                        setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
-                      }
-                    }}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
+                    <Upload size={16} />
+                    <span>{bannerFileName || 'Choose Banner Image...'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          setBannerFileName(f.name);
+                          setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner', isRecrop: false });
+                        }
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+
+                  {(user?.banner_original_url || user?.banner_url) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const src = user.banner_original_url || user.banner_url;
+                        if (src) {
+                          setCropModal({ isOpen: true, file: src, title: 'Adjust Banner Position & Crop', aspectRatio: 3, target: 'banner', isRecrop: true });
+                        }
+                      }}
+                      className="btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}
+                    >
+                      <Crop size={16} />
+                      <span>Adjust Crop</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -810,6 +871,7 @@ export const NookCustomizerPage: React.FC = () => {
                 onCommitTheme={(targetThemeId, palette) => {
                   handleCommitTheme(targetThemeId, palette);
                 }}
+                onDiscardStagedTheme={handleDiscardStagedTheme}
                 isSaving={isSaving}
               />
             </div>
@@ -1043,7 +1105,7 @@ export const NookCustomizerPage: React.FC = () => {
                     />
 
                     {/* Card Type Badge */}
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.45rem', borderRadius: '6px', background: c.type === 'markdown' ? 'rgba(56,189,248,0.2)' : c.type === 'html' ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.1)', color: c.type === 'markdown' ? '#38bdf8' : c.type === 'html' ? '#c084fc' : 'var(--text-main)', flexShrink: 0 }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.45rem', borderRadius: '6px', background: c.type === 'markdown' ? 'rgba(56,189,248,0.2)' : c.type === 'html' ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.1)', color: c.type === 'markdown' ? '#38bdf8' : c.type === 'html' ? '#c084fc' : 'var(--text-main)', flexShrink: 0, whiteSpace: 'nowrap' }}>
                       {c.type.toUpperCase()}
                     </span>
 
@@ -1282,12 +1344,66 @@ export const NookCustomizerPage: React.FC = () => {
               const cardTracks = c.music_tracks || (cIdx === cardLayout.findIndex(item => item.type === 'music') ? musicTracks : []);
               return (
                 <div key={c.id} className="nook-panel">
-                  <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Music size={20} />
                       <span>🎵 Profile Music Playlist ({cardNumLabel} - {cardTracks.length} tracks)</span>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowSpotifySearch(!showSpotifySearch)}
+                      className="btn-primary"
+                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                    >
+                      {showSpotifySearch ? 'Close Search' : 'Search Spotify 🎵'}
+                    </button>
                   </div>
+
+                  {showSpotifySearch && (
+                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <input
+                          type="text"
+                          placeholder="Search track name or artist on Spotify..."
+                          value={spotifySearchQ}
+                          onChange={e => setSpotifySearchQ(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleSearchSpotify()}
+                          style={{ flex: 1, minWidth: 0, padding: '0.55rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                        />
+                        <button type="button" onClick={handleSearchSpotify} className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}>
+                          Search
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto' }}>
+                        {spotifyResults.map((t: any) => (
+                          <div key={t.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.65rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                            {t.albumCover && <img src={t.albumCover} alt="" style={{ width: '45px', height: '45px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                              <div style={{ fontSize: '0.75rem', opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.artist}</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newTr: MusicTrack = {
+                                  id: `tr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                                  title: `${t.title}${t.artist ? ' - ' + t.artist : ''}`,
+                                  type: 'spotify',
+                                  url: t.spotifyUrl
+                                };
+                                updateCardMusic([...cardTracks, newTr]);
+                                showToast(`Added "${t.title}" to playlist!`, 'success');
+                              }}
+                              className="btn-primary"
+                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', flexShrink: 0 }}
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     {/* Add Streaming Track */}
@@ -2169,9 +2285,9 @@ export const NookCustomizerPage: React.FC = () => {
         aspectRatio={cropModal.aspectRatio}
         onCropComplete={(croppedFile) => {
           if (cropModal.target === 'avatar') {
-            handleAvatarFileUpload(croppedFile);
+            handleAvatarFileUpload(croppedFile, cropModal.isRecrop);
           } else if (cropModal.target === 'banner') {
-            handleBannerFileUpload(croppedFile);
+            handleBannerFileUpload(croppedFile, cropModal.isRecrop);
           } else if (cropModal.target === 'sticker') {
             handleCustomStickerUpload(croppedFile);
           }

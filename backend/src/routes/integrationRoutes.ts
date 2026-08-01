@@ -101,6 +101,124 @@ function parseSteamInput(input: string): { type: 'steamid64' | 'vanity'; value: 
   return { type: 'vanity', value: raw };
 }
 
+/**
+ * Multi-stage Steam Handle & Username Resolver
+ * Resolves custom vanity URLs, persona display names, or raw IDs to a valid 17-digit 64-bit Steam ID.
+ */
+async function resolveSteamHandle(input: string, apiKey?: string): Promise<{ steamId64?: string; vanity?: string }> {
+  const clean = input.trim();
+  if (/^\d{17}$/.test(clean)) {
+    return { steamId64: clean };
+  }
+
+  // Stage 1: Official Steam Web API ResolveVanityURL (if API key is configured)
+  if (apiKey) {
+    try {
+      const vanityRes = await fetchJson(`https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${apiKey}&vanityurl=${encodeURIComponent(clean)}`);
+      if (vanityRes?.response?.success === 1 && vanityRes.response.steamid) {
+        return { steamId64: vanityRes.response.steamid, vanity: clean };
+      }
+    } catch (e) {}
+  }
+
+  // Stage 2: Direct Steam Community XML Feed via custom URL path (/id/handle/?xml=1)
+  try {
+    const xmlUrl = `https://steamcommunity.com/id/${encodeURIComponent(clean)}/?xml=1`;
+    const xmlText = await fetchText(xmlUrl);
+    const m = xmlText.match(/<steamID64>(7656\d{13})<\/steamID64>/);
+    if (m) {
+      return { steamId64: m[1], vanity: clean };
+    }
+  } catch (e) {}
+
+  // Stage 3: Direct Steam Community XML Feed via profiles path (/profiles/handle/?xml=1)
+  try {
+    const altXmlUrl = `https://steamcommunity.com/profiles/${encodeURIComponent(clean)}/?xml=1`;
+    const altXmlText = await fetchText(altXmlUrl);
+    const m = altXmlText.match(/<steamID64>(7656\d{13})<\/steamID64>/);
+    if (m) {
+      return { steamId64: m[1] };
+    }
+  } catch (e) {}
+
+  // Stage 4: Steam Community User Search API Ajax (Resolves display names like "vitoardnalac" or "em0321")
+  try {
+    let sessionid = '0';
+    let cookieHeader = '';
+    try {
+      const sessionRes = await new Promise<{ sessionid: string; cookies: string[] }>((resolve) => {
+        const req = https.get('https://steamcommunity.com/search/users/', {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          }
+        }, (res) => {
+          const rawCookies = res.headers['set-cookie'] || [];
+          let sid = '';
+          for (const c of rawCookies) {
+            const m = c.match(/sessionid=([a-zA-Z0-9]+)/);
+            if (m) sid = m[1];
+          }
+          resolve({ sessionid: sid, cookies: rawCookies });
+        });
+        req.on('error', () => resolve({ sessionid: '', cookies: [] }));
+      });
+      if (sessionRes.sessionid) {
+        sessionid = sessionRes.sessionid;
+        cookieHeader = sessionRes.cookies.map(c => c.split(';')[0]).join('; ');
+      }
+    } catch (e) {}
+
+    const searchUrl = `https://steamcommunity.com/search/SearchCommunityAjax?text=${encodeURIComponent(clean)}&filter=users&sessionid=${sessionid}&page=1`;
+    const searchHeaders: Record<string, string> = {
+      'X-Requested-With': 'XMLHttpRequest'
+    };
+    if (cookieHeader) searchHeaders['Cookie'] = cookieHeader;
+
+    const searchData = await fetchJson(searchUrl, searchHeaders).catch(() => null);
+    const htmlSnippet = searchData?.html || '';
+
+    // Search for 64-bit profile link (e.g. steamcommunity.com/profiles/76561198089478482)
+    const profileMatch = htmlSnippet.match(/steamcommunity\.com\/profiles\/(7656\d{13})/);
+    if (profileMatch) {
+      return { steamId64: profileMatch[1] };
+    }
+
+    // Search for custom vanity URL link (e.g. steamcommunity.com/id/custom_name)
+    const vanityMatch = htmlSnippet.match(/steamcommunity\.com\/id\/([a-zA-Z0-9_\-]+)/);
+    if (vanityMatch) {
+      const foundVanity = vanityMatch[1];
+      if (apiKey) {
+        try {
+          const vanityRes = await fetchJson(`https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${apiKey}&vanityurl=${encodeURIComponent(foundVanity)}`);
+          if (vanityRes?.response?.success === 1 && vanityRes.response.steamid) {
+            return { steamId64: vanityRes.response.steamid, vanity: foundVanity };
+          }
+        } catch (e) {}
+      }
+
+      try {
+        const vXml = await fetchText(`https://steamcommunity.com/id/${encodeURIComponent(foundVanity)}/?xml=1`);
+        const vM = vXml.match(/<steamID64>(7656\d{13})<\/steamID64>/);
+        if (vM) {
+          return { steamId64: vM[1], vanity: foundVanity };
+        }
+      } catch (e) {}
+    }
+  } catch (e) {}
+
+  // Stage 5: Steam Community Search HTML Scrape
+  try {
+    const searchHtml = await fetchText(`https://steamcommunity.com/search/users/text?text=${encodeURIComponent(clean)}`);
+    const profileMatch = searchHtml.match(/steamcommunity\.com\/profiles\/(7656\d{13})/);
+    if (profileMatch) {
+      return { steamId64: profileMatch[1] };
+    }
+  } catch (e) {}
+
+  return {};
+}
+
 // Steam User Stats & Games endpoint
 router.get('/steam/:steamInput', async (req: Request, res: Response) => {
   try {
@@ -113,16 +231,16 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
 
     let targetSteamId64 = parsedInput.type === 'steamid64' ? parsedInput.value : '';
 
+    // Perform multi-stage resolution to find 64-bit Steam ID from vanity or display name
+    if (!targetSteamId64) {
+      const resolved = await resolveSteamHandle(parsedInput.value, apiKey);
+      if (resolved.steamId64) {
+        targetSteamId64 = resolved.steamId64;
+      }
+    }
+
     if (apiKey) {
       try {
-        // Resolve vanity URL if needed
-        if (!targetSteamId64 && parsedInput.type === 'vanity') {
-          const vanityRes = await fetchJson(`https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${apiKey}&vanityurl=${encodeURIComponent(parsedInput.value)}`);
-          if (vanityRes.response && vanityRes.response.success === 1 && vanityRes.response.steamid) {
-            targetSteamId64 = vanityRes.response.steamid;
-          }
-        }
-
         if (targetSteamId64) {
           const recentRes = await fetchJson(`https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=${apiKey}&steamid=${targetSteamId64}&format=json`).catch(() => ({}));
           const ownedRes = await fetchJson(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${targetSteamId64}&include_appinfo=true&include_played_free_games=true&format=json`).catch(() => ({}));
@@ -245,7 +363,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
             return res.json({
               player: {
                 personaName: player.personaname,
-                avatar: player.avatarfull || player.avatarmedium || player.avatar,
+                avatar: player.avatarfull || player.avatarmedium || player.avatar || '/branding/default_avatar.svg',
                 profileUrl: player.profileurl || `https://steamcommunity.com/profiles/${targetSteamId64}`,
                 personaState: player.personastate ?? 0,
                 inGameTitle: player.gameextrainfo || '',
@@ -271,9 +389,10 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
 
     // 2. Fallback Scrape: Public Steam profile XML feed & HTML page
     try {
-      let xmlUrl = parsedInput.type === 'steamid64'
-        ? `https://steamcommunity.com/profiles/${parsedInput.value}/?xml=1`
-        : `https://steamcommunity.com/id/${encodeURIComponent(parsedInput.value)}/?xml=1`;
+      let activeLookupId = targetSteamId64 || parsedInput.value;
+      let xmlUrl = targetSteamId64 || /^\d{17}$/.test(activeLookupId)
+        ? `https://steamcommunity.com/profiles/${activeLookupId}/?xml=1`
+        : `https://steamcommunity.com/id/${encodeURIComponent(activeLookupId)}/?xml=1`;
 
       let xmlText = '';
       try {
@@ -282,7 +401,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
 
       // If vanity endpoint returned an error or couldn't find profile, try profiles endpoint
       if (!xmlText || xmlText.includes('<error>') || !xmlText.includes('<steamID>')) {
-        const altXmlUrl = `https://steamcommunity.com/profiles/${encodeURIComponent(parsedInput.value)}/?xml=1`;
+        const altXmlUrl = `https://steamcommunity.com/profiles/${encodeURIComponent(activeLookupId)}/?xml=1`;
         try {
           const altXml = await fetchText(altXmlUrl);
           if (altXml.includes('<steamID>')) {
@@ -297,7 +416,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
         return res.json({
           player: {
             personaName: parsedInput.value,
-            avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=300&auto=format&fit=crop&q=80',
+            avatar: '/branding/default_avatar.svg',
             profileUrl: `https://steamcommunity.com/search/users/#text=${encodeURIComponent(parsedInput.value)}`,
             personaState: 0,
             stateMessage: 'Steam Profile Not Found (Check Steam ID or URL)'
@@ -315,7 +434,7 @@ router.get('/steam/:steamInput', async (req: Request, res: Response) => {
 
       const resolvedSteamId64 = steamId64Match ? steamId64Match[1] : (parsedInput.type === 'steamid64' ? parsedInput.value : '');
       const personaName = personaNameMatch ? personaNameMatch[1] : parsedInput.value;
-      const avatar = avatarMatch ? avatarMatch[1] : 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=300&auto=format&fit=crop&q=80';
+      const avatar = avatarMatch ? avatarMatch[1] : '/branding/default_avatar.svg';
       const onlineStateRaw = stateMatch ? stateMatch[1].toLowerCase() : 'offline';
       const isOnline = onlineStateRaw !== 'offline';
       const inGame = onlineStateRaw === 'in-game';

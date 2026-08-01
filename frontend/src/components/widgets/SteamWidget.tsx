@@ -67,6 +67,30 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
     );
   }
 
+  if (error) {
+    return (
+      <div className="nook-panel" style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '1.25rem' }}>
+        <div className="nook-panel-header" style={{ width: '100%', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Gamepad2 size={20} />
+          <span style={{ fontWeight: 700 }}>{title}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: 'rgba(0, 0, 0, 0.25)', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+          <img
+            src="/branding/default_avatar.svg"
+            alt="Default Profile"
+            style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-color)', flexShrink: 0 }}
+          />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#ef4444' }}>Steam Profile Not Found</div>
+            <div style={{ fontSize: '0.78rem', opacity: 0.75, marginTop: '2px' }}>
+              Could not locate Steam user "{targetIdentifier}". Please check your Steam ID, Username, or Custom URL in Nook settings.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="nook-panel" style={{ minHeight: minContainerHeight, display: 'flex', flexDirection: 'column' }}>
@@ -196,8 +220,11 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
           }}
         >
           <img
-            src={player.avatar}
-            alt={player.personaName}
+            src={player.avatar || '/branding/default_avatar.svg'}
+            alt={player.personaName || 'Steam Profile'}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/branding/default_avatar.svg';
+            }}
             style={{
               width: '48px',
               height: '48px',

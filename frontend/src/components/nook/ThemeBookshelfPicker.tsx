@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { THEME_CATEGORIES, ALL_THEMES, getThemesByCategory, getCategoryForTheme, getThemeById } from '../../themes/registry';
 import { ThemeDefinition, ThemePalette, ThemeCategory } from '../../themes/types';
-import { ChevronDown, ChevronRight, Check, Sparkles, Save, Info, Bookmark } from 'lucide-react';
+import { ChevronDown, ChevronRight, Check, Sparkles, Save, Info, Bookmark, RotateCcw } from 'lucide-react';
 
 interface ThemeBookshelfPickerProps {
   currentSavedThemeId: string;
@@ -9,6 +9,7 @@ interface ThemeBookshelfPickerProps {
   hasUnsavedColors?: boolean;
   onStageTheme: (theme: ThemeDefinition) => void;
   onCommitTheme: (themeId: string, palette: ThemePalette) => void;
+  onDiscardStagedTheme?: () => void;
   isSaving?: boolean;
 }
 
@@ -18,6 +19,7 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
   hasUnsavedColors = false,
   onStageTheme,
   onCommitTheme,
+  onDiscardStagedTheme,
   isSaving = false
 }) => {
   // Determine initial category shelf to expand based on currently saved theme
@@ -48,11 +50,13 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
         borderRadius: '12px',
         border: '1px solid var(--border-color)',
         gap: '1rem',
-        flexWrap: 'wrap'
+        flexWrap: 'wrap',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}>
-        <div style={{ flex: '1 1 240px' }}>
+        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.95rem' }}>
-            <Bookmark size={18} style={{ color: 'var(--accent-color)' }} />
+            <Bookmark size={18} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
             <span>Theme Engine Bookshelf</span>
           </div>
           <p style={{ fontSize: '0.78rem', opacity: 0.7, marginTop: '0.2rem', margin: 0 }}>
@@ -61,8 +65,8 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
         </div>
 
         {/* Dedicated "Apply & Save Theme" Action Button & Tooltip Container */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem', flexShrink: 0 }}>
-          <div style={{ position: 'relative', display: 'inline-block' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem', flex: '1 1 260px', maxWidth: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', maxWidth: '100%' }}>
             <button
               onClick={() => {
                 if (hasUnsavedThemeChange && stagedThemeObj) {
@@ -82,26 +86,54 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
                 cursor: hasUnsavedThemeChange ? 'pointer' : 'not-allowed',
                 boxShadow: hasUnsavedThemeChange ? '0 0 16px rgba(99, 102, 241, 0.5)' : 'none',
                 filter: hasUnsavedThemeChange ? 'brightness(1.1)' : 'grayscale(60%)',
-                transition: 'all 0.25s ease'
+                transition: 'all 0.25s ease',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                whiteSpace: 'nowrap'
               }}
               title='Theme swaps do not auto-save, click "Apply & Save Theme" to keep the change.'
             >
-              <Save size={16} />
-              <span>{isSaving ? 'Applying Theme...' : hasUnsavedThemeChange ? 'Apply & Save Theme' : 'Theme Saved'}</span>
+              <Save size={16} style={{ flexShrink: 0 }} />
+              <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>{isSaving ? 'Applying Theme...' : hasUnsavedThemeChange ? 'Apply & Save Theme' : 'Theme Saved'}</span>
             </button>
+
+            {hasUnsavedThemeChange && onDiscardStagedTheme && (
+              <button
+                type="button"
+                onClick={onDiscardStagedTheme}
+                className="btn-secondary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.55rem 0.85rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  maxWidth: '100%',
+                  boxSizing: 'border-box',
+                  whiteSpace: 'nowrap'
+                }}
+                title="Discard staged theme preview and revert to your saved theme and colors"
+              >
+                <RotateCcw size={15} style={{ flexShrink: 0 }} />
+                <span>Revert Staged Theme</span>
+              </button>
+            )}
           </div>
 
-          {/* Simple Tooltip / Notice helper text */}
+          {/* Tooltip / Notice helper text */}
           <div style={{
             fontSize: '0.74rem',
             color: hasUnsavedThemeChange ? 'var(--accent-color)' : 'var(--text-muted)',
             fontWeight: hasUnsavedThemeChange ? 600 : 400,
             display: 'flex',
-            alignItems: 'center',
-            gap: '0.25rem'
+            alignItems: 'flex-start',
+            gap: '0.35rem',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
           }}>
-            <Info size={12} />
-            <span>
+            <Info size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span style={{ flex: 1, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere', lineHeight: 1.35 }}>
               {hasUnsavedThemeChange
                 ? `Staged change to "${stagedThemeObj.name}". Theme swaps do not auto-save, click "Apply & Save Theme" to keep the change.`
                 : 'Theme swaps do not auto-save, click "Apply & Save Theme" to keep the change.'}
@@ -144,16 +176,18 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
                   cursor: 'pointer',
                   userSelect: 'none',
                   background: isExpanded ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
-                  transition: 'background 0.2s ease'
+                  transition: 'background 0.2s ease',
+                  gap: '0.75rem',
+                  flexWrap: 'wrap'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '1.3rem' }}>{cat.icon}</span>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: '1 1 auto', minWidth: 0, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{cat.icon}</span>
+                  <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <span>{cat.label} Shelf</span>
                       {containsSavedTheme && (
-                        <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '10px', background: '#22c55e', color: '#ffffff', fontWeight: 700 }}>
+                        <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '10px', background: '#22c55e', color: '#ffffff', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
                           Active Theme Included
                         </span>
                       )}
@@ -162,11 +196,11 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <span style={{ fontSize: '0.75rem', opacity: 0.7, background: 'rgba(255,255,255,0.1)', padding: '0.2rem 0.55rem', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.7, background: 'rgba(255,255,255,0.1)', padding: '0.2rem 0.55rem', borderRadius: '12px', flexShrink: 0, whiteSpace: 'nowrap' }}>
                     {categoryThemes.length} {categoryThemes.length === 1 ? 'Theme' : 'Themes'}
                   </span>
-                  {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  {isExpanded ? <ChevronDown size={18} style={{ flexShrink: 0 }} /> : <ChevronRight size={18} style={{ flexShrink: 0 }} />}
                 </div>
               </div>
 
@@ -211,11 +245,11 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
                               </div>
 
                               {isSaved ? (
-                                <span style={{ fontSize: '0.68rem', background: '#22c55e', color: '#fff', padding: '0.15rem 0.45rem', borderRadius: '10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                                <span style={{ fontSize: '0.68rem', background: '#22c55e', color: '#fff', padding: '0.15rem 0.45rem', borderRadius: '10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0, whiteSpace: 'nowrap' }}>
                                   <Check size={10} /> Active
                                 </span>
                               ) : isStaged ? (
-                                <span style={{ fontSize: '0.68rem', background: 'var(--accent-color)', color: '#fff', padding: '0.15rem 0.45rem', borderRadius: '10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                                <span style={{ fontSize: '0.68rem', background: 'var(--accent-color)', color: '#fff', padding: '0.15rem 0.45rem', borderRadius: '10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0, whiteSpace: 'nowrap' }}>
                                   <Sparkles size={10} /> Staged
                                 </span>
                               ) : null}

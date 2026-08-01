@@ -341,11 +341,11 @@ const migrations: Migration[] = [
     }
   },
   {
-    version: 11,
-    name: 'v2.5.6_pinned_chats',
+    version: 13,
+    name: 'v3.2.0_spotify_search_and_tab_titles',
     up: async () => {
       try {
-        await execute('ALTER TABLE conversation_members ADD COLUMN is_pinned INTEGER DEFAULT 0');
+        await execute('ALTER TABLE nooks ADD COLUMN steam_excluded_games_json TEXT DEFAULT "[]"');
       } catch (e) {}
     }
   }
@@ -361,6 +361,12 @@ export async function runMigrations() {
     );
   `);
 
+  try {
+    await execute('ALTER TABLE users ADD COLUMN avatar_original_url TEXT DEFAULT ""');
+  } catch (e) {}
+  try {
+    await execute('ALTER TABLE users ADD COLUMN banner_original_url TEXT DEFAULT ""');
+  } catch (e) {}
   try {
     await execute('ALTER TABLE conversation_members ADD COLUMN is_pinned INTEGER DEFAULT 0');
   } catch (e) {}

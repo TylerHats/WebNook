@@ -47,7 +47,7 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
     }
 
     const owner = await queryOne<any>(
-      'SELECT id, username, display_name, bio, avatar_url, banner_url, status_message, status_emoji, privacy_default, created_at FROM users WHERE username = ?',
+      'SELECT id, username, display_name, bio, avatar_url, banner_url, avatar_original_url, banner_original_url, status_message, status_emoji, privacy_default, created_at FROM users WHERE username = ?',
       [cleanUsername]
     );
 
@@ -80,6 +80,7 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
           username: owner.username,
           display_name: owner.display_name,
           avatar_url: owner.avatar_url,
+          avatar_original_url: owner.avatar_original_url,
           status_message: owner.status_message,
           status_emoji: owner.status_emoji
         },
@@ -89,7 +90,7 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
           accent_color: nookSettings.accent_color,
           text_color: nookSettings.text_color
         },
-        message: `Shh... @${owner.username}'s Nook is currently private & cozy! Send a friend request to step inside and explore their space ✨`
+        message: `Shh... @${owner.username}'s Nook is currently private & cozy! 🔒✨ Sign in and send a friend request to step inside and explore their space!`
       });
     }
 
@@ -167,14 +168,30 @@ router.post('/upload/avatar', authenticateToken, uploadMedia.single('avatar'), a
       return res.status(400).json({ error: 'No avatar image file uploaded' });
     }
 
+    const isRecrop = req.query.is_recrop === 'true' || req.body?.is_recrop === 'true';
     const webpFilename = await processImageUpload(req.file.path, uploadsDir, 'avatar');
     const avatarUrl = `/uploads/${webpFilename}`;
-    await execute('UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
-      avatarUrl,
-      req.user!.id
-    ]);
 
-    return res.json({ message: 'Avatar image uploaded & processed successfully', avatar_url: avatarUrl });
+    if (isRecrop) {
+      await execute('UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+        avatarUrl,
+        req.user!.id
+      ]);
+    } else {
+      await execute('UPDATE users SET avatar_url = ?, avatar_original_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+        avatarUrl,
+        avatarUrl,
+        req.user!.id
+      ]);
+    }
+
+    const updatedUser = await queryOne<any>('SELECT avatar_url, avatar_original_url FROM users WHERE id = ?', [req.user!.id]);
+
+    return res.json({
+      message: 'Avatar image uploaded & processed successfully',
+      avatar_url: updatedUser.avatar_url,
+      avatar_original_url: updatedUser.avatar_original_url || updatedUser.avatar_url
+    });
   } catch (err: any) {
     console.error('Avatar upload error:', err);
     return res.status(500).json({ error: 'Failed to upload avatar image' });
@@ -188,14 +205,30 @@ router.post('/upload/banner', authenticateToken, uploadMedia.single('banner'), a
       return res.status(400).json({ error: 'No banner image file uploaded' });
     }
 
+    const isRecrop = req.query.is_recrop === 'true' || req.body?.is_recrop === 'true';
     const webpFilename = await processImageUpload(req.file.path, uploadsDir, 'banner');
     const bannerUrl = `/uploads/${webpFilename}`;
-    await execute('UPDATE users SET banner_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
-      bannerUrl,
-      req.user!.id
-    ]);
 
-    return res.json({ message: 'Banner image uploaded & processed successfully', banner_url: bannerUrl });
+    if (isRecrop) {
+      await execute('UPDATE users SET banner_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+        bannerUrl,
+        req.user!.id
+      ]);
+    } else {
+      await execute('UPDATE users SET banner_url = ?, banner_original_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+        bannerUrl,
+        bannerUrl,
+        req.user!.id
+      ]);
+    }
+
+    const updatedUser = await queryOne<any>('SELECT banner_url, banner_original_url FROM users WHERE id = ?', [req.user!.id]);
+
+    return res.json({
+      message: 'Banner image uploaded & processed successfully',
+      banner_url: updatedUser.banner_url,
+      banner_original_url: updatedUser.banner_original_url || updatedUser.banner_url
+    });
   } catch (err: any) {
     console.error('Banner upload error:', err);
     return res.status(500).json({ error: 'Failed to upload banner image' });

@@ -10,7 +10,7 @@ import { HobbiesWidget } from '../components/widgets/HobbiesWidget';
 import { GuestbookWidget } from '../components/nook/GuestbookWidget';
 import { StickerCanvas } from '../components/nook/StickerCanvas';
 import { ThemeAnimationOverlay } from '../components/nook/ThemeAnimationOverlay';
-import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users, Clock, UserCheck, CheckCircle2, FileText, Code } from 'lucide-react';
+import { ShieldAlert, UserPlus, Heart, Sparkles, Edit3, Users, Clock, UserCheck, CheckCircle2, FileText, Code, Lock, LogIn } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 import { playThemeSound } from '../utils/themeSoundEngine';
@@ -32,6 +32,17 @@ export const NookViewPage: React.FC = () => {
     statusText: '🌐 Dialing ISP (28.8 Kbps)...'
   });
 
+  const [appName, setAppName] = useState('WebNook');
+
+  useEffect(() => {
+    fetch('/api/branding/public')
+      .then(res => res.json())
+      .then(data => {
+        if (data.app_name) setAppName(data.app_name);
+      })
+      .catch(() => {});
+  }, []);
+
   const fetchProfile = () => {
     setIsLoading(true);
     const headers: Record<string, string> = {};
@@ -42,7 +53,7 @@ export const NookViewPage: React.FC = () => {
       .then(data => {
         setProfileData(data);
         if (data?.owner) {
-          document.title = `${data.owner.display_name || data.owner.username}'s Nook | WebNook`;
+          document.title = `${data.owner.display_name || data.owner.username}'s Nook | ${appName}`;
         }
         setIsLoading(false);
       })
@@ -54,7 +65,7 @@ export const NookViewPage: React.FC = () => {
 
   useEffect(() => {
     fetchProfile();
-  }, [targetUsername, token]);
+  }, [targetUsername, token, appName]);
 
   const isWin9xTheme = profileData?.nookSettings?.theme === 'win98' || profileData?.nookSettings?.theme === 'win9x';
 
@@ -181,37 +192,72 @@ export const NookViewPage: React.FC = () => {
   // Render Private Nook view if access is blocked
   if (profileData.is_private) {
     const rel = profileData.relationship || 'public';
+    const returnUrl = encodeURIComponent(`/nook/${targetUsername}`);
+
     return (
-      <div className={themeClass} style={{ minHeight: '90vh', padding: '2rem 1rem' }}>
-        <div style={{ maxWidth: '550px', margin: '0 auto', textAlign: 'center' }} className="nook-panel">
-          <div style={{ width: '80px', height: '80px', margin: '0 auto 1rem', borderRadius: '50%', background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-color)' }}>
-            <Sparkles size={40} />
-          </div>
-          <h2 style={{ marginBottom: '0.5rem' }}>@{profileData.owner.username}'s Cozy Nook</h2>
-          <p style={{ opacity: 0.85, marginBottom: '1.5rem', lineHeight: 1.6, fontSize: '0.95rem' }}>
+      <div className={themeClass} style={{ minHeight: '90vh', padding: '3rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ maxWidth: '560px', width: '100%', textAlign: 'center', padding: '2.5rem 1.5rem' }} className="nook-panel">
+          {profileData.owner?.avatar_url ? (
+            <img
+              src={profileData.owner.avatar_url}
+              alt={profileData.owner.display_name || profileData.owner.username}
+              style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', margin: '0 auto 1.25rem', border: '3px solid var(--accent-color)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}
+            />
+          ) : (
+            <div style={{ width: '80px', height: '80px', margin: '0 auto 1.25rem', borderRadius: '50%', background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-color)' }}>
+              <Lock size={40} />
+            </div>
+          )}
+
+          <h2 style={{ marginBottom: '0.5rem', fontSize: '1.6rem', fontWeight: 800 }}>@{profileData.owner.username}'s Cozy Nook</h2>
+
+          <p style={{ opacity: 0.9, marginBottom: '1.75rem', lineHeight: 1.6, fontSize: '0.98rem' }}>
             {profileData.message}
           </p>
-          {user && !isOwner && (
-            rel === 'pending_outgoing' ? (
-              <button disabled className="btn-secondary" style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85, cursor: 'not-allowed' }}>
-                <Clock size={18} />
-                <span>Friend Request Pending</span>
-              </button>
-            ) : rel === 'pending_incoming' ? (
-              <Link to="/friends" className="btn-primary" style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                <UserCheck size={18} />
-                <span>Respond to Friend Request</span>
+
+          {!user ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', alignItems: 'center', width: '100%', maxWidth: '320px', margin: '0 auto' }}>
+              <Link
+                to={`/login?redirect=${returnUrl}`}
+                className="btn-primary"
+                style={{ width: '100%', justifyContent: 'center', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.2rem', fontSize: '0.95rem' }}
+              >
+                <LogIn size={18} />
+                <span>Sign In to Request Access</span>
               </Link>
-            ) : rel === 'friend' ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 600 }}>
-                <CheckCircle2 size={18} />
-                <span>Friends</span>
-              </div>
-            ) : (
-              <button onClick={handleSendFriendRequest} className="btn-primary" style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                <UserPlus size={18} />
-                <span>Send Friend Request</span>
-              </button>
+              
+              <Link
+                to={`/register?redirect=${returnUrl}`}
+                className="btn-secondary"
+                style={{ width: '100%', justifyContent: 'center', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.2rem', fontSize: '0.88rem' }}
+              >
+                <UserPlus size={16} />
+                <span>New here? Create an Account</span>
+              </Link>
+            </div>
+          ) : (
+            !isOwner && (
+              rel === 'pending_outgoing' ? (
+                <button disabled className="btn-secondary" style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85, cursor: 'not-allowed', padding: '0.65rem 1.2rem' }}>
+                  <Clock size={18} />
+                  <span>Friend Request Pending</span>
+                </button>
+              ) : rel === 'pending_incoming' ? (
+                <Link to="/friends" className="btn-primary" style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.2rem' }}>
+                  <UserCheck size={18} />
+                  <span>Respond to Friend Request</span>
+                </Link>
+              ) : rel === 'friend' ? (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.58rem 1.2rem', background: 'rgba(34, 197, 94, 0.15)', border: '1px solid rgba(34, 197, 94, 0.4)', color: '#4ade80', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 700 }}>
+                  <CheckCircle2 size={18} />
+                  <span>Friends</span>
+                </div>
+              ) : (
+                <button onClick={handleSendFriendRequest} className="btn-primary" style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.2rem' }}>
+                  <UserPlus size={18} />
+                  <span>Send Friend Request</span>
+                </button>
+              )
             )
           )}
         </div>

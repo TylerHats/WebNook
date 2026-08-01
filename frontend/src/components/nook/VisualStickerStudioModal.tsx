@@ -142,76 +142,100 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
         position: 'sticky',
         top: 0,
         zIndex: 1000,
-        background: 'rgba(15, 16, 29, 0.95)',
-        backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid var(--border-color)',
-        padding: '0.75rem 1.5rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+        background: '#0f111e',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+        padding: '0.85rem 1.5rem',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
+        color: '#ffffff'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Sparkles size={24} color="var(--accent-color)" />
-          <div>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>Visual Sticker Studio</h2>
-            <p style={{ fontSize: '0.75rem', opacity: 0.7, margin: 0 }}>Drag, scale, and layer stickers over your live Nook page preview!</p>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '1rem',
+          flexWrap: 'wrap'
+        }}>
+          {/* Title & Description Container */}
+          <div style={{ flex: '1 1 320px', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Sparkles size={22} style={{ color: 'var(--accent-color, #6366f1)', flexShrink: 0 }} />
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#ffffff', letterSpacing: '0.3px' }}>
+                Visual Sticker Studio
+              </h2>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 500, margin: '0.25rem 0 0 0', lineHeight: 1.35 }}>
+              Drag, scale, and layer stickers over your live Nook page preview!
+            </p>
           </div>
-        </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          {/* Ghost Cards Mode Toggle Button */}
-          <button
-            onClick={() => setGhostCards(!ghostCards)}
-            className="btn-secondary"
-            style={{
-              padding: '0.4rem 0.85rem',
-              fontSize: '0.82rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              background: ghostCards ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255,255,255,0.08)',
-              border: ghostCards ? '1px solid var(--accent-color)' : '1px solid var(--border-color)'
-            }}
-            title="Ghost Cards Mode lets you click & drag stickers positioned behind cards!"
-          >
-            <Ghost size={16} color={ghostCards ? 'var(--accent-color)' : '#fff'} />
-            <span>{ghostCards ? 'Ghost Cards ON' : 'Ghost Cards OFF'}</span>
-          </button>
+          {/* Action Buttons Container */}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
+            {/* Ghost Cards Mode Toggle Button */}
+            <button
+              onClick={() => setGhostCards(!ghostCards)}
+              className="btn-secondary"
+              style={{
+                padding: '0.45rem 0.9rem',
+                fontSize: '0.85rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: ghostCards ? 'rgba(99, 102, 241, 0.35)' : 'rgba(255,255,255,0.12)',
+                color: '#ffffff',
+                border: ghostCards ? '1px solid var(--accent-color, #6366f1)' : '1px solid rgba(255,255,255,0.25)',
+                fontWeight: 600,
+                flexShrink: 0,
+                whiteSpace: 'nowrap'
+              }}
+              title="Ghost Cards Mode lets you click & drag stickers positioned behind cards!"
+            >
+              <Ghost size={16} color={ghostCards ? 'var(--accent-color, #6366f1)' : '#fff'} style={{ flexShrink: 0 }} />
+              <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>{ghostCards ? 'Ghost Cards ON' : 'Ghost Cards OFF'}</span>
+            </button>
 
-          <button onClick={handleSaveAndClose} className="btn-primary" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}>
-            <Save size={16} />
-            <span>Save Stickers & Return</span>
-          </button>
+            <button
+              onClick={handleSaveAndClose}
+              className="btn-primary"
+              style={{ padding: '0.45rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <Save size={16} style={{ flexShrink: 0 }} />
+              <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>Save Stickers & Return</span>
+            </button>
 
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0.8 }}>
-            <X size={22} />
-          </button>
+            <button
+              onClick={onClose}
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '0.35rem', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              title="Close Sticker Studio"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Floating Toolbar Options for Selected Sticker */}
       <div style={{
         position: 'sticky',
-        top: '65px',
+        top: '68px',
         zIndex: 999,
-        background: 'rgba(24, 26, 42, 0.95)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--border-color)',
-        padding: '0.6rem 1.5rem',
+        background: '#161827',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+        padding: '0.65rem 1.5rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '1rem',
-        flexWrap: 'wrap'
+        flexWrap: 'wrap',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        color: '#ffffff'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <button
             onClick={() => setShowPresetPicker(!showPresetPicker)}
             className="btn-primary"
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}
           >
-            <Plus size={16} />
+            <Plus size={16} style={{ flexShrink: 0 }} />
             <span>Add Sticker</span>
           </button>
         </div>
@@ -220,12 +244,12 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
             {/* Layer Selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Layers size={16} color="var(--accent-color)" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Layer:</span>
+              <Layers size={16} color="var(--accent-color, #6366f1)" />
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ffffff' }}>Layer:</span>
               <select
                 value={selectedSticker.layer || 'above_cards'}
                 onChange={(e) => handleUpdateSelected({ layer: e.target.value as any })}
-                style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid var(--border-color)', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.8rem' }}
+                style={{ background: 'rgba(0,0,0,0.5)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.25)', padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 600 }}
               >
                 <option value="above_cards">Above Cards</option>
                 <option value="behind_cards">Behind Cards</option>
@@ -234,8 +258,8 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
 
             {/* Scale Control */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Maximize2 size={16} color="var(--accent-color)" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Scale:</span>
+              <Maximize2 size={16} color="var(--accent-color, #6366f1)" />
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ffffff' }}>Scale:</span>
               <input
                 type="range"
                 min="0.3"
@@ -245,13 +269,13 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
                 onChange={(e) => handleUpdateSelected({ scale: parseFloat(e.target.value) })}
                 style={{ width: '90px' }}
               />
-              <span style={{ fontSize: '0.75rem', opacity: 0.7, width: '32px' }}>{(selectedSticker.scale || 1.0).toFixed(1)}x</span>
+              <span style={{ fontSize: '0.78rem', color: '#e2e8f0', width: '32px', fontWeight: 600 }}>{(selectedSticker.scale || 1.0).toFixed(1)}x</span>
             </div>
 
             {/* Rotation Control */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <RotateCw size={16} color="var(--accent-color)" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Rotation:</span>
+              <RotateCw size={16} color="var(--accent-color, #6366f1)" />
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ffffff' }}>Rotation:</span>
               <input
                 type="range"
                 min="-180"
@@ -261,20 +285,20 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
                 onChange={(e) => handleUpdateSelected({ rotation: parseInt(e.target.value) })}
                 style={{ width: '90px' }}
               />
-              <span style={{ fontSize: '0.75rem', opacity: 0.7, width: '36px' }}>{selectedSticker.rotation || 0}°</span>
+              <span style={{ fontSize: '0.78rem', color: '#e2e8f0', width: '36px', fontWeight: 600 }}>{selectedSticker.rotation || 0}°</span>
             </div>
 
             {/* Delete Selected Sticker */}
             <button
               onClick={handleDeleteSelected}
-              style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '6px', padding: '0.25rem 0.6rem', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+              style={{ background: 'rgba(239, 68, 68, 0.25)', color: '#fca5a5', border: '1px solid #ef4444', borderRadius: '6px', padding: '0.3rem 0.7rem', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}
             >
-              <Trash2 size={12} />
+              <Trash2 size={13} />
               <span>Delete</span>
             </button>
           </div>
         ) : (
-          <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>Click any sticker on screen to edit its scale, rotation, or layer!</span>
+          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 500 }}>Click any sticker on screen to edit its scale, rotation, or layer!</span>
         )}
       </div>
 

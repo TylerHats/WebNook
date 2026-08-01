@@ -50,6 +50,9 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
   const [activeTrackIndex, setActiveTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const activeTrack = playlist[activeTrackIndex];
@@ -57,6 +60,45 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
 
   // Detect touch device vs desktop
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+  // Reset time when active track changes
+  useEffect(() => {
+    setCurrentTime(0);
+    setDuration(0);
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      if (isPlaying && playlist[activeTrackIndex]?.type === 'audio') {
+        audioRef.current.play().catch(console.error);
+      }
+    }
+  }, [activeTrackIndex]);
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current && !isSeeking) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration || 0);
+    }
+  };
+
+  const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = parseFloat(e.target.value);
+    setCurrentTime(newTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
+  };
+
+  const formatTime = (timeInSeconds: number) => {
+    if (isNaN(timeInSeconds) || timeInSeconds < 0) return '0:00';
+    const mins = Math.floor(timeInSeconds / 60);
+    const secs = Math.floor(timeInSeconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
 
   // Attempt autoplay on mount if first track is MP3 and has autoplay enabled
   useEffect(() => {
@@ -129,6 +171,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
 
   // Handle MP3 Track ended logic (Auto Next Play & Loop)
   const handleTrackEnded = () => {
+    setCurrentTime(0);
     if (isAllMp3 && autoNextPlay) {
       if (activeTrackIndex < playlist.length - 1) {
         const nextIdx = activeTrackIndex + 1;
@@ -190,41 +233,101 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
           {activeTrack && (
             <div style={{ marginBottom: '1rem' }}>
               {activeTrack.type === 'audio' && (
-                <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div
-                    onClick={togglePlay}
-                    style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '50%',
-                      background: 'var(--accent-color)',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      boxShadow: isPlaying ? '0 0 12px var(--accent-color)' : 'none',
-                      transition: 'all 0.2s ease',
-                      flexShrink: 0
-                    }}
-                  >
-                    {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: '2px' }} />}
+                <div style={{
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem'
+                }}>
+                  {/* Top Header Row: Play/Pause Button + Title & Info */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                    <button
+                      type="button"
+                      onClick={togglePlay}
+                      style={{
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '50%',
+                        background: 'var(--accent-color, #6366f1)',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: 'none',
+                        cursor: 'pointer',
+                        boxShadow: isPlaying ? '0 0 14px var(--accent-color, #6366f1)' : 'none',
+                        transition: 'all 0.2s ease',
+                        flexShrink: 0
+                      }}
+                      title={isPlaying ? 'Pause' : 'Play'}
+                    >
+                      {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: '2px' }} />}
+                    </button>
+
+                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <Disc size={16} className={isPlaying ? 'animate-spin' : ''} style={{ color: 'var(--accent-color, #6366f1)', flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeTrack.title}</span>
+                      </div>
+                      {activeTrack.artist ? (
+                        <div style={{ fontSize: '0.78rem', opacity: 0.8, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {activeTrack.artist}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '2px' }}>
+                          {isPlaying ? 'Now Playing MP3' : 'MP3 Audio Track'}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      <Disc size={16} className={isPlaying ? 'animate-spin' : ''} color="var(--accent-color)" />
-                      <span>{activeTrack.title}</span>
+                  {/* Interactive Progress Slider & Time Labels */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type="range"
+                        min={0}
+                        max={duration || 100}
+                        step={0.1}
+                        value={currentTime}
+                        onMouseDown={() => setIsSeeking(true)}
+                        onTouchStart={() => setIsSeeking(true)}
+                        onMouseUp={() => setIsSeeking(false)}
+                        onTouchEnd={() => setIsSeeking(false)}
+                        onChange={handleSeekChange}
+                        style={{
+                          width: '100%',
+                          height: '8px',
+                          borderRadius: '4px',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          WebkitAppearance: 'none',
+                          appearance: 'none',
+                          background: `linear-gradient(to right, var(--accent-color, #6366f1) 0%, var(--accent-color, #6366f1) ${
+                            duration > 0 ? (currentTime / duration) * 100 : 0
+                          }%, rgba(255, 255, 255, 0.18) ${
+                            duration > 0 ? (currentTime / duration) * 100 : 0
+                          }%, rgba(255, 255, 255, 0.18) 100%)`,
+                          transition: 'background 0.1s linear'
+                        }}
+                      />
                     </div>
-                    {activeTrack.artist && <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>{activeTrack.artist}</div>}
-                    <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '2px' }}>
-                      {isPlaying ? 'Now Playing' : 'Click play button to listen'}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', opacity: 0.85, fontWeight: 600, padding: '0 2px' }}>
+                      <span>{formatTime(currentTime)}</span>
+                      <span>{duration > 0 ? formatTime(duration) : '--:--'}</span>
                     </div>
                   </div>
 
                   <audio
                     ref={audioRef}
                     src={activeTrack.url}
+                    onTimeUpdate={handleTimeUpdate}
+                    onLoadedMetadata={handleLoadedMetadata}
+                    onDurationChange={handleLoadedMetadata}
                     onEnded={handleTrackEnded}
                     style={{ display: 'none' }}
                   />
@@ -302,15 +405,16 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
                       borderRadius: '8px',
                       border: activeTrackIndex === idx ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
                       cursor: 'pointer',
-                      fontSize: '0.85rem'
+                      fontSize: '0.85rem',
+                      gap: '0.5rem'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
-                      <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 700, width: '20px' }}>#{idx + 1}</span>
-                      <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr.title}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden', flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 700, width: '20px', flexShrink: 0 }}>#{idx + 1}</span>
+                      <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{tr.title}</span>
                     </div>
 
-                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.8, background: 'rgba(255,255,255,0.08)', padding: '0.15rem 0.5rem', borderRadius: '10px', fontWeight: 700 }}>
+                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.8, background: 'rgba(255,255,255,0.08)', padding: '0.15rem 0.5rem', borderRadius: '10px', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
                       {tr.type === 'audio' ? 'MP3' : tr.type}
                     </span>
                   </div>

@@ -6,10 +6,11 @@ import {
   MessageSquare, Plus, Bell, BellOff, Send, Users, User, 
   Bold, Italic, Code, Link as LinkIcon, List, Eye, Search, X, Bot, 
   Lock, Settings, LogOut, UserPlus, Image as ImageIcon, Upload,
-  Bug, Reply, Smile, ShieldAlert, ArrowLeft, Pin
+  Bug, Reply, Smile, ShieldAlert, ArrowLeft, Pin, Crop
 } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 import { CustomSelect, CustomSelectOption } from '../components/ui/CustomSelect';
+import { formatSmartNotificationTime } from '../utils/dateUtils';
 
 // Markdown parser helper for standard chat messages
 const renderMessageMarkdown = (text: string) => {
@@ -129,7 +130,7 @@ export const MessagesPage: React.FC = () => {
 
   // Crop modal state
   const [cropModalOpen, setCropModalOpen] = useState(false);
-  const [cropImageFile, setCropImageFile] = useState<File | null>(null);
+  const [cropImageFile, setCropImageFile] = useState<File | string | null>(null);
   const [cropSource, setCropSource] = useState<'new_group' | 'edit_group'>('new_group');
 
   // Form states
@@ -795,11 +796,11 @@ export const MessagesPage: React.FC = () => {
                         type="button"
                         onClick={() => setMobileShowChat(false)}
                         className="btn-secondary"
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0, whiteSpace: 'nowrap' }}
                         title="Back to Conversations List"
                       >
-                        <ArrowLeft size={18} />
-                        <span>Chats</span>
+                        <ArrowLeft size={18} style={{ flexShrink: 0 }} />
+                        <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>Chats</span>
                       </button>
                     )}
 
@@ -943,7 +944,7 @@ export const MessagesPage: React.FC = () => {
                               maxWidth: '90%'
                             }}
                           >
-                            ✨ {msg.content} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            ✨ {msg.content} • {formatSmartNotificationTime(msg.created_at)}
                           </div>
                         );
                       }
@@ -1345,9 +1346,24 @@ export const MessagesPage: React.FC = () => {
                 </label>
 
                 {newGroupAvatarUrl && (
-                  <button type="button" onClick={() => setNewGroupAvatarUrl('')} className="btn-secondary" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', color: '#ef4444' }}>
-                    Remove
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCropImageFile(newGroupAvatarUrl);
+                        setCropSource('new_group');
+                        setCropModalOpen(true);
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <Crop size={14} />
+                      <span>Adjust Crop</span>
+                    </button>
+                    <button type="button" onClick={() => setNewGroupAvatarUrl('')} className="btn-secondary" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', color: '#ef4444' }}>
+                      Remove
+                    </button>
+                  </>
                 )}
               </div>
 
@@ -1439,9 +1455,24 @@ export const MessagesPage: React.FC = () => {
                 </label>
 
                 {editGroupAvatarUrl && (
-                  <button type="button" onClick={() => setEditGroupAvatarUrl('')} className="btn-secondary" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', color: '#ef4444' }}>
-                    Remove
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCropImageFile(editGroupAvatarUrl);
+                        setCropSource('edit_group');
+                        setCropModalOpen(true);
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <Crop size={14} />
+                      <span>Adjust Crop</span>
+                    </button>
+                    <button type="button" onClick={() => setEditGroupAvatarUrl('')} className="btn-secondary" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', color: '#ef4444' }}>
+                      Remove
+                    </button>
+                  </>
                 )}
               </div>
 

@@ -7,7 +7,7 @@ import { Mail, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, Sparkles } from
 export const VerifyEmailPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const { user, token: authToken } = useAuth();
+  const { user, token: authToken, refreshUser } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -26,14 +26,16 @@ export const VerifyEmailPage: React.FC = () => {
     if (token) {
       fetch(`/api/auth/verify-email?token=${token}`)
         .then(res => res.json())
-        .then(data => {
+        .then(async data => {
           if (data.already_verified) {
+            await refreshUser();
             setStatus('already_verified');
             setMessage(data.message);
           } else if (data.error) {
             setStatus('error');
             setMessage(data.error);
           } else {
+            await refreshUser();
             setStatus('success');
             setMessage(data.message);
           }
@@ -42,8 +44,11 @@ export const VerifyEmailPage: React.FC = () => {
           setStatus('error');
           setMessage('Failed to verify email token. Please try again.');
         });
+    } else if (authToken && !user?.is_email_verified) {
+      // Re-check user auth status from backend in case user verified
+      refreshUser();
     }
-  }, [token, user]);
+  }, [token, authToken]);
 
   const handleResend = async () => {
     if (!authToken) {
@@ -93,12 +98,12 @@ export const VerifyEmailPage: React.FC = () => {
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               {user ? (
-                <Link to={`/nook/${user.username}`} className="btn-primary" style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}>
-                  <span>Go to My Nook (@{user.username})</span>
+                <Link to={user.onboarding_completed ? `/nook/${user.username}` : '/onboarding'} className="btn-primary" style={{ padding: '0.75rem 1.5rem', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span>{user.onboarding_completed ? `Go to My Nook (@${user.username})` : 'Start Nook Onboarding Wizard'}</span>
                   <ArrowRight size={18} />
                 </Link>
               ) : (
-                <Link to="/login" className="btn-primary" style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}>
+                <Link to="/login" className="btn-primary" style={{ padding: '0.75rem 1.5rem', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>Sign In to Account</span>
                   <ArrowRight size={18} />
                 </Link>
@@ -116,8 +121,15 @@ export const VerifyEmailPage: React.FC = () => {
             <p style={{ opacity: 0.8, fontSize: '0.95rem', marginBottom: '1.75rem', lineHeight: 1.5 }}>
               {message || 'Your email address has been successfully verified.'}
             </p>
-            <button onClick={() => window.location.href = '/onboarding'} className="btn-primary" style={{ margin: '0 auto', fontSize: '1rem', padding: '0.75rem 1.5rem' }}>
-              <span>Start Nook Onboarding Wizard</span>
+            <button
+              onClick={async () => {
+                await refreshUser();
+                navigate(user?.onboarding_completed ? `/nook/${user.username}` : '/onboarding');
+              }}
+              className="btn-primary"
+              style={{ margin: '0 auto', fontSize: '1rem', padding: '0.75rem 1.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <span>{user?.onboarding_completed ? 'Go to My Nook' : 'Start Nook Onboarding Wizard'}</span>
               <ArrowRight size={18} />
             </button>
           </div>

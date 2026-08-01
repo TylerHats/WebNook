@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { usePWA } from '../context/PWAContext';
 import { startRegistration } from '@simplewebauthn/browser';
-import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail, Smile, Upload, Smartphone, Download, AlertTriangle, X } from 'lucide-react';
+import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail, Smile, Upload, Smartphone, Download, AlertTriangle, X, Crop } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 
 export const AccountSettingsPage: React.FC = () => {
@@ -33,16 +33,18 @@ export const AccountSettingsPage: React.FC = () => {
   // Crop Modal state
   const [cropModal, setCropModal] = useState<{
     isOpen: boolean;
-    file: File | null;
+    file: File | string | null;
     title: string;
     aspectRatio: number;
     target: 'avatar' | 'banner';
+    isRecrop?: boolean;
   }>({
     isOpen: false,
     file: null,
     title: '',
     aspectRatio: 1,
-    target: 'avatar'
+    target: 'avatar',
+    isRecrop: false
   });
 
   // Email Notifications Preferences state
@@ -259,12 +261,12 @@ export const AccountSettingsPage: React.FC = () => {
     }
   };
 
-  const handleAvatarFileUpload = async (file: File | null) => {
+  const handleAvatarFileUpload = async (file: File | null, isRecrop = false) => {
     if (!file || !token) return;
     const formData = new FormData();
     formData.append('avatar', file);
     try {
-      const res = await fetch('/api/nook/upload/avatar', {
+      const res = await fetch(`/api/nook/upload/avatar?is_recrop=${isRecrop}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
@@ -272,7 +274,7 @@ export const AccountSettingsPage: React.FC = () => {
       const data = await res.json();
       if (res.ok) {
         setAvatarUrl(data.avatar_url);
-        showToast('Avatar uploaded successfully!', 'success');
+        showToast('Avatar updated successfully!', 'success');
         refreshUser();
       } else {
         showToast(data.error || 'Failed to upload avatar', 'error');
@@ -282,12 +284,12 @@ export const AccountSettingsPage: React.FC = () => {
     }
   };
 
-  const handleBannerFileUpload = async (file: File | null) => {
+  const handleBannerFileUpload = async (file: File | null, isRecrop = false) => {
     if (!file || !token) return;
     const formData = new FormData();
     formData.append('banner', file);
     try {
-      const res = await fetch('/api/nook/upload/banner', {
+      const res = await fetch(`/api/nook/upload/banner?is_recrop=${isRecrop}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
@@ -295,7 +297,7 @@ export const AccountSettingsPage: React.FC = () => {
       const data = await res.json();
       if (res.ok) {
         setBannerUrl(data.banner_url);
-        showToast('Banner uploaded successfully!', 'success');
+        showToast('Banner updated successfully!', 'success');
         refreshUser();
       } else {
         showToast(data.error || 'Failed to upload banner', 'error');
@@ -368,56 +370,81 @@ export const AccountSettingsPage: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Profile Avatar Image (URL or Direct Upload)</label>
-                <input
-                  type="text"
-                  placeholder={avatarUrl.startsWith('/uploads/') ? 'Uploaded Avatar active (or paste external URL...)' : 'https://example.com/avatar.jpg'}
-                  value={avatarUrl.startsWith('/uploads/') ? '' : avatarUrl}
-                  onChange={e => setAvatarUrl(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}
-                />
-                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
-                  <Upload size={15} />
-                  <span>{avatarFileName || (avatarUrl.startsWith('/uploads/') ? 'Uploaded Avatar (Click to change)' : 'Choose Avatar Image...')}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => {
-                      const f = e.target.files?.[0];
-                      if (f) {
-                        setAvatarFileName(f.name);
-                        setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar' });
-                      }
-                    }}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Profile Avatar Image</label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                    <Upload size={15} />
+                    <span>{avatarFileName || (avatarUrl.startsWith('/uploads/') ? 'Upload New Avatar...' : 'Choose Avatar Image...')}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          setAvatarFileName(f.name);
+                          setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar', isRecrop: false });
+                        }
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+
+                  {(user?.avatar_original_url || user?.avatar_url) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const src = user.avatar_original_url || user.avatar_url;
+                        if (src) {
+                          setCropModal({ isOpen: true, file: src, title: 'Adjust Avatar Position & Crop', aspectRatio: 1, target: 'avatar', isRecrop: true });
+                        }
+                      }}
+                      className="btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
+                    >
+                      <Crop size={15} />
+                      <span>Adjust Crop</span>
+                    </button>
+                  )}
+                </div>
               </div>
+
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Header Banner Image (URL or Direct Upload)</label>
-                <input
-                  type="text"
-                  placeholder={bannerUrl.startsWith('/uploads/') ? 'Uploaded Banner active (or paste external URL...)' : 'https://example.com/banner.jpg'}
-                  value={bannerUrl.startsWith('/uploads/') ? '' : bannerUrl}
-                  onChange={e => setBannerUrl(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', marginBottom: '0.4rem' }}
-                />
-                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
-                  <Upload size={15} />
-                  <span>{bannerFileName || (bannerUrl.startsWith('/uploads/') ? 'Uploaded Banner (Click to change)' : 'Choose Banner Image...')}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => {
-                      const f = e.target.files?.[0];
-                      if (f) {
-                        setBannerFileName(f.name);
-                        setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
-                      }
-                    }}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Header Banner Image</label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
+                    <Upload size={15} />
+                    <span>{bannerFileName || (bannerUrl.startsWith('/uploads/') ? 'Upload New Banner...' : 'Choose Banner Image...')}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          setBannerFileName(f.name);
+                          setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner', isRecrop: false });
+                        }
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+
+                  {(user?.banner_original_url || user?.banner_url) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const src = user.banner_original_url || user.banner_url;
+                        if (src) {
+                          setCropModal({ isOpen: true, file: src, title: 'Adjust Banner Position & Crop', aspectRatio: 3, target: 'banner', isRecrop: true });
+                        }
+                      }}
+                      className="btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
+                    >
+                      <Crop size={15} />
+                      <span>Adjust Crop</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -853,9 +880,9 @@ export const AccountSettingsPage: React.FC = () => {
         aspectRatio={cropModal.aspectRatio}
         onCropComplete={(croppedFile) => {
           if (cropModal.target === 'avatar') {
-            handleAvatarFileUpload(croppedFile);
+            handleAvatarFileUpload(croppedFile, cropModal.isRecrop);
           } else if (cropModal.target === 'banner') {
-            handleBannerFileUpload(croppedFile);
+            handleBannerFileUpload(croppedFile, cropModal.isRecrop);
           }
         }}
         onClose={() => setCropModal({ ...cropModal, isOpen: false, file: null })}

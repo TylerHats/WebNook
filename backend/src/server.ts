@@ -100,14 +100,21 @@ app.get('/uploads/:filename', async (req, res) => {
 
     // 2. Check if file belongs to a User Nook Profile (avatar, banner, bg_music, sticker, guestbook)
     const ownerUser = await queryOne<any>(
-      `SELECT u.id, u.username, u.role, n.visibility_nook 
+      `SELECT u.id, u.username, u.role, u.avatar_url, u.avatar_original_url, n.visibility_nook 
        FROM users u 
        LEFT JOIN nooks n ON n.user_id = u.id 
-       WHERE u.avatar_url LIKE ? OR u.banner_url LIKE ?`,
-      [`%${filename}%`, `%${filename}%`]
+       WHERE u.avatar_url LIKE ? OR u.banner_url LIKE ? OR u.avatar_original_url LIKE ? OR u.banner_original_url LIKE ?`,
+      [`%${filename}%`, `%${filename}%`, `%${filename}%`, `%${filename}%`]
     );
 
-    // If file belongs to a user whose Nook is private
+    // Profile Avatars (avatar_*) are public user profile pictures and MUST always be viewable by everyone!
+    const isAvatar = filename.startsWith('avatar_') || (ownerUser && (ownerUser.avatar_url?.includes(filename) || ownerUser.avatar_original_url?.includes(filename)));
+
+    if (isAvatar) {
+      return res.sendFile(filePath);
+    }
+
+    // If non-avatar file belongs to a user whose Nook is private
     if (ownerUser && ownerUser.visibility_nook === 'private') {
       if (!requestingUser) {
         return res.status(403).send('Access denied: This file belongs to a private Nook');
@@ -116,10 +123,7 @@ app.get('/uploads/:filename', async (req, res) => {
       const isOwner = requestingUser.id === ownerUser.id;
       const isAdmin = requestingUser.role === 'admin';
 
-      // Avatars are viewable by any authenticated user or friend
-      const isAvatar = filename.startsWith('avatar_') || ownerUser.avatar_url?.includes(filename);
-
-      if (!isOwner && !isAdmin && !isAvatar) {
+      if (!isOwner && !isAdmin) {
         // Check for accepted OR pending friend relationship (both requestor & requestee)
         const friendRow = await queryOne(
           `SELECT id FROM friends 

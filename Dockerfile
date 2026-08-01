@@ -40,7 +40,7 @@ COPY frontend/ ./frontend/
 COPY .git ./.git
 
 # Install setup dependencies including devDependencies so npm run build can compile TypeScript & Vite assets
-RUN NODE_ENV=development npm install --include=dev && cd backend && NODE_ENV=development npm install --include=dev && cd ../frontend && NODE_ENV=development npm install --include=dev
+RUN NODE_ENV=development npm install --include=dev --no-audit --no-fund && cd backend && NODE_ENV=development npm install --include=dev --no-audit --no-fund && cd ../frontend && NODE_ENV=development npm install --include=dev --no-audit --no-fund
 
 # Copy compiled dist files
 COPY --from=builder /app/backend/dist ./backend/dist

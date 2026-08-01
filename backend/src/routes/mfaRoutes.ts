@@ -130,17 +130,24 @@ router.post('/passkey/register-verify', authenticateToken, async (req: Authentic
       return res.status(400).json({ error: 'Registration challenge expired' });
     }
 
+    const origin = getOrigin(req);
+    const rpID = getRpId(req);
+    const origins = Array.from(new Set([origin, req.headers.origin].filter(Boolean) as string[]));
+
     const verification = await verifyRegistrationResponse({
       response: req.body,
       expectedChallenge,
-      expectedOrigin: getOrigin(req),
-      expectedRPID: getRpId(req)
+      expectedOrigin: origins.length === 1 ? origins[0] : origins,
+      expectedRPID: rpID
     });
 
     const { verified, registrationInfo } = verification;
 
     if (verified && registrationInfo) {
-      const { credentialID, credentialPublicKey, counter } = registrationInfo;
+      const credentialID = req.body.id || Buffer.from(registrationInfo.credentialID).toString('base64url');
+      const credentialPublicKey = registrationInfo.credentialPublicKey;
+      const counter = registrationInfo.counter ?? 0;
+      const transports = req.body.response?.transports || [];
 
       await execute(
         'INSERT INTO passkey_credentials (id, user_id, public_key, counter, transports) VALUES (?, ?, ?, ?, ?)',
@@ -149,7 +156,7 @@ router.post('/passkey/register-verify', authenticateToken, async (req: Authentic
           user.id,
           Buffer.from(credentialPublicKey).toString('base64'),
           counter,
-          JSON.stringify(req.body.response.transports || [])
+          JSON.stringify(transports)
         ]
       );
 
@@ -216,21 +223,27 @@ router.post('/passkey/login-verify', async (req: AuthenticatedRequest, res: Resp
       return res.status(400).json({ error: 'Associated user account not found' });
     }
 
+    const origin = getOrigin(req);
+    const rpID = getRpId(req);
+    const origins = Array.from(new Set([origin, req.headers.origin].filter(Boolean) as string[]));
+
     const verification = await verifyAuthenticationResponse({
       response,
       expectedChallenge,
-      expectedOrigin: getOrigin(req),
-      expectedRPID: getRpId(req),
+      expectedOrigin: origins.length === 1 ? origins[0] : origins,
+      expectedRPID: rpID,
       authenticator: {
         credentialID: passkey.id,
         credentialPublicKey: Buffer.from(passkey.public_key, 'base64'),
-        counter: passkey.counter
+        counter: passkey.counter,
+        transports: passkey.transports ? JSON.parse(passkey.transports) : undefined
       }
     });
 
     if (verification.verified) {
+      const newCounter = verification.authenticationInfo?.newCounter ?? passkey.counter;
       await execute('UPDATE passkey_credentials SET counter = ? WHERE id = ?', [
-        verification.authenticationInfo.newCounter,
+        newCounter,
         passkey.id
       ]);
 

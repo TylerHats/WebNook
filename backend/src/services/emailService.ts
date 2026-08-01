@@ -55,43 +55,67 @@ export async function sendStyledEmail(options: EmailOptions): Promise<boolean> {
 
     const htmlContent = `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${options.title}</title>
       <style>
-        body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0b0c10; color: #e0e0e0; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #12131c; border-radius: 12px; border: 1px solid #2a2b3d; overflow: hidden; }
-        .header { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); padding: 24px; text-align: center; color: #ffffff; }
-        .header h1 { margin: 0; font-size: 24px; font-weight: 800; }
-        .content { padding: 32px 24px; font-size: 15px; line-height: 1.6; color: #d1d5db; }
-        .title { font-size: 20px; font-weight: 700; color: #ffffff; margin-top: 0; margin-bottom: 16px; }
-        .reason-box { background-color: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 16px; border-radius: 6px; color: #fca5a5; margin: 16px 0; }
-        .btn { display: inline-block; background-color: #6366f1; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 20px; text-align: center; }
-        .footer { background-color: #0a0b10; padding: 16px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f202e; }
+        body { margin: 0; padding: 0; background-color: #0b0c10; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        a { color: #818cf8; text-decoration: underline; }
       </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>${appName}</h1>
-        </div>
-        <div class="content">
-          <div class="title">${options.title}</div>
-          ${options.bodyHtml}
-          ${options.actionUrl && options.actionText ? `<div style="text-align: center; margin: 24px 0;"><a href="${options.actionUrl}" class="btn">${options.actionText}</a></div>` : ''}
-          ${options.safetyUrl ? `
-            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
-              <p style="font-size: 12px; color: #9ca3af; margin: 0; word-break: break-all;">
-                If the button above does not work, copy and paste this link into your browser:<br>
-                <a href="${options.safetyUrl}" style="color: #6366f1; text-decoration: underline;">${options.safetyUrl}</a>
-              </p>
-            </div>
-          ` : ''}
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} ${appName}
-        </div>
-      </div>
+    <body style="margin: 0; padding: 20px 0; background-color: #0b0c10; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0b0c10; width: 100%;">
+        <tr>
+          <td align="center" style="padding: 10px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%; background-color: #151728; border-radius: 12px; border: 1px solid #2d314e; overflow: hidden;">
+              <!-- Header Banner -->
+              <tr>
+                <td align="center" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); padding: 28px 20px; color: #ffffff;">
+                  <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px;">${appName}</h1>
+                </td>
+              </tr>
+              <!-- Content Body -->
+              <tr>
+                <td style="padding: 32px 28px; background-color: #151728; color: #f8fafc; font-size: 15px; line-height: 1.6;">
+                  <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; margin: 0 0 16px 0;">${options.title}</h2>
+                  <div style="color: #e2e8f0; font-size: 15px; line-height: 1.6;">
+                    ${options.bodyHtml}
+                  </div>
+                  
+                  ${options.actionUrl && options.actionText ? `
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0 20px 0;">
+                      <tr>
+                        <td align="center">
+                          <a href="${options.actionUrl}" target="_blank" style="background-color: #6366f1; color: #ffffff !important; display: inline-block; padding: 14px 30px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 8px; text-align: center; border: 1px solid #4f46e5; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
+                            <span style="color: #ffffff !important; text-decoration: none; font-weight: 700;">${options.actionText}</span>
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  ` : ''}
+
+                  ${options.safetyUrl ? `
+                    <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #2d314e;">
+                      <p style="font-size: 13px; color: #94a3b8; margin: 0; word-break: break-all; line-height: 1.5;">
+                        If the button above does not work, copy and paste this link into your browser:<br>
+                        <a href="${options.safetyUrl}" target="_blank" style="color: #818cf8 !important; text-decoration: underline; font-weight: 600;"><span style="color: #818cf8 !important;">${options.safetyUrl}</span></a>
+                      </p>
+                    </div>
+                  ` : ''}
+                </td>
+              </tr>
+              <!-- Footer -->
+              <tr>
+                <td align="center" style="background-color: #0d0e17; padding: 18px; font-size: 12px; color: #94a3b8; border-top: 1px solid #2d314e;">
+                  &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
     `;
