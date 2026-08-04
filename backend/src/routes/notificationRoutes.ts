@@ -12,13 +12,16 @@ export async function createNotification(
   title: string,
   message: string,
   linkUrl: string = '',
-  linkTitle: string = ''
+  linkTitle: string = '',
+  skipNoticeDbRow: boolean = false
 ) {
   try {
-    await execute(
-      'INSERT INTO notifications (user_id, type, sender_id, title, message, link_url, link_title) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [userId, type, senderId, title, message, linkUrl, linkTitle]
-    );
+    if (!skipNoticeDbRow) {
+      await execute(
+        'INSERT INTO notifications (user_id, type, sender_id, title, message, link_url, link_title) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [userId, type, senderId, title, message, linkUrl, linkTitle]
+      );
+    }
 
     // Check user email notification preferences
     const recipient = await queryOne<any>('SELECT email, username, notify_email_guestbook, notify_email_friends, notify_email_system FROM users WHERE id = ?', [userId]);

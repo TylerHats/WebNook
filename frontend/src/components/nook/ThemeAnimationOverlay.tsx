@@ -235,7 +235,7 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
               style={{
                 position: 'absolute',
                 top: `${topPos}%`,
-                left: '-25%',
+                left: '-200px',
                 opacity: 0.95,
                 filter: 'drop-shadow(0 8px 18px rgba(2, 132, 199, 0.45))',
                 animation: `cloudFloatRight ${duration}s linear infinite`,

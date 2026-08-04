@@ -1039,7 +1039,7 @@ input, textarea, select {
 
 @keyframes cloudFloatRight {
   0% { transform: translateX(0); }
-  100% { transform: translateX(120vw); }
+  100% { transform: translateX(calc(100vw + 380px)); }
 }
 
 @keyframes pixelPulse {
@@ -1295,6 +1295,34 @@ input, textarea, select {
   .nook-panel {
     padding: 0.75rem 0.6rem !important;
     border-radius: 12px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .nook-container {
+    padding: 0.35rem 0.15rem !important;
+  }
+
+  .nook-panel {
+    padding: 0.6rem 0.45rem !important;
+    border-radius: 10px !important;
+  }
+
+  .nook-panel-header {
+    font-size: 0.95rem !important;
+    padding-bottom: 0.4rem !important;
+    margin-bottom: 0.6rem !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .nook-container {
+    padding: 0.2rem 0.1rem !important;
+  }
+
+  .nook-panel {
+    padding: 0.5rem 0.35rem !important;
+    border-radius: 8px !important;
   }
 }
 

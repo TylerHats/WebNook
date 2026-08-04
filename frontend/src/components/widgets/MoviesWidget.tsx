@@ -40,7 +40,7 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
           No favorite movies or TV shows added yet 🍿
         </p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '1rem', justifyContent: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))', gap: '0.75rem', justifyContent: 'start' }}>
           {movieList.map((m, idx) => {
             const isFullUrl = m.overview && (m.overview.startsWith('http://') || m.overview.startsWith('https://'));
             const movieUrl = isFullUrl ? m.overview! : (m.title ? `https://www.themoviedb.org/search?query=${encodeURIComponent(m.title)}` : '#');
@@ -51,7 +51,8 @@ export const MoviesWidget: React.FC<MoviesWidgetProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  width: '135px',
+                  width: '100%',
+                  minWidth: 0,
                   background: 'rgba(0,0,0,0.2)',
                   borderRadius: '10px',
                   border: '1px solid var(--border-color)',

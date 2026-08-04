@@ -27,16 +27,24 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
   const [error, setError] = useState(false);
 
   const targetIdentifier = (steamInput || steamId64 || steamId || '').trim();
+  const [debouncedTarget, setDebouncedTarget] = useState(targetIdentifier);
 
   useEffect(() => {
-    if (!targetIdentifier || targetIdentifier === '76561198000000000') {
+    const timer = setTimeout(() => {
+      setDebouncedTarget(targetIdentifier);
+    }, 750);
+    return () => clearTimeout(timer);
+  }, [targetIdentifier]);
+
+  useEffect(() => {
+    if (!debouncedTarget || debouncedTarget === '76561198000000000') {
       setLoading(false);
       setData(null);
       return;
     }
     setLoading(true);
     setError(false);
-    fetch(`/api/integrations/steam/${encodeURIComponent(targetIdentifier)}`)
+    fetch(`/api/integrations/steam/${encodeURIComponent(debouncedTarget)}`)
       .then(res => {
         if (!res.ok) throw new Error('Steam fetch failed');
         return res.json();
@@ -49,7 +57,7 @@ export const SteamWidget: React.FC<SteamWidgetProps> = ({
         setError(true);
         setLoading(false);
       });
-  }, [targetIdentifier]);
+  }, [debouncedTarget]);
 
   const minContainerHeight = displayMode === 'none' ? '120px' : (displayMode === 'both' ? '390px' : '260px');
 

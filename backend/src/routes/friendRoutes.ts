@@ -89,14 +89,16 @@ router.post('/request', authenticateToken, async (req: AuthenticatedRequest, res
       targetUser.id
     ]);
 
-    // Send notification notice to target user
+    // Send email notification to target user (skipping duplicate Notice DB row since request lives in Requests tab)
     await createNotification(
       targetUser.id,
       'friend_request',
       sender.id,
       'New Friend Request 🤝',
       `@${sender.username} sent you a friend request! Click to view and respond.`,
-      `/nook/${sender.username}`
+      `/nook/${sender.username}`,
+      'View Request',
+      true
     );
 
     return res.json({ message: `Friend request sent to @${targetUser.username}!` });

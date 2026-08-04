@@ -414,8 +414,8 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
                       <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{tr.title}</span>
                     </div>
 
-                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.8, background: 'rgba(255,255,255,0.08)', padding: '0.15rem 0.5rem', borderRadius: '10px', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                      {tr.type === 'audio' ? 'MP3' : tr.type}
+                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.85, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
+                      {tr.type === 'spotify' ? 'SPOTIFY' : tr.type === 'apple' ? 'APPLE MUSIC' : tr.type === 'audio' ? 'MP3' : tr.type}
                     </span>
                   </div>
                 ))}

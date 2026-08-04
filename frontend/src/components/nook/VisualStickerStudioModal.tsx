@@ -152,11 +152,11 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '1rem',
+          gap: '0.75rem 1rem',
           flexWrap: 'wrap'
         }}>
           {/* Title & Description Container */}
-          <div style={{ flex: '1 1 320px', minWidth: 0 }}>
+          <div style={{ flex: '1 1 240px', minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Sparkles size={22} style={{ color: 'var(--accent-color, #6366f1)', flexShrink: 0 }} />
               <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#ffffff', letterSpacing: '0.3px' }}>
@@ -169,7 +169,7 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
           </div>
 
           {/* Action Buttons Container */}
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '0.5rem 0.75rem', alignItems: 'center', flexWrap: 'wrap', maxWidth: '100%' }}>
             {/* Ghost Cards Mode Toggle Button */}
             <button
               onClick={() => setGhostCards(!ghostCards)}
@@ -184,22 +184,21 @@ export const VisualStickerStudioModal: React.FC<VisualStickerStudioModalProps> =
                 color: '#ffffff',
                 border: ghostCards ? '1px solid var(--accent-color, #6366f1)' : '1px solid rgba(255,255,255,0.25)',
                 fontWeight: 600,
-                flexShrink: 0,
                 whiteSpace: 'nowrap'
               }}
               title="Ghost Cards Mode lets you click & drag stickers positioned behind cards!"
             >
               <Ghost size={16} color={ghostCards ? 'var(--accent-color, #6366f1)' : '#fff'} style={{ flexShrink: 0 }} />
-              <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>{ghostCards ? 'Ghost Cards ON' : 'Ghost Cards OFF'}</span>
+              <span>{ghostCards ? 'Ghost Cards ON' : 'Ghost Cards OFF'}</span>
             </button>
 
             <button
               onClick={handleSaveAndClose}
               className="btn-primary"
-              style={{ padding: '0.45rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              style={{ padding: '0.45rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
             >
               <Save size={16} style={{ flexShrink: 0 }} />
-              <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>Save Stickers & Return</span>
+              <span>Save Stickers & Return</span>
             </button>
 
             <button

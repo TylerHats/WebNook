@@ -263,7 +263,8 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
           onTouchEnd={handleTouchEnd}
           style={{
             width: '100%',
-            height: '300px',
+            aspectRatio: '4 / 3',
+            maxHeight: '300px',
             borderRadius: '10px',
             overflow: 'hidden',
             cursor: isDragging ? 'grabbing' : 'grab',
@@ -278,7 +279,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             ref={canvasRef}
             width={400}
             height={300}
-            style={{ width: '100%', height: '100%', display: 'block' }}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
           />
         </div>
 

@@ -63,7 +63,7 @@ export const BooksWidget: React.FC<BooksWidgetProps> = ({
           No favorite books added yet 📖
         </p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 135px)', gap: '1rem', justifyContent: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))', gap: '0.75rem', justifyContent: 'start' }}>
           {bookList.map((b, idx) => {
             const bookUrl = (b.title ? `https://openlibrary.org/search?q=${encodeURIComponent(b.title + (b.author ? ' ' + b.author : ''))}` : '#');
             return (
@@ -73,7 +73,8 @@ export const BooksWidget: React.FC<BooksWidgetProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  width: '135px',
+                  width: '100%',
+                  minWidth: 0,
                   background: 'rgba(0,0,0,0.2)',
                   borderRadius: '10px',
                   border: '1px solid var(--border-color)',

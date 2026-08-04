@@ -1518,7 +1518,9 @@ export const NookCustomizerPage: React.FC = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
                               <span style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.6 }}>#{trIdx + 1}</span>
                               <span style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr.title}</span>
-                              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.7, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>{tr.type}</span>
+                              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.85, background: 'rgba(255,255,255,0.12)', padding: '0.15rem 0.5rem', borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>
+                                {tr.type === 'spotify' ? 'SPOTIFY' : tr.type === 'apple' ? 'APPLE MUSIC' : tr.type === 'audio' ? 'MP3' : tr.type}
+                              </span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                               <button

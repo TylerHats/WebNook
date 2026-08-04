@@ -27,6 +27,41 @@ async function getRelationship(visitorId: number | null, ownerId: number): Promi
   return 'public';
 }
 
+// Public / Authenticated System About Endpoint
+router.get('/about', async (req: Request, res: Response) => {
+  try {
+    const channelRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "update_channel"');
+    const channel = channelRow?.value || 'stable';
+
+    const installedVersionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "installed_version"');
+    let version = installedVersionRow?.value || '3.3.0';
+
+    let currentPkgVersion = '3.3.0';
+    try {
+      const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8'));
+      if (rootPkg && rootPkg.version) currentPkgVersion = rootPkg.version;
+    } catch (e) {}
+
+    if (!version) version = currentPkgVersion;
+
+    const latestRelease = {
+      tag: version.startsWith('v') ? version : `v${version}`,
+      name: `WebNook ${version.startsWith('v') ? version : `v${version}`}`,
+      notes: `WebNook Release ${version.startsWith('v') ? version : `v${version}`} — Features custom whitelabel branding, real-time messaging & reactions, responsive nook customization, theme engine, visual sticker studio, PWA support, and self-updater migrations.`,
+      published_at: new Date().toISOString()
+    };
+
+    return res.json({
+      currentVersion: version.startsWith('v') ? version : `v${version}`,
+      channel,
+      githubUrl: 'https://github.com/TylerHats/WebNook',
+      latestRelease
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch system about info' });
+  }
+});
+
 // Get Nook Profile by username
 router.get('/profile/:username', async (req: Request, res: Response) => {
   try {
@@ -162,17 +197,28 @@ const uploadMedia = multer({
 import { processImageUpload, processAudioUpload } from '../services/mediaService';
 
 // Upload User Avatar Image File
-router.post('/upload/avatar', authenticateToken, uploadMedia.single('avatar'), async (req: AuthenticatedRequest, res: Response) => {
+// Upload User Avatar Image File
+router.post('/upload/avatar', authenticateToken, uploadMedia.fields([{ name: 'avatar', maxCount: 1 }, { name: 'avatar_original', maxCount: 1 }]), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.file) {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const avatarFile = files?.['avatar']?.[0] || req.file;
+    const originalFile = files?.['avatar_original']?.[0];
+
+    if (!avatarFile) {
       return res.status(400).json({ error: 'No avatar image file uploaded' });
     }
 
     const isRecrop = req.query.is_recrop === 'true' || req.body?.is_recrop === 'true';
-    const webpFilename = await processImageUpload(req.file.path, uploadsDir, 'avatar');
+    const webpFilename = await processImageUpload(avatarFile.path, uploadsDir, 'avatar');
     const avatarUrl = `/uploads/${webpFilename}`;
 
-    if (isRecrop) {
+    let avatarOriginalUrl = avatarUrl;
+    if (originalFile) {
+      const origWebpFilename = await processImageUpload(originalFile.path, uploadsDir, 'avatar_orig');
+      avatarOriginalUrl = `/uploads/${origWebpFilename}`;
+    }
+
+    if (isRecrop && !originalFile) {
       await execute('UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
         avatarUrl,
         req.user!.id
@@ -180,7 +226,7 @@ router.post('/upload/avatar', authenticateToken, uploadMedia.single('avatar'), a
     } else {
       await execute('UPDATE users SET avatar_url = ?, avatar_original_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
         avatarUrl,
-        avatarUrl,
+        avatarOriginalUrl,
         req.user!.id
       ]);
     }
@@ -199,17 +245,27 @@ router.post('/upload/avatar', authenticateToken, uploadMedia.single('avatar'), a
 });
 
 // Upload User Banner Image File
-router.post('/upload/banner', authenticateToken, uploadMedia.single('banner'), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/upload/banner', authenticateToken, uploadMedia.fields([{ name: 'banner', maxCount: 1 }, { name: 'banner_original', maxCount: 1 }]), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.file) {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const bannerFile = files?.['banner']?.[0] || req.file;
+    const originalFile = files?.['banner_original']?.[0];
+
+    if (!bannerFile) {
       return res.status(400).json({ error: 'No banner image file uploaded' });
     }
 
     const isRecrop = req.query.is_recrop === 'true' || req.body?.is_recrop === 'true';
-    const webpFilename = await processImageUpload(req.file.path, uploadsDir, 'banner');
+    const webpFilename = await processImageUpload(bannerFile.path, uploadsDir, 'banner');
     const bannerUrl = `/uploads/${webpFilename}`;
 
-    if (isRecrop) {
+    let bannerOriginalUrl = bannerUrl;
+    if (originalFile) {
+      const origWebpFilename = await processImageUpload(originalFile.path, uploadsDir, 'banner_orig');
+      bannerOriginalUrl = `/uploads/${origWebpFilename}`;
+    }
+
+    if (isRecrop && !originalFile) {
       await execute('UPDATE users SET banner_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
         bannerUrl,
         req.user!.id
@@ -217,7 +273,7 @@ router.post('/upload/banner', authenticateToken, uploadMedia.single('banner'), a
     } else {
       await execute('UPDATE users SET banner_url = ?, banner_original_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
         bannerUrl,
-        bannerUrl,
+        bannerOriginalUrl,
         req.user!.id
       ]);
     }

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { usePWA } from '../context/PWAContext';
 import { startRegistration } from '@simplewebauthn/browser';
-import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail, Smile, Upload, Smartphone, Download, AlertTriangle, X, Crop } from 'lucide-react';
+import { ShieldCheck, KeyRound, QrCode, User, Save, Trash2, CheckCircle2, Mail, Smile, Upload, Smartphone, Download, AlertTriangle, X, Crop, Info, ExternalLink, GitBranch, Github, Sparkles, Globe, Lock } from 'lucide-react';
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 
 export const AccountSettingsPage: React.FC = () => {
@@ -25,6 +25,45 @@ export const AccountSettingsPage: React.FC = () => {
   const [bannerFileName, setBannerFileName] = useState('');
   const [statusMessage, setStatusMessage] = useState(user?.status_message || '');
   const [statusEmoji, setStatusEmoji] = useState(user?.status_emoji || '');
+
+  // Nook Privacy State
+  const [nookVisibility, setNookVisibility] = useState<'public' | 'private'>('private');
+
+  const fetchNookPrivacy = () => {
+    if (!token) return;
+    fetch('/api/nook/settings/mine', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.nookSettings?.visibility_nook) {
+          setNookVisibility(data.nookSettings.visibility_nook as any);
+        }
+      })
+      .catch(err => console.error('Error fetching nook privacy:', err));
+  };
+
+  const handleUpdateNookPrivacy = async (newVal: 'public' | 'private') => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/nook/customize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ visibility_nook: newVal })
+      });
+      if (res.ok) {
+        setNookVisibility(newVal);
+        showToast(`Nook privacy set to ${newVal === 'public' ? 'Public 🌐' : 'Private (Friends Only) 🔒'}!`, 'success');
+      } else {
+        showToast('Failed to update Nook privacy', 'error');
+      }
+    } catch (e) {
+      showToast('Error updating Nook privacy', 'error');
+    }
+  };
 
   // Message reaction preferences
   const [reactionEmojis, setReactionEmojis] = useState<string[]>(['👍', '❤️', '😂', '🔥', '😮', '🎉']);
@@ -60,6 +99,25 @@ export const AccountSettingsPage: React.FC = () => {
 
   // Passkeys list
   const [passkeys, setPasskeys] = useState<any[]>([]);
+
+  // About WebNook Modal State
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
+  const [aboutInfo, setAboutInfo] = useState<any>(null);
+  const [isAboutLoading, setIsAboutLoading] = useState(false);
+
+  const fetchAboutInfo = () => {
+    setIsAboutLoading(true);
+    fetch('/api/nook/about')
+      .then(res => res.json())
+      .then(data => {
+        setAboutInfo(data);
+        setIsAboutLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setIsAboutLoading(false);
+      });
+  };
 
   useEffect(() => {
     if (token) {
@@ -261,10 +319,16 @@ export const AccountSettingsPage: React.FC = () => {
     }
   };
 
-  const handleAvatarFileUpload = async (file: File | null, isRecrop = false) => {
-    if (!file || !token) return;
+  const [rawAvatarFile, setRawAvatarFile] = useState<File | null>(null);
+  const [rawBannerFile, setRawBannerFile] = useState<File | null>(null);
+
+  const handleAvatarFileUpload = async (croppedFile: File | null, originalFile: File | null = null, isRecrop = false) => {
+    if (!croppedFile || !token) return;
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append('avatar', croppedFile);
+    if (originalFile) {
+      formData.append('avatar_original', originalFile);
+    }
     try {
       const res = await fetch(`/api/nook/upload/avatar?is_recrop=${isRecrop}`, {
         method: 'POST',
@@ -284,10 +348,13 @@ export const AccountSettingsPage: React.FC = () => {
     }
   };
 
-  const handleBannerFileUpload = async (file: File | null, isRecrop = false) => {
-    if (!file || !token) return;
+  const handleBannerFileUpload = async (croppedFile: File | null, originalFile: File | null = null, isRecrop = false) => {
+    if (!croppedFile || !token) return;
     const formData = new FormData();
-    formData.append('banner', file);
+    formData.append('banner', croppedFile);
+    if (originalFile) {
+      formData.append('banner_original', originalFile);
+    }
     try {
       const res = await fetch(`/api/nook/upload/banner?is_recrop=${isRecrop}`, {
         method: 'POST',
@@ -333,10 +400,24 @@ export const AccountSettingsPage: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', padding: '2rem 1rem' }}>
-      <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <ShieldCheck size={28} color="var(--accent-color)" />
-        <span>Account & Security Settings</span>
-      </h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <ShieldCheck size={28} color="var(--accent-color)" />
+          <span>Account & Security Settings</span>
+        </h1>
+        <button
+          type="button"
+          onClick={() => {
+            setIsAboutModalOpen(true);
+            fetchAboutInfo();
+          }}
+          className="btn-secondary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.9rem', fontSize: '0.85rem', fontWeight: 700 }}
+        >
+          <Info size={17} color="var(--accent-color)" />
+          <span>About WebNook</span>
+        </button>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Profile Information Form */}
@@ -381,6 +462,7 @@ export const AccountSettingsPage: React.FC = () => {
                       onChange={e => {
                         const f = e.target.files?.[0];
                         if (f) {
+                          setRawAvatarFile(f);
                           setAvatarFileName(f.name);
                           setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar Image', aspectRatio: 1, target: 'avatar', isRecrop: false });
                         }
@@ -420,6 +502,7 @@ export const AccountSettingsPage: React.FC = () => {
                       onChange={e => {
                         const f = e.target.files?.[0];
                         if (f) {
+                          setRawBannerFile(f);
                           setBannerFileName(f.name);
                           setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner', isRecrop: false });
                         }
@@ -463,6 +546,65 @@ export const AccountSettingsPage: React.FC = () => {
               <span>Save Profile Info</span>
             </button>
           </form>
+        </div>
+
+        {/* Nook Privacy & Access Control */}
+        <div className="nook-panel">
+          <div className="nook-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Globe size={20} style={{ flexShrink: 0 }} />
+            <span>Nook Profile Privacy & Visibility</span>
+          </div>
+          <p style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.5, marginBottom: '1rem' }}>
+            Choose who can view your Nook profile page. You can switch between Public and Private at any time.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            <div
+              onClick={() => handleUpdateNookPrivacy('public')}
+              style={{
+                background: nookVisibility === 'public' ? 'rgba(99, 102, 241, 0.18)' : 'rgba(0,0,0,0.2)',
+                border: nookVisibility === 'public' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                borderRadius: '12px',
+                padding: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Globe size={18} color={nookVisibility === 'public' ? 'var(--accent-color)' : 'inherit'} />
+                  <span>Public Nook</span>
+                </span>
+                {nookVisibility === 'public' && <span style={{ fontSize: '0.72rem', background: 'var(--accent-color)', color: '#fff', padding: '0.15rem 0.55rem', borderRadius: '10px', fontWeight: 700 }}>ACTIVE</span>}
+              </div>
+              <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.75, lineHeight: 1.4 }}>
+                Anyone on the web can visit your Nook URL and view your profile, music, and widgets.
+              </p>
+            </div>
+
+            <div
+              onClick={() => handleUpdateNookPrivacy('private')}
+              style={{
+                background: nookVisibility === 'private' ? 'rgba(99, 102, 241, 0.18)' : 'rgba(0,0,0,0.2)',
+                border: nookVisibility === 'private' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                borderRadius: '12px',
+                padding: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Lock size={18} color={nookVisibility === 'private' ? 'var(--accent-color)' : 'inherit'} />
+                  <span>Private (Friends Only)</span>
+                </span>
+                {nookVisibility === 'private' && <span style={{ fontSize: '0.72rem', background: 'var(--accent-color)', color: '#fff', padding: '0.15rem 0.55rem', borderRadius: '10px', fontWeight: 700 }}>ACTIVE</span>}
+              </div>
+              <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.75, lineHeight: 1.4 }}>
+                Only accepted friends can view your Nook profile. Unauthenticated users and non-friends will see a private profile message.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Mobile PWA & App Installation Card */}
@@ -873,6 +1015,100 @@ export const AccountSettingsPage: React.FC = () => {
         </div>
       )}
 
+      {/* About WebNook Popup Modal */}
+      {isAboutModalOpen && (
+        <div className="custom-modal-backdrop" onClick={() => setIsAboutModalOpen(false)}>
+          <div className="custom-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <img src="/branding/logo.png" alt="WebNook" style={{ height: '36px', width: 'auto', borderRadius: '6px' }} onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span>WebNook</span>
+                    <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.55rem', borderRadius: '12px', background: 'var(--accent-color)', color: '#fff', fontWeight: 700 }}>
+                      {aboutInfo?.currentVersion || 'v3.3.0'}
+                    </span>
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', opacity: 0.7, marginTop: '2px' }}>Your Cozy Digital Corner of the Web</div>
+                </div>
+              </div>
+              <button type="button" onClick={() => setIsAboutModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {isAboutLoading ? (
+              <div style={{ textAlign: 'center', padding: '2.5rem', opacity: 0.7 }}>
+                <Sparkles size={28} className="animate-spin" style={{ margin: '0 auto 0.5rem', color: 'var(--accent-color)' }} />
+                <p style={{ fontSize: '0.85rem' }}>Fetching release notes & system info...</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                {/* System Info Badges Row */}
+                <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '140px', background: 'rgba(0,0,0,0.25)', padding: '0.65rem 0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.72rem', opacity: 0.7, textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <GitBranch size={13} color="var(--accent-color)" />
+                      <span>Active Branch / Channel</span>
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, textTransform: 'capitalize' }}>
+                      {aboutInfo?.channel ? `${aboutInfo.channel} (main)` : 'main (stable)'}
+                    </div>
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: '140px', background: 'rgba(0,0,0,0.25)', padding: '0.65rem 0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.72rem', opacity: 0.7, textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>
+                      <span>Current Release</span>
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-color)' }}>
+                      {aboutInfo?.latestRelease?.tag || aboutInfo?.currentVersion || 'v3.3.0'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Release Change Notes */}
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.9rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-color)' }}>
+                    <Sparkles size={15} />
+                    <span>Latest Release Notes & Features:</span>
+                  </div>
+                  <p style={{ fontSize: '0.83rem', lineHeight: 1.5, opacity: 0.9, margin: 0, whiteSpace: 'pre-wrap' }}>
+                    {aboutInfo?.latestRelease?.notes || 'WebNook v3.3.0 brings passkey PC authenticator compatibility, Steam showcase input debouncing, Cloud theme edge animation improvements, deduplicated friend requests, Nook Public vs Private settings, full original image crop retention, and deleted user DM display improvements.'}
+                  </p>
+                </div>
+
+                {/* GitHub Repository Link Button */}
+                <a
+                  href={aboutInfo?.githubUrl || 'https://github.com/TylerHats/WebNook'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    padding: '0.7rem 1.2rem',
+                    textDecoration: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    borderRadius: 'var(--border-radius-btn)'
+                  }}
+                >
+                  <Github size={20} />
+                  <span>View Project Repository on GitHub</span>
+                  <ExternalLink size={16} style={{ marginLeft: 'auto' }} />
+                </a>
+
+                <div style={{ textAlign: 'center', fontSize: '0.75rem', opacity: 0.6, marginTop: '0.2rem' }}>
+                  Built with ❤️ for personal spaces and cozy web customization.
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <ImageCropModal
         isOpen={cropModal.isOpen}
         imageFile={cropModal.file}
@@ -880,9 +1116,9 @@ export const AccountSettingsPage: React.FC = () => {
         aspectRatio={cropModal.aspectRatio}
         onCropComplete={(croppedFile) => {
           if (cropModal.target === 'avatar') {
-            handleAvatarFileUpload(croppedFile, cropModal.isRecrop);
+            handleAvatarFileUpload(croppedFile, rawAvatarFile, cropModal.isRecrop);
           } else if (cropModal.target === 'banner') {
-            handleBannerFileUpload(croppedFile, cropModal.isRecrop);
+            handleBannerFileUpload(croppedFile, rawBannerFile, cropModal.isRecrop);
           }
         }}
         onClose={() => setCropModal({ ...cropModal, isOpen: false, file: null })}

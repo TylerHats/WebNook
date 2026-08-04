@@ -138,7 +138,8 @@ router.post('/passkey/register-verify', authenticateToken, async (req: Authentic
       response: req.body,
       expectedChallenge,
       expectedOrigin: origins.length === 1 ? origins[0] : origins,
-      expectedRPID: rpID
+      expectedRPID: rpID,
+      requireUserVerification: false
     });
 
     const { verified, registrationInfo } = verification;
@@ -232,6 +233,7 @@ router.post('/passkey/login-verify', async (req: AuthenticatedRequest, res: Resp
       expectedChallenge,
       expectedOrigin: origins.length === 1 ? origins[0] : origins,
       expectedRPID: rpID,
+      requireUserVerification: false,
       authenticator: {
         credentialID: passkey.id,
         credentialPublicKey: Buffer.from(passkey.public_key, 'base64'),

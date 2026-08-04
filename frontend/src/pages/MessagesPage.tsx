@@ -303,7 +303,7 @@ export const MessagesPage: React.FC = () => {
     }
 
     const otherMember = members.find((m: any) => m.id !== user?.id);
-    if (!otherMember) return 'Direct Message';
+    if (!otherMember) return 'Deleted User';
     return `@${otherMember.username} (${otherMember.display_name || otherMember.username})`;
   };
 
@@ -829,6 +829,10 @@ export const MessagesPage: React.FC = () => {
                         );
                       }
 
+                      const members = activeConv.members || [];
+                      const otherMember = members.find((m: any) => m.id !== user?.id);
+                      const isDeletedUserDM = activeConv.type === 'direct' && !otherMember;
+
                       return (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -839,9 +843,11 @@ export const MessagesPage: React.FC = () => {
                               <span>{getConvTitle(activeConv)}</span>
                               {isConvLocked && <Lock size={14} color="#ef4444" />}
                             </h3>
-                            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.6 }}>
-                              {activeConv.type === 'group' ? `${(activeConv.members || []).length} Members` : (isBugReportsChat ? 'Direct Support Channel' : 'System Announcement')}
-                            </p>
+                            {!isDeletedUserDM && (
+                              <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.6 }}>
+                                {activeConv.type === 'group' ? `${members.length} Members` : (isBugReportsChat ? 'Direct Support Channel' : 'System Announcement')}
+                              </p>
+                            )}
                           </div>
                         </div>
                       );
