@@ -110,6 +110,9 @@ export const UserOnboardingPage: React.FC = () => {
 
   const [visibilityNook, setVisibilityNook] = useState<'public' | 'friends' | 'private'>('public');
 
+  const [rawAvatarFile, setRawAvatarFile] = useState<File | null>(null);
+  const [rawBannerFile, setRawBannerFile] = useState<File | null>(null);
+
   const handleCompleteOnboarding = async () => {
     if (!token || !user) return;
     setIsSubmitting(true);
@@ -119,6 +122,9 @@ export const UserOnboardingPage: React.FC = () => {
       if (avatarFile) {
         const avatarFormData = new FormData();
         avatarFormData.append('avatar', avatarFile);
+        if (rawAvatarFile) {
+          avatarFormData.append('avatar_original', rawAvatarFile);
+        }
         await fetch('/api/nook/upload/avatar', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
@@ -130,6 +136,9 @@ export const UserOnboardingPage: React.FC = () => {
       if (bannerFile) {
         const bannerFormData = new FormData();
         bannerFormData.append('banner', bannerFile);
+        if (rawBannerFile) {
+          bannerFormData.append('banner_original', rawBannerFile);
+        }
         await fetch('/api/nook/upload/banner', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
@@ -250,17 +259,20 @@ export const UserOnboardingPage: React.FC = () => {
                         accept="image/*"
                         onChange={e => {
                           const f = e.target.files?.[0];
-                          if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar', aspectRatio: 1, target: 'avatar' });
+                          if (f) {
+                            setRawAvatarFile(f);
+                            setCropModal({ isOpen: true, file: f, title: 'Crop Profile Avatar', aspectRatio: 1, target: 'avatar' });
+                          }
                         }}
                         style={{ display: 'none' }}
                       />
                     </label>
 
-                    {(avatarFile || user?.avatar_original_url || user?.avatar_url) && (
+                    {(rawAvatarFile || user?.avatar_original_url || user?.avatar_url) && (
                       <button
                         type="button"
                         onClick={() => {
-                          const src = avatarFile || user?.avatar_original_url || user?.avatar_url;
+                          const src = rawAvatarFile || user?.avatar_original_url || user?.avatar_url;
                           if (src) setCropModal({ isOpen: true, file: src, title: 'Adjust Avatar Crop', aspectRatio: 1, target: 'avatar' });
                         }}
                         className="btn-secondary"
@@ -291,17 +303,20 @@ export const UserOnboardingPage: React.FC = () => {
                       accept="image/*"
                       onChange={e => {
                         const f = e.target.files?.[0];
-                        if (f) setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
+                        if (f) {
+                          setRawBannerFile(f);
+                          setCropModal({ isOpen: true, file: f, title: 'Crop Header Banner Image', aspectRatio: 3, target: 'banner' });
+                        }
                       }}
                       style={{ display: 'none' }}
                     />
                   </label>
 
-                  {(bannerFile || user?.banner_original_url || user?.banner_url) && (
+                  {(rawBannerFile || user?.banner_original_url || user?.banner_url) && (
                     <button
                       type="button"
                       onClick={() => {
-                        const src = bannerFile || user?.banner_original_url || user?.banner_url;
+                        const src = rawBannerFile || user?.banner_original_url || user?.banner_url;
                         if (src) setCropModal({ isOpen: true, file: src, title: 'Adjust Banner Crop', aspectRatio: 3, target: 'banner' });
                       }}
                       className="btn-secondary"
@@ -548,7 +563,7 @@ export const UserOnboardingPage: React.FC = () => {
                 <KeyRound size={16} color="var(--accent-color)" />
                 <span>Passkey Passwordless Login (Optional)</span>
               </div>
-              <p style={{ fontSize: '0.8rem', opacity: 0.75, marginBottom: '0.75rem', margin: 0 }}>
+              <p style={{ fontSize: '0.8rem', opacity: 0.75, margin: '0 0 0.75rem 0' }}>
                 Register FaceID, TouchID, or YubiKey hardware passkey for 1-click passwordless login.
               </p>
 

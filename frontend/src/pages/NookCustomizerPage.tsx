@@ -1522,7 +1522,7 @@ export const NookCustomizerPage: React.FC = () => {
                                 {tr.type === 'spotify' ? 'SPOTIFY' : tr.type === 'apple' ? 'APPLE MUSIC' : tr.type === 'audio' ? 'MP3' : tr.type}
                               </span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
                               <button
                                 type="button"
                                 disabled={trIdx === 0}
@@ -1533,7 +1533,7 @@ export const NookCustomizerPage: React.FC = () => {
                                   updated[trIdx - 1] = temp;
                                   updateCardMusic(updated);
                                 }}
-                                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: trIdx === 0 ? 'default' : 'pointer', opacity: trIdx === 0 ? 0.3 : 1 }}
+                                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: trIdx === 0 ? 'default' : 'pointer', opacity: trIdx === 0 ? 0.3 : 1, flexShrink: 0 }}
                               >
                                 ▲
                               </button>
@@ -1547,7 +1547,7 @@ export const NookCustomizerPage: React.FC = () => {
                                   updated[trIdx + 1] = temp;
                                   updateCardMusic(updated);
                                 }}
-                                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: trIdx === cardTracks.length - 1 ? 'default' : 'pointer', opacity: trIdx === cardTracks.length - 1 ? 0.3 : 1 }}
+                                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.4rem', cursor: trIdx === cardTracks.length - 1 ? 'default' : 'pointer', opacity: trIdx === cardTracks.length - 1 ? 0.3 : 1, flexShrink: 0 }}
                               >
                                 ▼
                               </button>
@@ -1556,9 +1556,9 @@ export const NookCustomizerPage: React.FC = () => {
                                 onClick={() => {
                                   updateCardMusic(cardTracks.filter((_: any, i: number) => i !== trIdx));
                                 }}
-                                style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer' }}
+                                style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={14} style={{ flexShrink: 0 }} />
                               </button>
                             </div>
                           </div>

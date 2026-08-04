@@ -189,6 +189,54 @@ export const NookViewPage: React.FC = () => {
   const themeClass = `theme-${profileData.nookSettings?.theme || 'glassmorphism'}`;
   const isOwner = user && user.username === targetUsername;
 
+  // Render Disabled Account Nook view if account is disabled by admins
+  if (profileData.is_disabled) {
+    return (
+      <div className={themeClass} style={{ minHeight: '90vh', padding: '3rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ maxWidth: '560px', width: '100%', textAlign: 'center', padding: '2.5rem 1.5rem' }} className="nook-panel">
+          {profileData.owner?.avatar_url ? (
+            <div style={{ position: 'relative', width: '90px', height: '90px', margin: '0 auto 1.25rem' }}>
+              <img
+                src={profileData.owner.avatar_url}
+                alt={profileData.owner.display_name || profileData.owner.username}
+                style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #ef4444', filter: 'grayscale(0.8)', opacity: 0.8 }}
+              />
+              <div style={{ position: 'absolute', bottom: -4, right: -4, background: '#ef4444', color: '#fff', borderRadius: '50%', padding: '0.35rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShieldAlert size={16} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ width: '80px', height: '80px', margin: '0 auto 1.25rem', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+              <ShieldAlert size={40} />
+            </div>
+          )}
+
+          <h2 style={{ marginBottom: '0.5rem', fontSize: '1.6rem', fontWeight: 800 }}>
+            @{profileData.owner?.username || targetUsername}'s Nook is Disabled 🔒
+          </h2>
+
+          <div style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
+            <div style={{ color: '#ef4444', fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Lock size={16} />
+              <span>Account Disabled by Administrators</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.9, lineHeight: 1.5 }}>
+              {profileData.disabled_reason || 'This account has been temporarily or permanently disabled by site administrators.'}
+            </p>
+          </div>
+
+          <p style={{ opacity: 0.75, marginBottom: '1.75rem', lineHeight: 1.5, fontSize: '0.88rem' }}>
+            While this account is disabled, their Nook profile, guestbook, and content are locked and unavailable for viewing.
+          </p>
+
+          <Link to="/" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem' }}>
+            <span>Return to Home</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // Render Private Nook view if access is blocked
   if (profileData.is_private) {
     const rel = profileData.relationship || 'public';

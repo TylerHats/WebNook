@@ -46,8 +46,8 @@ export const AccountSettingsPage: React.FC = () => {
   const handleUpdateNookPrivacy = async (newVal: 'public' | 'private') => {
     if (!token) return;
     try {
-      const res = await fetch('/api/nook/customize', {
-        method: 'POST',
+      const res = await fetch('/api/nook/customization', {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
@@ -471,11 +471,11 @@ export const AccountSettingsPage: React.FC = () => {
                     />
                   </label>
 
-                  {(user?.avatar_original_url || user?.avatar_url) && (
+                  {(rawAvatarFile || user?.avatar_original_url || user?.avatar_url) && (
                     <button
                       type="button"
                       onClick={() => {
-                        const src = user.avatar_original_url || user.avatar_url;
+                        const src = rawAvatarFile || user?.avatar_original_url || user?.avatar_url;
                         if (src) {
                           setCropModal({ isOpen: true, file: src, title: 'Adjust Avatar Position & Crop', aspectRatio: 1, target: 'avatar', isRecrop: true });
                         }
@@ -511,11 +511,11 @@ export const AccountSettingsPage: React.FC = () => {
                     />
                   </label>
 
-                  {(user?.banner_original_url || user?.banner_url) && (
+                  {(rawBannerFile || user?.banner_original_url || user?.banner_url) && (
                     <button
                       type="button"
                       onClick={() => {
-                        const src = user.banner_original_url || user.banner_url;
+                        const src = rawBannerFile || user?.banner_original_url || user?.banner_url;
                         if (src) {
                           setCropModal({ isOpen: true, file: src, title: 'Adjust Banner Position & Crop', aspectRatio: 3, target: 'banner', isRecrop: true });
                         }
@@ -1026,7 +1026,7 @@ export const AccountSettingsPage: React.FC = () => {
                   <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <span>WebNook</span>
                     <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.55rem', borderRadius: '12px', background: 'var(--accent-color)', color: '#fff', fontWeight: 700 }}>
-                      {aboutInfo?.currentVersion || 'v3.3.0'}
+                      {aboutInfo?.currentVersion || 'v3.3.1'}
                     </span>
                   </h3>
                   <div style={{ fontSize: '0.78rem', opacity: 0.7, marginTop: '2px' }}>Your Cozy Digital Corner of the Web</div>
@@ -1061,7 +1061,7 @@ export const AccountSettingsPage: React.FC = () => {
                       <span>Current Release</span>
                     </div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-color)' }}>
-                      {aboutInfo?.latestRelease?.tag || aboutInfo?.currentVersion || 'v3.3.0'}
+                      {aboutInfo?.latestRelease?.tag || aboutInfo?.currentVersion || 'v3.3.1'}
                     </div>
                   </div>
                 </div>
@@ -1073,7 +1073,7 @@ export const AccountSettingsPage: React.FC = () => {
                     <span>Latest Release Notes & Features:</span>
                   </div>
                   <p style={{ fontSize: '0.83rem', lineHeight: 1.5, opacity: 0.9, margin: 0, whiteSpace: 'pre-wrap' }}>
-                    {aboutInfo?.latestRelease?.notes || 'WebNook v3.3.0 brings passkey PC authenticator compatibility, Steam showcase input debouncing, Cloud theme edge animation improvements, deduplicated friend requests, Nook Public vs Private settings, full original image crop retention, and deleted user DM display improvements.'}
+                    {aboutInfo?.latestRelease?.notes || 'WebNook v3.3.1 introduces a themed locked profile screen for admin-disabled accounts, fixes Nook profile privacy settings state & persistence, improves onboarding passkey button spacing, fixes music track delete button sizing, and enables full raw original image retention for crop adjustments.'}
                   </p>
                 </div>
 

@@ -34,9 +34,9 @@ router.get('/about', async (req: Request, res: Response) => {
     const channel = channelRow?.value || 'stable';
 
     const installedVersionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "installed_version"');
-    let version = installedVersionRow?.value || '3.3.0';
+    let version = installedVersionRow?.value || '3.3.1';
 
-    let currentPkgVersion = '3.3.0';
+    let currentPkgVersion = '3.3.1';
     try {
       const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8'));
       if (rootPkg && rootPkg.version) currentPkgVersion = rootPkg.version;
@@ -62,6 +62,22 @@ router.get('/about', async (req: Request, res: Response) => {
   }
 });
 
+// Get Logged-In User Nook Settings
+router.get('/settings/mine', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    let nookSettings = await queryOne<any>('SELECT * FROM nooks WHERE user_id = ?', [userId]);
+    if (!nookSettings) {
+      await execute('INSERT INTO nooks (user_id) VALUES (?)', [userId]);
+      nookSettings = await queryOne<any>('SELECT * FROM nooks WHERE user_id = ?', [userId]);
+    }
+    return res.json({ nookSettings });
+  } catch (err) {
+    console.error('Error fetching nook settings:', err);
+    return res.status(500).json({ error: 'Failed to fetch nook settings' });
+  }
+});
+
 // Get Nook Profile by username
 router.get('/profile/:username', async (req: Request, res: Response) => {
   try {
@@ -82,7 +98,7 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
     }
 
     const owner = await queryOne<any>(
-      'SELECT id, username, display_name, bio, avatar_url, banner_url, avatar_original_url, banner_original_url, status_message, status_emoji, privacy_default, created_at FROM users WHERE username = ?',
+      'SELECT id, username, display_name, bio, avatar_url, banner_url, avatar_original_url, banner_original_url, status_message, status_emoji, privacy_default, is_disabled, disabled_reason, created_at FROM users WHERE username = ?',
       [cleanUsername]
     );
 
@@ -97,6 +113,29 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
     if (!nookSettings) {
       await execute('INSERT INTO nooks (user_id) VALUES (?)', [owner.id]);
       nookSettings = await queryOne<any>('SELECT * FROM nooks WHERE user_id = ?', [owner.id]);
+    }
+
+    if (owner.is_disabled) {
+      return res.status(403).json({
+        is_disabled: true,
+        disabled_reason: owner.disabled_reason || 'This user account has been disabled by site administrators.',
+        relationship,
+        owner: {
+          id: owner.id,
+          username: owner.username,
+          display_name: owner.display_name,
+          avatar_url: owner.avatar_url,
+          avatar_original_url: owner.avatar_original_url,
+          status_message: owner.status_message,
+          status_emoji: owner.status_emoji
+        },
+        nookSettings: {
+          theme: nookSettings.theme,
+          bg_color: nookSettings.bg_color,
+          accent_color: nookSettings.accent_color,
+          text_color: nookSettings.text_color
+        }
+      });
     }
 
     // Evaluate Nook visibility ('private' = Friends Only Access, 'public' = Everyone)
@@ -218,15 +257,18 @@ router.post('/upload/avatar', authenticateToken, uploadMedia.fields([{ name: 'av
       avatarOriginalUrl = `/uploads/${origWebpFilename}`;
     }
 
-    if (isRecrop && !originalFile) {
-      await execute('UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
-        avatarUrl,
-        req.user!.id
-      ]);
-    } else {
+    if (originalFile) {
       await execute('UPDATE users SET avatar_url = ?, avatar_original_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
         avatarUrl,
         avatarOriginalUrl,
+        req.user!.id
+      ]);
+    } else {
+      const existingUser = await queryOne<any>('SELECT avatar_original_url FROM users WHERE id = ?', [req.user!.id]);
+      const finalOrig = existingUser?.avatar_original_url || avatarUrl;
+      await execute('UPDATE users SET avatar_url = ?, avatar_original_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+        avatarUrl,
+        finalOrig,
         req.user!.id
       ]);
     }
@@ -265,15 +307,18 @@ router.post('/upload/banner', authenticateToken, uploadMedia.fields([{ name: 'ba
       bannerOriginalUrl = `/uploads/${origWebpFilename}`;
     }
 
-    if (isRecrop && !originalFile) {
-      await execute('UPDATE users SET banner_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
-        bannerUrl,
-        req.user!.id
-      ]);
-    } else {
+    if (originalFile) {
       await execute('UPDATE users SET banner_url = ?, banner_original_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
         bannerUrl,
         bannerOriginalUrl,
+        req.user!.id
+      ]);
+    } else {
+      const existingUser = await queryOne<any>('SELECT banner_original_url FROM users WHERE id = ?', [req.user!.id]);
+      const finalOrig = existingUser?.banner_original_url || bannerUrl;
+      await execute('UPDATE users SET banner_url = ?, banner_original_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+        bannerUrl,
+        finalOrig,
         req.user!.id
       ]);
     }
@@ -352,7 +397,7 @@ router.post('/onboarding/complete', authenticateToken, async (req: Authenticated
     }
 
     const updatedUser = await queryOne<any>(
-      'SELECT id, username, email, display_name, bio, avatar_url, banner_url, status_message, status_emoji, role, is_email_verified, onboarding_completed FROM users WHERE id = ?',
+      'SELECT id, username, email, display_name, bio, avatar_url, banner_url, avatar_original_url, banner_original_url, status_message, status_emoji, role, is_email_verified, onboarding_completed FROM users WHERE id = ?',
       [userId]
     );
 
