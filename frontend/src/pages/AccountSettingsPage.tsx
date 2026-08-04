@@ -122,6 +122,7 @@ export const AccountSettingsPage: React.FC = () => {
   useEffect(() => {
     if (token) {
       fetchPasskeys();
+      fetchNookPrivacy();
     }
     if ((user as any)?.reaction_picker_json) {
       try {
@@ -1026,7 +1027,7 @@ export const AccountSettingsPage: React.FC = () => {
                   <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <span>WebNook</span>
                     <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.55rem', borderRadius: '12px', background: 'var(--accent-color)', color: '#fff', fontWeight: 700 }}>
-                      {aboutInfo?.currentVersion || 'v3.3.1'}
+                      {aboutInfo?.currentVersion || 'v3.3.2'}
                     </span>
                   </h3>
                   <div style={{ fontSize: '0.78rem', opacity: 0.7, marginTop: '2px' }}>Your Cozy Digital Corner of the Web</div>
@@ -1061,7 +1062,7 @@ export const AccountSettingsPage: React.FC = () => {
                       <span>Current Release</span>
                     </div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-color)' }}>
-                      {aboutInfo?.latestRelease?.tag || aboutInfo?.currentVersion || 'v3.3.1'}
+                      {aboutInfo?.latestRelease?.tag || aboutInfo?.currentVersion || 'v3.3.2'}
                     </div>
                   </div>
                 </div>
@@ -1073,7 +1074,7 @@ export const AccountSettingsPage: React.FC = () => {
                     <span>Latest Release Notes & Features:</span>
                   </div>
                   <p style={{ fontSize: '0.83rem', lineHeight: 1.5, opacity: 0.9, margin: 0, whiteSpace: 'pre-wrap' }}>
-                    {aboutInfo?.latestRelease?.notes || 'WebNook v3.3.1 introduces a themed locked profile screen for admin-disabled accounts, fixes Nook profile privacy settings state & persistence, improves onboarding passkey button spacing, fixes music track delete button sizing, and enables full raw original image retention for crop adjustments.'}
+                    {aboutInfo?.latestRelease?.notes || 'WebNook v3.3.2 fixes active state display for Nook profile privacy settings on Account Settings page load, introduces a themed locked profile screen for admin-disabled accounts, improves passkey button spacing, fixes music track delete button sizing, and enables full raw original image retention for crop adjustments.'}
                   </p>
                 </div>
 

@@ -34,9 +34,9 @@ router.get('/about', async (req: Request, res: Response) => {
     const channel = channelRow?.value || 'stable';
 
     const installedVersionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "installed_version"');
-    let version = installedVersionRow?.value || '3.3.1';
+    let version = installedVersionRow?.value || '3.3.2';
 
-    let currentPkgVersion = '3.3.1';
+    let currentPkgVersion = '3.3.2';
     try {
       const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8'));
       if (rootPkg && rootPkg.version) currentPkgVersion = rootPkg.version;
