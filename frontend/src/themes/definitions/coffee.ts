@@ -19,12 +19,23 @@ export const coffeeTheme: ThemeDefinition = {
   animationPreset: 'none',
   cssClass: 'theme-coffee',
   previewStyle: {
+    fontFamily: "'Playfair Display', serif",
     borderRadius: '14px',
     borderStyle: 'solid',
     borderWidth: '1px',
-    borderColor: '#78350f',
+    borderColor: '#854d0e',
     headerBg: 'linear-gradient(135deg, #78350f 0%, #d97706 100%)',
-    cardBg: '#292524',
-    badge: '☕'
+    cardBg: '#2c221e',
+    badge: '☕',
+    decorIcons: ['☕', '🫘', '🥐']
+  },
+  defaultCardTitles: {
+    bio: 'Barista Notes',
+    music: 'Morning Espresso Jazz',
+    friends: 'Coffeehouse Table',
+    hobbies: 'Brewing & Crafts',
+    movies: 'Rainy Day Cinema',
+    books: 'Café Reading Stack',
+    steam: 'After-Hours Play'
   }
 };

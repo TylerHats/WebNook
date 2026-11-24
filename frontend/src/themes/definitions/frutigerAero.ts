@@ -19,13 +19,24 @@ export const frutigerAeroTheme: ThemeDefinition = {
   animationPreset: 'none',
   cssClass: 'theme-frutiger-aero',
   previewStyle: {
+    fontFamily: "'Outfit', sans-serif",
     borderRadius: '16px',
     borderStyle: 'solid',
     borderWidth: '2px',
     borderColor: '#ffffff',
-    headerBg: 'linear-gradient(180deg, #66b2ff 0%, #0066cc 100%)',
+    headerBg: 'linear-gradient(180deg, #66b2ff 0%, #0078d7 100%)',
     cardBg: 'rgba(255, 255, 255, 0.88)',
     accentGlow: '0 4px 15px rgba(0, 128, 255, 0.4)',
-    badge: '💧'
+    badge: '💧',
+    decorIcons: ['💧', '🫧', '🌊']
+  },
+  defaultCardTitles: {
+    bio: 'Aero User Profile',
+    music: 'Media Player 12',
+    friends: 'Messenger Contacts',
+    hobbies: 'Desktop Gadgets',
+    movies: 'Video Library',
+    books: 'Digital Reader',
+    steam: 'Games Explorer'
   }
 };

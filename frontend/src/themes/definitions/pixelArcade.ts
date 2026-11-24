@@ -19,7 +19,7 @@ export const pixelArcadeTheme: ThemeDefinition = {
   animationPreset: 'pixel-arcade',
   cssClass: 'theme-pixel-arcade',
   previewStyle: {
-    fontFamily: 'monospace',
+    fontFamily: "'VT323', monospace",
     borderRadius: '0px',
     borderStyle: 'solid',
     borderWidth: '3px',
@@ -29,5 +29,14 @@ export const pixelArcadeTheme: ThemeDefinition = {
     accentGlow: '4px 4px 0px #00ffcc',
     badge: '👾',
     decorIcons: ['👾', '🪙', '🍄']
+  },
+  defaultCardTitles: {
+    bio: 'PLAYER 1 STATS',
+    music: '8-BIT CHIPTUNE JUKEBOX',
+    friends: 'CO-OP PARTY',
+    hobbies: 'SIDE QUESTS',
+    movies: 'CUTSCENE REEL',
+    books: 'STRATEGY GUIDES',
+    steam: 'HIGH SCORE TABLE'
   }
 };

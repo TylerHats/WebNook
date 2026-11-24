@@ -348,6 +348,42 @@ const migrations: Migration[] = [
         await execute('ALTER TABLE nooks ADD COLUMN steam_excluded_games_json TEXT DEFAULT "[]"');
       } catch (e) {}
     }
+  },
+  {
+    version: 14,
+    name: 'v3.4.0_legal_policies_sticker_anchors_and_indexes',
+    up: async () => {
+      // Legal Terms & Privacy acceptance tracking on users
+      try { await execute('ALTER TABLE users ADD COLUMN terms_accepted_version TEXT DEFAULT ""'); } catch (e) {}
+      try { await execute('ALTER TABLE users ADD COLUMN terms_accepted_at DATETIME DEFAULT NULL'); } catch (e) {}
+
+      // Dual-anchor columns on nook_stickers for stable responsive anchoring
+      try { await execute('ALTER TABLE nook_stickers ADD COLUMN anchor_type TEXT DEFAULT "container"'); } catch (e) {}
+      try { await execute('ALTER TABLE nook_stickers ADD COLUMN anchor_id TEXT DEFAULT ""'); } catch (e) {}
+
+      // Default legal settings seeded idempotently
+      const todayIso = new Date().toISOString().slice(0, 10);
+      await execute('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)', ['legal_version', '1.0']);
+      await execute('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)', ['legal_effective_date', todayIso]);
+      await execute('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)', ['legal_min_age', '13']);
+
+      // Performance indexes for hot queries
+      const indexStatements = [
+        'CREATE INDEX IF NOT EXISTS idx_messages_conv_created ON messages(conversation_id, created_at)',
+        'CREATE INDEX IF NOT EXISTS idx_conv_members_user ON conversation_members(user_id)',
+        'CREATE INDEX IF NOT EXISTS idx_conv_members_conv_user ON conversation_members(conversation_id, user_id)',
+        'CREATE INDEX IF NOT EXISTS idx_message_reactions_msg ON message_reactions(message_id)',
+        'CREATE INDEX IF NOT EXISTS idx_friends_user_status ON friends(user_id, status)',
+        'CREATE INDEX IF NOT EXISTS idx_friends_friend_status ON friends(friend_id, status)',
+        'CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read, created_at)',
+        'CREATE INDEX IF NOT EXISTS idx_guestbook_nook_status ON guestbook_entries(nook_user_id, status, created_at)',
+        'CREATE INDEX IF NOT EXISTS idx_guestbook_reactions_entry ON guestbook_reactions(entry_id)',
+        'CREATE INDEX IF NOT EXISTS idx_nook_stickers_user ON nook_stickers(user_id)'
+      ];
+      for (const sql of indexStatements) {
+        try { await execute(sql); } catch (e) {}
+      }
+    }
   }
 ];
 
@@ -361,6 +397,24 @@ export async function runMigrations() {
     );
   `);
 
+  const currentVersionRow = await queryOne<{ max_version: number }>(
+    'SELECT MAX(version) as max_version FROM schema_migrations'
+  );
+  const currentVersion = currentVersionRow?.max_version || 0;
+
+  for (const migration of migrations) {
+    if (migration.version > currentVersion) {
+      console.log(`Running migration v${migration.version}: ${migration.name}...`);
+      await migration.up();
+      await execute('INSERT INTO schema_migrations (version, name) VALUES (?, ?)', [
+        migration.version,
+        migration.name
+      ]);
+      console.log(`Migration v${migration.version} applied successfully.`);
+    }
+  }
+
+  // Legacy safety alters run after initial schema migrations so fresh databases already have base tables
   try {
     await execute('ALTER TABLE users ADD COLUMN avatar_original_url TEXT DEFAULT ""');
   } catch (e) {}
@@ -390,21 +444,4 @@ export async function runMigrations() {
       )
     `);
   } catch (e) {}
-
-  const currentVersionRow = await queryOne<{ max_version: number }>(
-    'SELECT MAX(version) as max_version FROM schema_migrations'
-  );
-  const currentVersion = currentVersionRow?.max_version || 0;
-
-  for (const migration of migrations) {
-    if (migration.version > currentVersion) {
-      console.log(`Running migration v${migration.version}: ${migration.name}...`);
-      await migration.up();
-      await execute('INSERT INTO schema_migrations (version, name) VALUES (?, ?)', [
-        migration.version,
-        migration.name
-      ]);
-      console.log(`Migration v${migration.version} applied successfully.`);
-    }
-  }
 }

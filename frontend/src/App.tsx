@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { PWAProvider } from './context/PWAContext';
 import { PWAInstallBanner } from './components/ui/PWAInstallBanner';
 import { Navbar } from './components/ui/Navbar';
+import { TermsAcceptanceGate } from './components/ui/TermsAcceptanceGate';
 import { HomePage } from './pages/HomePage';
 import { NookViewPage } from './pages/NookViewPage';
 import { NookCustomizerPage } from './pages/NookCustomizerPage';
-import { LoginPage, RegisterPage } from './pages/AuthPages';
+import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage } from './pages/AuthPages';
 import { AccountSettingsPage } from './pages/AccountSettingsPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { SetupWizardPage } from './pages/SetupWizardPage';
@@ -16,7 +17,7 @@ import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { UserOnboardingPage } from './pages/UserOnboardingPage';
 import { FriendsPage } from './pages/FriendsPage';
 import { MessagesPage } from './pages/MessagesPage';
-import { useAuth } from './context/AuthContext';
+import { LegalPage } from './pages/LegalPage';
 import { Sparkles } from 'lucide-react';
 
 const DocumentTitleHandler: React.FC = () => {
@@ -50,6 +51,14 @@ const DocumentTitleHandler: React.FC = () => {
       document.title = `Login | ${appName}`;
     } else if (p === '/register') {
       document.title = `Sign Up | ${appName}`;
+    } else if (p === '/forgot-password') {
+      document.title = `Forgot Password | ${appName}`;
+    } else if (p === '/reset-password') {
+      document.title = `Reset Password | ${appName}`;
+    } else if (p === '/terms') {
+      document.title = `Terms & Conditions | ${appName}`;
+    } else if (p === '/privacy') {
+      document.title = `Privacy Policy | ${appName}`;
     } else if (p === '/verify-email') {
       document.title = `Verify Email | ${appName}`;
     } else if (p === '/onboarding') {
@@ -65,18 +74,19 @@ const DocumentTitleHandler: React.FC = () => {
 const AppRoutes: React.FC = () => {
   const [setupCompleted, setSetupCompleted] = useState<boolean | null>(null);
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
+    if (setupCompleted === true) return;
     fetch('/api/setup/status')
       .then(res => res.json())
       .then(data => {
-        setSetupCompleted(data.setup_completed);
+        setSetupCompleted(Boolean(data.setup_completed));
       })
       .catch(() => setSetupCompleted(true));
-  }, [location.pathname]);
+  }, [location.pathname, setupCompleted]);
 
-  if (setupCompleted === null) {
+  if (setupCompleted === null || authLoading) {
     return (
       <div style={{ textAlign: 'center', padding: '5rem', opacity: 0.7 }}>
         <Sparkles size={36} className="animate-spin" style={{ margin: '0 auto 1rem' }} />
@@ -90,36 +100,69 @@ const AppRoutes: React.FC = () => {
     return <Navigate to="/setup" replace />;
   }
 
+  const blockedByTerms = Boolean(user && user.requires_terms_acceptance);
+
   // If user is logged in but email is not verified, restrict customizer & onboarding access
-  if (user && !user.is_email_verified && (location.pathname === '/customize' || location.pathname === '/onboarding')) {
+  if (!blockedByTerms && user && !user.is_email_verified && (location.pathname === '/customize' || location.pathname === '/onboarding')) {
     return <Navigate to="/verify-email" replace />;
   }
 
   // If user is logged in and email verified but hasn't completed onboarding wizard
-  if (user && user.is_email_verified && !user.onboarding_completed && (location.pathname === '/customize' || location.pathname === `/nook/${user.username}`)) {
+  if (!blockedByTerms && user && user.is_email_verified && !user.onboarding_completed && (location.pathname === '/customize' || location.pathname === `/nook/${user.username}`)) {
     return <Navigate to="/onboarding" replace />;
   }
+
+  const showFooter = location.pathname !== '/setup' && location.pathname !== '/messages' && !blockedByTerms;
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <DocumentTitleHandler />
       {location.pathname !== '/setup' && <Navbar />}
-      <main style={{ flex: 1 }}>
-        <Routes>
-          <Route path="/setup" element={<SetupWizardPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/onboarding" element={<UserOnboardingPage />} />
-          <Route path="/" element={<HomePage />} />
-          <Route path="/nook/:username" element={<NookViewPage />} />
-          <Route path="/messages" element={<MessagesPage />} />
-          <Route path="/friends" element={<FriendsPage />} />
-          <Route path="/customize" element={<NookCustomizerPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/settings" element={<AccountSettingsPage />} />
-          <Route path="/admin" element={<AdminDashboardPage />} />
-        </Routes>
-      </main>
+      {blockedByTerms ? (
+        <main style={{ flex: 1 }}>
+          <TermsAcceptanceGate />
+        </main>
+      ) : (
+        <main style={{ flex: 1 }}>
+          <Routes>
+            <Route path="/setup" element={<SetupWizardPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/onboarding" element={<UserOnboardingPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/nook/:username" element={<NookViewPage />} />
+            <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/friends" element={<FriendsPage />} />
+            <Route path="/customize" element={<NookCustomizerPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/terms" element={<LegalPage defaultTab="terms" />} />
+            <Route path="/privacy" element={<LegalPage defaultTab="privacy" />} />
+            <Route path="/settings" element={<AccountSettingsPage />} />
+            <Route path="/admin" element={<AdminDashboardPage />} />
+          </Routes>
+        </main>
+      )}
+      {showFooter && (
+        <footer
+          style={{
+            padding: '1rem 1.5rem',
+            textAlign: 'center',
+            fontSize: '0.82rem',
+            opacity: 0.68,
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '1rem',
+            flexWrap: 'wrap'
+          }}
+        >
+          <Link to="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms & Conditions</Link>
+          <span>•</span>
+          <Link to="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy Policy</Link>
+        </footer>
+      )}
     </div>
   );
 };

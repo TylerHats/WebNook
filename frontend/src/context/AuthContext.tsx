@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, startTransition } from 'react';
 
 export interface User {
   id: number;
@@ -19,6 +19,9 @@ export interface User {
   privacy_default?: string;
   reaction_picker_json?: string;
   default_reaction?: string;
+  terms_accepted_version?: string;
+  required_terms_version?: string;
+  requires_terms_acceptance?: boolean;
 }
 
 interface AuthContextType {
@@ -90,8 +93,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     localStorage.removeItem('webnook_token');
     document.cookie = "token=; path=/; max-age=0;";
-    setToken(null);
-    setUser(null);
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    startTransition(() => {
+      setToken(null);
+      setUser(null);
+    });
   };
 
   return (

@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { execute, queryOne } from '../db/connection';
 import { JWT_SECRET } from '../middleware/authMiddleware';
+import { validatePasswordComplexity } from './authRoutes';
+import { getCurrentLegalVersion, invalidateLegalCache } from '../services/legalService';
 
 const router = Router();
 
@@ -33,7 +35,17 @@ router.post('/initialize', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Setup wizard has already been completed.' });
     }
 
-    const { app_name, admin_username, admin_email, admin_password, admin_display_name, steam_api_key } = req.body;
+    const {
+      app_name,
+      admin_username,
+      admin_email,
+      admin_password,
+      admin_display_name,
+      steam_api_key,
+      site_url,
+      legal_operator_name,
+      legal_contact_email
+    } = req.body;
 
     if (!admin_username || !admin_email || !admin_password) {
       return res.status(400).json({ error: 'Admin username, email, and password are required' });
@@ -44,12 +56,19 @@ router.post('/initialize', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Admin username must be at least 3 characters long' });
     }
 
-    const password_hash = await bcrypt.hash(admin_password, 10);
+    const pwdError = await validatePasswordComplexity(admin_password);
+    if (pwdError) {
+      return res.status(400).json({ error: pwdError });
+    }
 
-    // Create Admin User
+    const password_hash = await bcrypt.hash(admin_password, 10);
+    const cleanEmail = admin_email.trim().toLowerCase();
+    const currentLegalVersion = await getCurrentLegalVersion();
+
+    // Create Admin User (auto-verified, onboarding completed, current terms accepted)
     const result = await execute(
-      'INSERT INTO users (username, email, password_hash, display_name, role) VALUES (?, ?, ?, ?, ?)',
-      [cleanUsername, admin_email.trim().toLowerCase(), password_hash, admin_display_name || cleanUsername, 'admin']
+      'INSERT INTO users (username, email, password_hash, display_name, role, is_email_verified, onboarding_completed, terms_accepted_version, terms_accepted_at) VALUES (?, ?, ?, ?, ?, 1, 1, ?, CURRENT_TIMESTAMP)',
+      [cleanUsername, cleanEmail, password_hash, admin_display_name || cleanUsername, 'admin', currentLegalVersion]
     );
 
     const userId = result.lastID;
@@ -77,12 +96,30 @@ router.post('/initialize', async (req: Request, res: Response) => {
     if (steam_api_key) {
       await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_api_key', steam_api_key]);
     }
+    if (site_url) {
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['site_url', String(site_url).trim()]);
+    }
+    if (legal_operator_name) {
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['legal_operator_name', String(legal_operator_name).trim()]);
+    }
+    if (legal_contact_email) {
+      await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['legal_contact_email', String(legal_contact_email).trim()]);
+    }
+    invalidateLegalCache();
 
     const token = jwt.sign(
-      { id: userId, username: cleanUsername, email: admin_email.trim().toLowerCase(), role: 'admin' },
+      { id: userId, username: cleanUsername, email: cleanEmail, role: 'admin' },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
+
+    const proto = String(req.headers['x-forwarded-proto'] || req.protocol || '').split(',')[0].trim().toLowerCase();
+    res.cookie('token', token, {
+      maxAge: 7 * 86400 * 1000,
+      sameSite: 'lax',
+      path: '/',
+      secure: req.secure || proto === 'https'
+    });
 
     return res.json({
       message: 'OOBE Setup completed successfully!',
@@ -90,9 +127,14 @@ router.post('/initialize', async (req: Request, res: Response) => {
       user: {
         id: userId,
         username: cleanUsername,
-        email: admin_email.trim().toLowerCase(),
+        email: cleanEmail,
         display_name: admin_display_name || cleanUsername,
-        role: 'admin'
+        role: 'admin',
+        is_email_verified: true,
+        onboarding_completed: true,
+        terms_accepted_version: currentLegalVersion,
+        required_terms_version: currentLegalVersion,
+        requires_terms_acceptance: false
       }
     });
   } catch (err: any) {

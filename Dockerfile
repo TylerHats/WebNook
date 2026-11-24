@@ -25,8 +25,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
 
-# Install git, typescript, and vite for in-container self-updating
-RUN apk add --no-cache git && npm install -g typescript vite
+# Install git, ffmpeg, typescript, and vite for media transcoding and in-container self-updating
+RUN apk add --no-cache git ffmpeg && npm install -g typescript vite
 
 COPY package*.json tsconfig*.json ./
 COPY backend/package*.json ./backend/

@@ -13,13 +13,14 @@ export const glassmorphismTheme: ThemeDefinition = {
     text: '#ffffff',
     border: 'rgba(255, 255, 255, 0.14)'
   },
-  supportsSounds: false,
-  supportsAnimations: false,
+  supportsSounds: true,
+  supportsAnimations: true,
   soundPreset: 'none',
   animationPreset: 'none',
   cssClass: 'theme-glassmorphism',
   previewStyle: {
-    borderRadius: '16px',
+    fontFamily: "'Outfit', sans-serif",
+    borderRadius: '20px',
     borderStyle: 'solid',
     borderWidth: '1px',
     borderColor: 'rgba(255, 255, 255, 0.2)',

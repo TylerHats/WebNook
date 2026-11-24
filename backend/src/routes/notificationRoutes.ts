@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { execute, query, queryOne } from '../db/connection';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { sendStyledEmail } from '../services/emailService';
+import { escapeHtml } from '../utils/security';
 
 const router = Router();
 
@@ -34,11 +35,12 @@ export async function createNotification(
       if (sendEmail) {
         sendStyledEmail({
           to: recipient.email,
-          subject: `${title} - WebNook Notification`,
+          subject: `${title} - Notification`,
           title: title,
-          bodyHtml: `<p>Hello @<strong>${recipient.username}</strong>,</p><p>${message}</p>`,
+          bodyHtml: `<p>Hello @<strong>${escapeHtml(recipient.username)}</strong>,</p><p>${escapeHtml(message)}</p>`,
           actionUrl: linkUrl ? linkUrl : undefined,
-          actionText: linkUrl ? (linkTitle || 'View Notification') : undefined
+          actionText: linkUrl ? (linkTitle || 'View Notification') : undefined,
+          safetyUrl: linkUrl ? linkUrl : undefined
         });
       }
     }

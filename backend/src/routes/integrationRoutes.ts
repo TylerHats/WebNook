@@ -1,19 +1,57 @@
 import { Router, Request, Response } from 'express';
 import { queryOne, execute } from '../db/connection';
 import { sendIntegrationErrorEmail } from '../services/emailService';
+import { createRateLimiter } from '../utils/security';
 import https from 'https';
 import http from 'http';
+import net from 'net';
 
 const router = Router();
+router.use(createRateLimiter({ windowMs: 60 * 1000, max: 60, message: 'Too many integration lookup requests. Please slow down.' }));
 
-// Helper HTTP/HTTPS text getter with browser User-Agent & relative redirect support
-function fetchText(urlStr: string, headers: Record<string, string> = {}): Promise<string> {
+const MAX_EXTERNAL_BYTES = 2 * 1024 * 1024;
+const EXTERNAL_TIMEOUT_MS = 8000;
+
+function isSafeExternalUrl(urlStr: string): URL | null {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host === '0.0.0.0' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal')
+    ) {
+      return null;
+    }
+    if (net.isIPv4(host)) {
+      const [a, b] = host.split('.').map(Number);
+      if (a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) {
+        return null;
+      }
+    }
+    if (net.isIPv6(host) && (host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd') || host === '::1')) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// Helper HTTP/HTTPS text getter with timeout, size cap & safe redirect limit
+function fetchText(urlStr: string, headers: Record<string, string> = {}, redirectCount = 0): Promise<string> {
   return new Promise((resolve, reject) => {
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(urlStr);
-    } catch (e) {
-      return reject(e);
+    if (redirectCount > 5) {
+      return reject(new Error('Too many redirects'));
+    }
+
+    const parsedUrl = isSafeExternalUrl(urlStr);
+    if (!parsedUrl) {
+      return reject(new Error('Disallowed external URL'));
     }
 
     const defaultHeaders = {
@@ -26,15 +64,27 @@ function fetchText(urlStr: string, headers: Record<string, string> = {}): Promis
     const client = parsedUrl.protocol === 'https:' ? https : http;
     const req = client.get(parsedUrl, { headers: defaultHeaders }, (res) => {
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
         let redirectUrl = res.headers.location;
         if (redirectUrl.startsWith('/')) {
           redirectUrl = `${parsedUrl.protocol}//${parsedUrl.host}${redirectUrl}`;
         }
-        return fetchText(redirectUrl, headers).then(resolve).catch(reject);
+        return fetchText(redirectUrl, headers, redirectCount + 1).then(resolve).catch(reject);
       }
       let data = '';
-      res.on('data', chunk => data += chunk);
+      let byteCount = 0;
+      res.on('data', chunk => {
+        byteCount += Buffer.byteLength(chunk);
+        if (byteCount > MAX_EXTERNAL_BYTES) {
+          req.destroy(new Error('External response exceeded size limit'));
+          return;
+        }
+        data += chunk;
+      });
       res.on('end', () => resolve(data));
+    });
+    req.setTimeout(EXTERNAL_TIMEOUT_MS, () => {
+      req.destroy(new Error('External request timed out'));
     });
     req.on('error', reject);
   });
@@ -46,7 +96,10 @@ function fetchJson(url: string, headers: Record<string, string> = {}): Promise<a
 
 function postForm(urlStr: string, bodyObj: Record<string, string>, headers: Record<string, string> = {}): Promise<string> {
   return new Promise((resolve, reject) => {
-    const url = new URL(urlStr);
+    const url = isSafeExternalUrl(urlStr);
+    if (!url || url.protocol !== 'https:') {
+      return reject(new Error('Disallowed external POST URL'));
+    }
     const postData = new URLSearchParams(bodyObj).toString();
     const req = https.request({
       hostname: url.hostname,
@@ -60,8 +113,19 @@ function postForm(urlStr: string, bodyObj: Record<string, string>, headers: Reco
       }
     }, (res) => {
       let data = '';
-      res.on('data', chunk => data += chunk);
+      let byteCount = 0;
+      res.on('data', chunk => {
+        byteCount += Buffer.byteLength(chunk);
+        if (byteCount > MAX_EXTERNAL_BYTES) {
+          req.destroy(new Error('External response exceeded size limit'));
+          return;
+        }
+        data += chunk;
+      });
       res.on('end', () => resolve(data));
+    });
+    req.setTimeout(EXTERNAL_TIMEOUT_MS, () => {
+      req.destroy(new Error('External request timed out'));
     });
     req.on('error', reject);
     req.write(postData);

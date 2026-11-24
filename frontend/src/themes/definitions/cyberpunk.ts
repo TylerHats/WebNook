@@ -7,11 +7,11 @@ export const cyberpunkTheme: ThemeDefinition = {
   description: 'Neon yellow pulse borders, electric spark crackles & high voltage arc showers',
   badge: '⚡',
   palette: {
-    bg: '#050505',
-    cardBg: '#121212',
-    accent: '#facc15',
-    text: '#00ffcc',
-    border: '#facc15'
+    bg: '#090411',
+    cardBg: 'rgba(18, 9, 34, 0.88)',
+    accent: '#ff007f',
+    text: '#d8fcff',
+    border: '#00f3ff'
   },
   supportsSounds: true,
   supportsAnimations: true,
@@ -19,13 +19,24 @@ export const cyberpunkTheme: ThemeDefinition = {
   animationPreset: 'cyberpunk',
   cssClass: 'theme-cyberpunk',
   previewStyle: {
+    fontFamily: "'Space Grotesk', sans-serif",
     borderRadius: '4px',
     borderStyle: 'solid',
     borderWidth: '2px',
     borderColor: '#00f3ff',
     headerBg: 'linear-gradient(90deg, #ff007f 0%, #00f3ff 100%)',
-    cardBg: 'rgba(20, 10, 35, 0.9)',
+    cardBg: 'rgba(18, 9, 34, 0.9)',
     accentGlow: '0 0 15px rgba(0, 243, 255, 0.7)',
-    badge: '⚡'
+    badge: '⚡',
+    decorIcons: ['⚡', '🦾', '💠']
+  },
+  defaultCardTitles: {
+    bio: 'Netrunner // Dossier',
+    music: 'Synthwave Deck.wav',
+    friends: 'Linked Squad',
+    hobbies: 'Cyberware & Mods',
+    movies: 'Holofilm Archive',
+    books: 'DataShards',
+    steam: 'Arcade Neural Link'
   }
 };

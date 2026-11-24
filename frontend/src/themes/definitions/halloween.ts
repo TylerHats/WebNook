@@ -19,7 +19,7 @@ export const halloweenTheme: ThemeDefinition = {
   animationPreset: 'none',
   cssClass: 'theme-halloween',
   previewStyle: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: "'Space Grotesk', sans-serif",
     borderRadius: '14px',
     borderStyle: 'solid',
     borderWidth: '2px',
@@ -29,5 +29,14 @@ export const halloweenTheme: ThemeDefinition = {
     accentGlow: '0 0 18px rgba(249, 115, 22, 0.5)',
     badge: '🎃',
     decorIcons: ['🎃', '🦇', '👻']
+  },
+  defaultCardTitles: {
+    bio: 'Crypt Keeper Bio',
+    music: 'Midnight Spooky Mix',
+    friends: 'Coven & Haunts',
+    hobbies: 'Potions & Lore',
+    movies: 'Fright Night Marathon',
+    books: 'Grimoire Shelf',
+    steam: 'Haunted Arcade'
   }
 };

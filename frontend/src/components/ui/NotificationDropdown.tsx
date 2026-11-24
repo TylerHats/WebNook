@@ -4,9 +4,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Bell, Check, X, UserPlus, MessageSquare, Heart, Sparkles, Trash2 } from 'lucide-react';
 import { formatSmartNotificationTime } from '../../utils/dateUtils';
+import { isSafeUrl } from '../../utils/sanitize';
 
 export const NotificationDropdown: React.FC = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { showToast } = useToast();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +19,7 @@ export const NotificationDropdown: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const loadNotifications = async () => {
-    if (!token) return;
+    if (!token || user?.requires_terms_acceptance || document.hidden) return;
     try {
       const res = await fetch('/api/notifications', {
         headers: { Authorization: `Bearer ${token}` }
@@ -37,8 +38,15 @@ export const NotificationDropdown: React.FC = () => {
   useEffect(() => {
     loadNotifications();
     const interval = setInterval(loadNotifications, 15000); // Poll every 15s
-    return () => clearInterval(interval);
-  }, [token]);
+    const onVisibility = () => {
+      if (!document.hidden) loadNotifications();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [token, user?.requires_terms_acceptance]);
 
   // Handle clicking outside popover to close
   useEffect(() => {
@@ -247,8 +255,10 @@ export const NotificationDropdown: React.FC = () => {
                     <p style={{ margin: 0, opacity: 0.85, lineHeight: 1.4, fontSize: '0.8rem' }}>{n.message}</p>
                     {n.link_url && (() => {
                       const rawUrl = n.link_url.trim();
-                      const isExternal = rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('//') || (!rawUrl.startsWith('/') && rawUrl.includes('.'));
+                      const hasExplicitScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(rawUrl.replace(/[\u0000-\u0020]+/g, ''));
+                      const isExternal = rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('//') || (!rawUrl.startsWith('/') && !hasExplicitScheme && rawUrl.includes('.'));
                       const finalUrl = isExternal && !rawUrl.startsWith('http://') && !rawUrl.startsWith('https://') && !rawUrl.startsWith('//') ? `https://${rawUrl}` : rawUrl;
+                      if (!isSafeUrl(finalUrl, true, false)) return null;
 
                       if (isExternal) {
                         return (

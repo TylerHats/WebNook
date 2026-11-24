@@ -11,6 +11,7 @@ import {
 import { ImageCropModal } from '../components/ui/ImageCropModal';
 import { CustomSelect, CustomSelectOption } from '../components/ui/CustomSelect';
 import { formatSmartNotificationTime } from '../utils/dateUtils';
+import { isSafeUrl } from '../utils/sanitize';
 
 // Markdown parser helper for standard chat messages
 const renderMessageMarkdown = (text: string) => {
@@ -58,6 +59,9 @@ const renderMessageMarkdown = (text: string) => {
           }
           const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
           if (linkMatch) {
+            if (!isSafeUrl(linkMatch[2], true, true)) {
+              return <span key={pIdx}>{linkMatch[1]}</span>;
+            }
             return (
               <a key={pIdx} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 600 }}>
                 {linkMatch[1]}
@@ -118,6 +122,10 @@ export const MessagesPage: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageStreamRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const prevConvIdRef = useRef<number | null>(null);
+  const prevLastMsgIdRef = useRef<number | null>(null);
 
   // Accepted friends list
   const [acceptedFriends, setAcceptedFriends] = useState<any[]>([]);
@@ -231,32 +239,44 @@ export const MessagesPage: React.FC = () => {
     }
   }, [conversations, activeConvId]);
 
-  // Poll for messages in active conversation
+  // Poll for messages in active conversation (paused while tab is hidden)
   useEffect(() => {
     if (!activeConvId) return;
     fetchMessages(activeConvId);
     const interval = setInterval(() => {
-      fetchMessages(activeConvId);
+      if (!document.hidden) {
+        fetchMessages(activeConvId);
+      }
     }, 4000);
-    return () => clearInterval(interval);
+    const onVisibility = () => {
+      if (!document.hidden) fetchMessages(activeConvId);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [activeConvId]);
 
-  // Scroll to bottom when messages update
+  // Smart auto-scroll: scroll on conversation switch or when already near bottom / sending own message
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+    const convChanged = prevConvIdRef.current !== activeConvId;
+    const hasNewLastMsg = lastMsg && lastMsg.id !== prevLastMsgIdRef.current;
+
+    if (convChanged || (hasNewLastMsg && (isNearBottomRef.current || lastMsg.sender_id === user?.id))) {
+      messagesEndRef.current?.scrollIntoView({ behavior: convChanged ? 'auto' : 'smooth' });
+      isNearBottomRef.current = true;
+    }
+
+    prevConvIdRef.current = activeConvId;
+    prevLastMsgIdRef.current = lastMsg ? lastMsg.id : null;
+  }, [messages, activeConvId, user?.id]);
 
   const activeConv = conversations.find(c => c.id === activeConvId);
 
-  // Sync group settings form when opening settings
-  useEffect(() => {
-    if (activeConv && activeConv.type === 'group') {
-      setEditGroupName(activeConv.name || '');
-      setEditGroupAvatarUrl(activeConv.avatar_url || '');
-    }
-  }, [activeConv]);
-
   const handleSelectConv = (convId: number) => {
+    isNearBottomRef.current = true;
     setActiveConvId(convId);
     setMobileShowChat(true);
     navigate(`/messages?conv=${convId}`, { replace: true });
@@ -273,18 +293,31 @@ export const MessagesPage: React.FC = () => {
     }
   };
 
-  // Handle Crop Completion
-  const handleCropComplete = (croppedFile: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      if (cropSource === 'new_group') {
-        setNewGroupAvatarUrl(dataUrl);
-      } else if (cropSource === 'edit_group') {
-        setEditGroupAvatarUrl(dataUrl);
+  // Upload cropped group icon to /api/nook/upload/group-avatar instead of embedding data URLs
+  const handleCropComplete = async (croppedFile: File) => {
+    if (!token) return;
+    const formData = new FormData();
+    formData.append('avatar', croppedFile);
+    try {
+      const res = await fetch('/api/nook/upload/group-avatar', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && data.avatar_url) {
+        if (cropSource === 'new_group') {
+          setNewGroupAvatarUrl(data.avatar_url);
+        } else if (cropSource === 'edit_group') {
+          setEditGroupAvatarUrl(data.avatar_url);
+        }
+        showToast('Group avatar uploaded!', 'success');
+      } else {
+        showToast(data.error || 'Failed to upload group avatar', 'error');
       }
-    };
-    reader.readAsDataURL(croppedFile);
+    } catch {
+      showToast('Error uploading group avatar', 'error');
+    }
   };
 
   // Helper to format conversation title
@@ -877,7 +910,11 @@ export const MessagesPage: React.FC = () => {
                         </button>
 
                         <button
-                          onClick={() => setGroupSettingsModalOpen(true)}
+                          onClick={() => {
+                            setEditGroupName(activeConv.name || '');
+                            setEditGroupAvatarUrl(activeConv.avatar_url || '');
+                            setGroupSettingsModalOpen(true);
+                          }}
                           className="btn-secondary"
                           style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                           title="Group Settings"
@@ -923,7 +960,14 @@ export const MessagesPage: React.FC = () => {
                 )}
 
                 {/* Message Stream */}
-                <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div
+                  ref={messageStreamRef}
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+                  }}
+                  style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}
+                >
                   {messages.length === 0 ? (
                     <div style={{ textAlign: 'center', margin: 'auto', opacity: 0.5, fontSize: '0.9rem' }}>
                       {isBugReportsChat

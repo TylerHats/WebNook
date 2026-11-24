@@ -19,6 +19,7 @@ export const cloudDreamTheme: ThemeDefinition = {
   animationPreset: 'cloud-dream',
   cssClass: 'theme-cloud-dream',
   previewStyle: {
+    fontFamily: "'Fredoka', sans-serif",
     borderRadius: '24px 12px 24px 12px',
     borderStyle: 'solid',
     borderWidth: '2px',
@@ -27,5 +28,14 @@ export const cloudDreamTheme: ThemeDefinition = {
     cardBg: 'rgba(255, 255, 255, 0.95)',
     badge: '☁️',
     decorIcons: ['☁️', '🎈']
+  },
+  defaultCardTitles: {
+    bio: 'Daydream Bio',
+    music: 'Skyward Lo-Fi Beats',
+    friends: 'Cloud Companions',
+    hobbies: 'Floaty Pastimes',
+    movies: 'Sunday Sky Films',
+    books: 'Softcover Shelf',
+    steam: 'Cozy Sky Adventures'
   }
 };

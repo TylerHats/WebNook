@@ -19,6 +19,7 @@ export const catCafeTheme: ThemeDefinition = {
   animationPreset: 'cat-cafe',
   cssClass: 'theme-cat-cafe',
   previewStyle: {
+    fontFamily: "'Fredoka', sans-serif",
     borderRadius: '20px',
     borderStyle: 'dashed',
     borderWidth: '2px',
@@ -27,5 +28,14 @@ export const catCafeTheme: ThemeDefinition = {
     cardBg: '#fffbf7',
     badge: '🐾',
     decorIcons: ['🐾', '🐱', '☕']
+  },
+  defaultCardTitles: {
+    bio: 'Meow About Me',
+    music: 'Purrfect Lo-Fi Mix',
+    friends: 'Café Regulars',
+    hobbies: 'Yarn & Naps',
+    movies: 'Cozy Watchlist',
+    books: 'Cat Café Bookshop',
+    steam: 'Cozy Games Shelf'
   }
 };

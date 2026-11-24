@@ -32,9 +32,14 @@ export const Navbar: React.FC = () => {
   }, []);
 
   // Poll unread messages count
+  const blockedByTerms = Boolean(user?.requires_terms_acceptance);
   useEffect(() => {
-    if (!token || !user) return;
+    if (!token || !user || blockedByTerms) {
+      setUnreadMsgCount(0);
+      return;
+    }
     const checkUnread = () => {
+      if (document.hidden) return;
       fetch('/api/messages/unread-count', {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -49,8 +54,15 @@ export const Navbar: React.FC = () => {
 
     checkUnread();
     const interval = setInterval(checkUnread, 5000);
-    return () => clearInterval(interval);
-  }, [token, user, location.pathname]);
+    const onVisibility = () => {
+      if (!document.hidden) checkUnread();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [token, user, blockedByTerms, location.pathname]);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -84,45 +96,75 @@ export const Navbar: React.FC = () => {
         <span>{appName}</span>
       </Link>
 
-      {/* Desktop Links */}
-      <div className="webnook-nav-links webnook-nav-links-desktop">
-        {user ? (
-          <>
-            <Link to={`/nook/${user.username}`} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <User size={18} />
-              <span>My Nook</span>
-            </Link>
-            <Link to="/messages" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', position: 'relative' }}>
-              <MessageSquare size={18} />
-              <span>Messages</span>
-              {unreadMsgCount > 0 && (
-                <span style={{
-                  background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800,
-                  borderRadius: '10px', padding: '0.1rem 0.4rem', minWidth: '16px', textAlign: 'center'
-                }}>
-                  {unreadMsgCount}
-                </span>
-              )}
-            </Link>
-            <Link to="/friends" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Users size={18} />
-              <span>Friends</span>
-            </Link>
-            <Link to="/customize" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Palette size={18} />
-              <span>Customizer</span>
-            </Link>
-            <Link to="/settings" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Settings size={18} />
-              <span>Settings</span>
-            </Link>
-            {user.role === 'admin' && (
-              <Link to="/admin" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-color)' }}>
-                <Shield size={18} />
-                <span>Admin</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        {/* Desktop Links */}
+        <div className="webnook-nav-links webnook-nav-links-desktop">
+          {user && !blockedByTerms ? (
+            <>
+              <Link to={`/nook/${user.username}`} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <User size={18} />
+                <span>My Nook</span>
               </Link>
-            )}
-            <NotificationDropdown />
+              <Link to="/messages" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', position: 'relative' }}>
+                <MessageSquare size={18} />
+                <span>Messages</span>
+                {unreadMsgCount > 0 && (
+                  <span style={{
+                    background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800,
+                    borderRadius: '10px', padding: '0.1rem 0.4rem', minWidth: '16px', textAlign: 'center'
+                  }}>
+                    {unreadMsgCount}
+                  </span>
+                )}
+              </Link>
+              <Link to="/friends" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Users size={18} />
+                <span>Friends</span>
+              </Link>
+              <Link to="/customize" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Palette size={18} />
+                <span>Customizer</span>
+              </Link>
+              <Link to="/settings" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Settings size={18} />
+                <span>Settings</span>
+              </Link>
+              {user.role === 'admin' && (
+                <Link to="/admin" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-color)' }}>
+                  <Shield size={18} />
+                  <span>Admin</span>
+                </Link>
+              )}
+            </>
+          ) : user && blockedByTerms ? (
+            <button
+              onClick={() => { logout(); navigate('/'); }}
+              className="btn-secondary"
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <LogOut size={16} />
+              <span>Logout</span>
+            </button>
+          ) : (
+            <>
+              <Link to="/login" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <LogIn size={18} />
+                <span>Login</span>
+              </Link>
+              <Link to="/register" className="btn-primary">
+                <UserPlus size={18} />
+                <span>Sign Up</span>
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Single shared NotificationDropdown instance across desktop & mobile */}
+        {user && !blockedByTerms && <NotificationDropdown />}
+
+        {/* Desktop Logout placed cleanly right of notifications */}
+        {user && !blockedByTerms && (
+          <div className="webnook-nav-links-desktop">
             <button
               onClick={() => { logout(); navigate('/login'); }}
               className="btn-secondary"
@@ -131,112 +173,109 @@ export const Navbar: React.FC = () => {
               <LogOut size={16} />
               <span>Logout</span>
             </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <LogIn size={18} />
-              <span>Login</span>
-            </Link>
-            <Link to="/register" className="btn-primary">
-              <UserPlus size={18} />
-              <span>Sign Up</span>
-            </Link>
-          </>
+          </div>
         )}
-      </div>
 
-      {/* Mobile Hamburger Menu Toggle & Dropdown */}
-      <div className="webnook-nav-mobile-toggle" style={{ display: 'none', alignItems: 'center', gap: '0.5rem', position: 'relative' }} ref={mobileMenuRef}>
-        {user && <NotificationDropdown />}
-        <button
-          onClick={() => setIsMobileMenuOpen(prev => !prev)}
-          className="btn-secondary"
-          style={{ padding: '0.45rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          aria-label="Toggle Navigation Menu"
-        >
-          {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-
-        {/* Mobile Dropdown Menu */}
-        {isMobileMenuOpen && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 'calc(100% + 0.75rem)',
-              right: 0,
-              width: '240px',
-              background: 'var(--bg-panel-solid, #1e1e2e)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '12px',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
-              padding: '0.75rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.4rem',
-              zIndex: 9999
-            }}
+        {/* Mobile Hamburger Menu Toggle & Dropdown */}
+        <div className="webnook-nav-mobile-toggle" style={{ display: 'none', alignItems: 'center', gap: '0.5rem', position: 'relative' }} ref={mobileMenuRef}>
+          <button
+            onClick={() => setIsMobileMenuOpen(prev => !prev)}
+            className="btn-secondary"
+            style={{ padding: '0.45rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            aria-label="Toggle Navigation Menu"
           >
-            {user ? (
-              <>
-                <Link to={`/nook/${user.username}`} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
-                  <User size={18} color="var(--accent-color)" />
-                  <span>My Nook</span>
-                </Link>
-                <Link to="/messages" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
-                  <MessageSquare size={18} color="var(--accent-color)" />
-                  <span>Messages</span>
-                  {unreadMsgCount > 0 && (
-                    <span style={{
-                      background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800,
-                      borderRadius: '10px', padding: '0.1rem 0.4rem', minWidth: '16px', textAlign: 'center', marginLeft: 'auto'
-                    }}>
-                      {unreadMsgCount}
-                    </span>
-                  )}
-                </Link>
-                <Link to="/friends" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
-                  <Users size={18} color="var(--accent-color)" />
-                  <span>Friends</span>
-                </Link>
-                <Link to="/customize" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
-                  <Palette size={18} color="var(--accent-color)" />
-                  <span>Customizer</span>
-                </Link>
-                <Link to="/settings" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
-                  <Settings size={18} color="var(--accent-color)" />
-                  <span>Settings</span>
-                </Link>
-                {user.role === 'admin' && (
-                  <Link to="/admin" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem', color: 'var(--accent-color)' }}>
-                    <Shield size={18} />
-                    <span>Admin Panel</span>
+            {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+
+          {/* Mobile Dropdown Menu */}
+          {isMobileMenuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 0.75rem)',
+                right: 0,
+                width: '240px',
+                background: 'var(--bg-panel-solid, #1e1e2e)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '12px',
+                boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+                padding: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.4rem',
+                zIndex: 9999
+              }}
+            >
+              {user && !blockedByTerms ? (
+                <>
+                  <Link to={`/nook/${user.username}`} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
+                    <User size={18} color="var(--accent-color)" />
+                    <span>My Nook</span>
                   </Link>
-                )}
-                <div style={{ height: '1px', background: 'var(--border-color)', margin: '0.2rem 0' }} />
+                  <Link to="/messages" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
+                    <MessageSquare size={18} color="var(--accent-color)" />
+                    <span>Messages</span>
+                    {unreadMsgCount > 0 && (
+                      <span style={{
+                        background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800,
+                        borderRadius: '10px', padding: '0.1rem 0.4rem', minWidth: '16px', textAlign: 'center', marginLeft: 'auto'
+                      }}>
+                        {unreadMsgCount}
+                      </span>
+                    )}
+                  </Link>
+                  <Link to="/friends" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
+                    <Users size={18} color="var(--accent-color)" />
+                    <span>Friends</span>
+                  </Link>
+                  <Link to="/customize" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
+                    <Palette size={18} color="var(--accent-color)" />
+                    <span>Customizer</span>
+                  </Link>
+                  <Link to="/settings" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
+                    <Settings size={18} color="var(--accent-color)" />
+                    <span>Settings</span>
+                  </Link>
+                  {user.role === 'admin' && (
+                    <Link to="/admin" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem', color: 'var(--accent-color)' }}>
+                      <Shield size={18} />
+                      <span>Admin Panel</span>
+                    </Link>
+                  )}
+                  <div style={{ height: '1px', background: 'var(--border-color)', margin: '0.2rem 0' }} />
+                  <button
+                    onClick={() => { setIsMobileMenuOpen(false); logout(); navigate('/login'); }}
+                    className="btn-secondary"
+                    style={{ width: '100%', justifyContent: 'flex-start', padding: '0.6rem 0.8rem', fontSize: '0.9rem' }}
+                  >
+                    <LogOut size={16} />
+                    <span>Logout (@{user.username})</span>
+                  </button>
+                </>
+              ) : user && blockedByTerms ? (
                 <button
-                  onClick={() => { setIsMobileMenuOpen(false); logout(); navigate('/login'); }}
+                  onClick={() => { setIsMobileMenuOpen(false); logout(); navigate('/'); }}
                   className="btn-secondary"
                   style={{ width: '100%', justifyContent: 'flex-start', padding: '0.6rem 0.8rem', fontSize: '0.9rem' }}
                 >
                   <LogOut size={16} />
                   <span>Logout (@{user.username})</span>
                 </button>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
-                  <LogIn size={18} color="var(--accent-color)" />
-                  <span>Login</span>
-                </Link>
-                <Link to="/register" className="btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '0.3rem' }}>
-                  <UserPlus size={18} />
-                  <span>Sign Up</span>
-                </Link>
-              </>
-            )}
-          </div>
-        )}
+              ) : (
+                <>
+                  <Link to="/login" className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.8rem' }}>
+                    <LogIn size={18} color="var(--accent-color)" />
+                    <span>Login</span>
+                  </Link>
+                  <Link to="/register" className="btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '0.3rem' }}>
+                    <UserPlus size={18} />
+                    <span>Sign Up</span>
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );

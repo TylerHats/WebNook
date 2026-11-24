@@ -24,7 +24,7 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
 }) => {
   // Determine initial category shelf to expand based on currently saved theme
   const initialCategory = getCategoryForTheme(currentSavedThemeId);
-  const [expandedCategory, setExpandedCategory] = useState<ThemeCategory>(initialCategory);
+  const [expandedCategory, setExpandedCategory] = useState<ThemeCategory | ''>(initialCategory);
 
   useEffect(() => {
     const cat = getCategoryForTheme(currentSavedThemeId);
@@ -35,7 +35,7 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
   const stagedThemeObj = getThemeById(stagedThemeId);
 
   const toggleCategory = (catId: ThemeCategory) => {
-    setExpandedCategory(prev => (prev === catId ? catId : catId));
+    setExpandedCategory(prev => (prev === catId ? '' : catId));
   };
 
   return (
@@ -260,43 +260,48 @@ export const ThemeBookshelfPicker: React.FC<ThemeBookshelfPickerProps> = ({
                           {/* Live Micro-Card Component Preview */}
                           <div style={{
                             background: t.palette.bg,
-                            borderRadius: '10px',
+                            borderRadius: prev.borderRadius || '10px',
                             padding: '0.6rem',
                             border: `1px solid ${t.palette.border}`,
+                            boxShadow: prev.accentGlow || 'none',
                             color: t.palette.text,
                             fontFamily: prev.fontFamily || 'inherit',
                             fontSize: '0.72rem',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '0.4rem'
+                            gap: '0.4rem',
+                            overflow: 'hidden'
                           }}>
                             {/* Micro Card Mock Header */}
                             <div style={{
                               background: prev.headerBg || t.palette.accent,
                               color: '#ffffff',
-                              padding: '0.25rem 0.45rem',
+                              padding: '0.28rem 0.5rem',
                               borderRadius: '6px',
                               fontWeight: 700,
                               fontSize: '0.7rem',
                               display: 'flex',
                               justifyContent: 'space-between',
-                              alignItems: 'center'
+                              alignItems: 'center',
+                              textShadow: '0 1px 2px rgba(0,0,0,0.45)'
                             }}>
-                              <span>{t.badge || '✨'} Sample Card</span>
-                              <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>Preview</span>
+                              <span>{t.badge || '✨'} {t.name.split(' ')[0]}</span>
+                              <span style={{ fontSize: '0.65rem', opacity: 0.9 }}>
+                                {prev.decorIcons?.slice(0, 2).join(' ') || '★'}
+                              </span>
                             </div>
 
                             {/* Micro Card Content Body */}
                             <div style={{
-                              background: t.palette.cardBg,
+                              background: prev.cardBg || t.palette.cardBg,
                               borderRadius: prev.borderRadius || '6px',
                               border: `${prev.borderWidth || '1px'} ${prev.borderStyle || 'solid'} ${prev.borderColor || t.palette.border}`,
                               padding: '0.45rem',
                               color: t.palette.text
                             }}>
-                              <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Nook Theme Cue</div>
-                              <div style={{ fontSize: '0.65rem', opacity: 0.8, lineHeight: 1.25 }}>
-                                Live micro styling demo.
+                              <div style={{ fontWeight: 700, marginBottom: '0.15rem' }}>Sample Card</div>
+                              <div style={{ fontSize: '0.65rem', opacity: 0.85, lineHeight: 1.25 }}>
+                                Live palette, radius &amp; header feel.
                               </div>
                             </div>
                           </div>

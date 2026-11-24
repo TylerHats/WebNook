@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare, Volume2, Upload, FileText, ArrowUp, ArrowDown, Crop } from 'lucide-react';
+import { Palette, Sparkles, Image, Music, Eye, Code, Plus, Trash2, Save, Gamepad2, Layers, CheckSquare, Volume2, Upload, FileText, ArrowUp, ArrowDown, Crop, RotateCcw } from 'lucide-react';
 import { StickerCanvas, Sticker } from '../components/nook/StickerCanvas';
 import { PRESET_STICKERS } from '../constants/presetStickers';
 
@@ -16,6 +16,18 @@ import { ThemeDefinition, ThemePalette } from '../themes/types';
 import { playThemeSound } from '../utils/themeSoundEngine';
 import { ThemeAnimationOverlay } from '../components/nook/ThemeAnimationOverlay';
 import { SteamWidget } from '../components/widgets/SteamWidget';
+import { sanitizeHtml } from '../utils/sanitize';
+import { getThemeById } from '../themes/registry';
+import {
+  buildNookRootProps,
+  parseNookStyleOverrides,
+  toHexInputFallback,
+  BorderRadiusPreset,
+  GlassBlurPreset,
+  GlowIntensityPreset,
+  FontOverridePreset,
+  BgPatternPreset
+} from '../utils/nookStyle';
 
 export interface NookCardConfig {
   id: string;
@@ -82,6 +94,18 @@ export const NookCustomizerPage: React.FC = () => {
   const [savedTextColor, setSavedTextColor] = useState('#ffffff');
   const [savedBorderColor, setSavedBorderColor] = useState('rgba(255,255,255,0.1)');
 
+  const [borderRadiusPreset, setBorderRadiusPreset] = useState<BorderRadiusPreset>('');
+  const [glassBlurPreset, setGlassBlurPreset] = useState<GlassBlurPreset>('');
+  const [glowIntensityPreset, setGlowIntensityPreset] = useState<GlowIntensityPreset>('');
+  const [fontOverridePreset, setFontOverridePreset] = useState<FontOverridePreset>('');
+  const [bgPatternPreset, setBgPatternPreset] = useState<BgPatternPreset>('');
+
+  const [savedBorderRadiusPreset, setSavedBorderRadiusPreset] = useState<BorderRadiusPreset>('');
+  const [savedGlassBlurPreset, setSavedGlassBlurPreset] = useState<GlassBlurPreset>('');
+  const [savedGlowIntensityPreset, setSavedGlowIntensityPreset] = useState<GlowIntensityPreset>('');
+  const [savedFontOverridePreset, setSavedFontOverridePreset] = useState<FontOverridePreset>('');
+  const [savedBgPatternPreset, setSavedBgPatternPreset] = useState<BgPatternPreset>('');
+
   // Steam & Music integration state
   const [steamId64, setSteamId64] = useState('');
   const [steamDisplayMode, setSteamDisplayMode] = useState<'none' | 'recently_played' | 'top_games' | 'both'>('both');
@@ -101,6 +125,7 @@ export const NookCustomizerPage: React.FC = () => {
   const [avatarFileName, setAvatarFileName] = useState('');
   const [bannerFileName, setBannerFileName] = useState('');
   const [audioFileName, setAudioFileName] = useState('');
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [csvFileName, setCsvFileName] = useState('');
   const [stickerFileName, setStickerFileName] = useState('');
 
@@ -204,19 +229,30 @@ export const NookCustomizerPage: React.FC = () => {
             setSavedTextColor(initText);
 
             if (data.nookSettings.card_colors_json) {
-              try {
-                const parsedCardColors = typeof data.nookSettings.card_colors_json === 'string'
-                  ? JSON.parse(data.nookSettings.card_colors_json)
-                  : data.nookSettings.card_colors_json;
-                if (parsedCardColors.cardBg) {
-                  setCardBgColor(parsedCardColors.cardBg);
-                  setSavedCardBgColor(parsedCardColors.cardBg);
-                }
-                if (parsedCardColors.border) {
-                  setBorderColor(parsedCardColors.border);
-                  setSavedBorderColor(parsedCardColors.border);
-                }
-              } catch (e) {}
+              const parsedCardColors = parseNookStyleOverrides(data.nookSettings.card_colors_json);
+              if (parsedCardColors.cardBg) {
+                setCardBgColor(parsedCardColors.cardBg);
+                setSavedCardBgColor(parsedCardColors.cardBg);
+              }
+              if (parsedCardColors.border) {
+                setBorderColor(parsedCardColors.border);
+                setSavedBorderColor(parsedCardColors.border);
+              }
+              const rad = parsedCardColors.borderRadius || '';
+              const blur = parsedCardColors.glassBlur || '';
+              const glow = parsedCardColors.glowIntensity || '';
+              const font = parsedCardColors.fontOverride || '';
+              const pat = parsedCardColors.bgPattern || '';
+              setBorderRadiusPreset(rad);
+              setSavedBorderRadiusPreset(rad);
+              setGlassBlurPreset(blur);
+              setSavedGlassBlurPreset(blur);
+              setGlowIntensityPreset(glow);
+              setSavedGlowIntensityPreset(glow);
+              setFontOverridePreset(font);
+              setSavedFontOverridePreset(font);
+              setBgPatternPreset(pat);
+              setSavedBgPatternPreset(pat);
             }
 
             setBgMusicUrl(data.nookSettings.bg_music_url || '');
@@ -361,6 +397,23 @@ export const NookCustomizerPage: React.FC = () => {
     showToast('Theme palette applied!', 'info');
   };
 
+  const handleResetToThemeDefaults = () => {
+    const def = getThemeById(theme);
+    if (def) {
+      setBgColor(def.palette.bg);
+      setCardBgColor(def.palette.cardBg);
+      setAccentColor(def.palette.accent);
+      setTextColor(def.palette.text);
+      setBorderColor(def.palette.border);
+    }
+    setBorderRadiusPreset('');
+    setGlassBlurPreset('');
+    setGlowIntensityPreset('');
+    setFontOverridePreset('');
+    setBgPatternPreset('');
+    showToast('Reset colors and style overrides to theme defaults!', 'info');
+  };
+
   const handleDiscardStagedTheme = () => {
     setTheme(savedTheme);
     setBgColor(savedBgColor);
@@ -368,6 +421,11 @@ export const NookCustomizerPage: React.FC = () => {
     setAccentColor(savedAccentColor);
     setTextColor(savedTextColor);
     setBorderColor(savedBorderColor);
+    setBorderRadiusPreset(savedBorderRadiusPreset);
+    setGlassBlurPreset(savedGlassBlurPreset);
+    setGlowIntensityPreset(savedGlowIntensityPreset);
+    setFontOverridePreset(savedFontOverridePreset);
+    setBgPatternPreset(savedBgPatternPreset);
     showToast('Reverted staged theme & colors to saved profile', 'info');
   };
 
@@ -378,7 +436,9 @@ export const NookCustomizerPage: React.FC = () => {
       pos_y: Math.floor(Math.random() * 60) + 20,
       scale: 1.0,
       rotation: Math.floor(Math.random() * 30) - 15,
-      layer: 'above_cards'
+      layer: 'above_cards',
+      anchor_type: 'card',
+      anchor_id: 'header'
     };
     setStickers([...stickers, newSticker]);
     showToast('Sticker added to canvas!', 'info');
@@ -477,7 +537,7 @@ export const NookCustomizerPage: React.FC = () => {
     }
   };
 
-  const handleSave = async (silent = false, themeToSave?: string) => {
+  const handleSave = async (silent = false, themeToSave?: string, overrideStickers?: Sticker[]) => {
     if (!token) return;
     setIsSaving(true);
 
@@ -489,6 +549,12 @@ export const NookCustomizerPage: React.FC = () => {
     const accentToPersist = isThemeStagedUnsaved ? savedAccentColor : accentColor;
     const textToPersist = isThemeStagedUnsaved ? savedTextColor : textColor;
     const borderToPersist = isThemeStagedUnsaved ? savedBorderColor : borderColor;
+    const radiusToPersist = isThemeStagedUnsaved ? savedBorderRadiusPreset : borderRadiusPreset;
+    const blurToPersist = isThemeStagedUnsaved ? savedGlassBlurPreset : glassBlurPreset;
+    const glowToPersist = isThemeStagedUnsaved ? savedGlowIntensityPreset : glowIntensityPreset;
+    const fontToPersist = isThemeStagedUnsaved ? savedFontOverridePreset : fontOverridePreset;
+    const patternToPersist = isThemeStagedUnsaved ? savedBgPatternPreset : bgPatternPreset;
+    const stickersToPersist = overrideStickers ?? stickers;
 
     const cleanedMovies = favoriteMovies.map(m => {
       let r = m.rating;
@@ -523,7 +589,15 @@ export const NookCustomizerPage: React.FC = () => {
           spotify_track_url: spotifyTrackUrl,
           apple_music_url: appleMusicUrl,
           card_visibility_json: cardVisibility,
-          card_colors_json: { cardBg: cardBgToPersist, border: borderToPersist },
+          card_colors_json: {
+            cardBg: cardBgToPersist,
+            border: borderToPersist,
+            borderRadius: radiusToPersist,
+            glassBlur: blurToPersist,
+            glowIntensity: glowToPersist,
+            fontOverride: fontToPersist,
+            bgPattern: patternToPersist
+          },
           card_titles_json: cardTitles,
           music_tracks_json: { tracks: musicTracks, autoNextPlay, loopPlaylist },
           favorite_movies_json: cleanedMovies,
@@ -544,7 +618,7 @@ export const NookCustomizerPage: React.FC = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ stickers })
+        body: JSON.stringify({ stickers: stickersToPersist })
       });
 
       if (custRes.ok && stickRes.ok) {
@@ -554,6 +628,11 @@ export const NookCustomizerPage: React.FC = () => {
         setSavedAccentColor(accentToPersist);
         setSavedTextColor(textToPersist);
         setSavedBorderColor(borderToPersist);
+        setSavedBorderRadiusPreset(radiusToPersist);
+        setSavedGlassBlurPreset(blurToPersist);
+        setSavedGlowIntensityPreset(glowToPersist);
+        setSavedFontOverridePreset(fontToPersist);
+        setSavedBgPatternPreset(patternToPersist);
         if (!silent) showToast('Nook customized successfully!', 'success');
       } else {
         if (!silent) showToast('Failed to save customization', 'error');
@@ -597,10 +676,25 @@ export const NookCustomizerPage: React.FC = () => {
     hobbies, customCss, stickers, cardLayout
   ]);
 
-  const hasUnsavedColors = bgColor !== savedBgColor || cardBgColor !== savedCardBgColor || accentColor !== savedAccentColor || textColor !== savedTextColor || borderColor !== savedBorderColor;
+  const hasUnsavedColors =
+    bgColor !== savedBgColor ||
+    cardBgColor !== savedCardBgColor ||
+    accentColor !== savedAccentColor ||
+    textColor !== savedTextColor ||
+    borderColor !== savedBorderColor ||
+    borderRadiusPreset !== savedBorderRadiusPreset ||
+    glassBlurPreset !== savedGlassBlurPreset ||
+    glowIntensityPreset !== savedGlowIntensityPreset ||
+    fontOverridePreset !== savedFontOverridePreset ||
+    bgPatternPreset !== savedBgPatternPreset;
 
   const handleMusicFileUpload = async (file: File | null) => {
     if (!file || !token) return;
+    if (file.size > 50 * 1024 * 1024) {
+      showToast('Audio file is too large (max 50 MB).', 'error');
+      return;
+    }
+    setIsUploadingAudio(true);
     const formData = new FormData();
     formData.append('music', file);
     try {
@@ -609,22 +703,27 @@ export const NookCustomizerPage: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
         body: formData
       });
-      const data = await res.json();
-      if (res.ok) {
-        setBgMusicUrl(data.bg_music_url);
+      const rawText = await res.text();
+      let data: any = {};
+      try { data = rawText ? JSON.parse(rawText) : {}; } catch { data = {}; }
+      const uploadedUrl = data.bg_music_url || data.music_url;
+      if (res.ok && uploadedUrl) {
+        setBgMusicUrl(uploadedUrl);
         const newTrack: MusicTrack = {
           id: `tr_${Date.now()}`,
-          title: bgMusicTitle.trim() || file.name,
+          title: bgMusicTitle.trim() || file.name.replace(/\.[^/.]+$/, ''),
           type: 'audio',
-          url: data.bg_music_url
+          url: uploadedUrl
         };
         setMusicTracks(prev => [...prev, newTrack]);
         showToast('Background audio file uploaded & added to playlist!', 'success');
       } else {
-        showToast(data.error || 'Failed to upload audio file', 'error');
+        showToast(data.error || `Failed to upload audio file (${res.status})`, 'error');
       }
     } catch (e) {
       showToast('Error uploading audio file', 'error');
+    } finally {
+      setIsUploadingAudio(false);
     }
   };
 
@@ -681,18 +780,23 @@ export const NookCustomizerPage: React.FC = () => {
     );
   }
 
-  const customStyle = {
-    minHeight: '100vh',
-    padding: '2rem 1rem',
-    position: 'relative',
-    backgroundColor: bgColor,
-    color: textColor,
-    '--bg-primary': bgColor,
-    '--bg-panel': cardBgColor || 'rgba(0,0,0,0.3)',
-    '--accent-color': accentColor,
-    '--text-main': textColor,
-    '--border-color': borderColor
-  } as React.CSSProperties;
+  const activeThemeMeta = getThemeById(theme);
+  const currentStyleOverrides = {
+    cardBg: cardBgColor,
+    border: borderColor,
+    borderRadius: borderRadiusPreset,
+    glassBlur: glassBlurPreset,
+    glowIntensity: glowIntensityPreset,
+    fontOverride: fontOverridePreset,
+    bgPattern: bgPatternPreset
+  };
+  const customizerRootProps = buildNookRootProps({
+    theme,
+    bgColor,
+    textColor,
+    accentColor,
+    overrides: currentStyleOverrides
+  });
 
   const handleGlobalClick = (e: React.MouseEvent) => {
     if (themeSoundsEnabled) {
@@ -701,7 +805,11 @@ export const NookCustomizerPage: React.FC = () => {
   };
 
   return (
-    <div className={`theme-${theme}`} style={customStyle} onClick={handleGlobalClick}>
+    <div
+      className={customizerRootProps.className}
+      style={{ ...customizerRootProps.style, padding: '2rem 1rem' }}
+      onClick={handleGlobalClick}
+    >
       {/* Theme Animation Overlay in Customizer Live Preview */}
       {themeAnimationsEnabled && <ThemeAnimationOverlay theme={theme} />}
 
@@ -712,7 +820,7 @@ export const NookCustomizerPage: React.FC = () => {
         stickers={stickers}
         onSaveStickers={(updatedStickers) => {
           setStickers(updatedStickers);
-          handleSave();
+          handleSave(false, undefined, updatedStickers);
         }}
         theme={theme}
         bgColor={bgColor}
@@ -720,6 +828,10 @@ export const NookCustomizerPage: React.FC = () => {
         accentColor={accentColor}
         textColor={textColor}
         borderColor={borderColor}
+        styleOverrides={currentStyleOverrides}
+        cardLayout={cardLayout}
+        hobbies={hobbies}
+        token={token}
         user={user}
         favoriteMovies={favoriteMovies}
         favoriteBooks={favoriteBooks}
@@ -876,57 +988,173 @@ export const NookCustomizerPage: React.FC = () => {
               />
             </div>
 
-            {/* Theme Sound & Animation Toggles - Rendered ONLY for supported themes */}
-            {['win9x', 'win98', 'cat-cafe', 'cloud-dream', 'pixel-arcade', 'magical-girl', 'cyberpunk', 'synthwave'].includes(theme) && (
+            {/* Theme Sound & Animation Toggles - Rendered dynamically from active theme capability metadata */}
+            {(activeThemeMeta?.supportsSounds || activeThemeMeta?.supportsAnimations) && (
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={themeSoundsEnabled}
-                    onChange={e => setThemeSoundsEnabled(e.target.checked)}
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
-                  />
-                  <span>🔊 Enable Theme Sound Effects (Clicks, Bleeps, Purrs & Chimes)</span>
-                </label>
+                {activeThemeMeta?.supportsSounds && (
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={themeSoundsEnabled}
+                      onChange={e => setThemeSoundsEnabled(e.target.checked)}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                    />
+                    <span>🔊 Enable Theme Sound Effects (Clicks, Bleeps, Purrs &amp; Chimes)</span>
+                  </label>
+                )}
 
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={themeAnimationsEnabled}
-                    onChange={e => setThemeAnimationsEnabled(e.target.checked)}
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
-                  />
-                  <span>✨ Enable Theme Micro-Animations (Laser Sweeps, Walking Cat & Cloud Drift)</span>
-                </label>
+                {activeThemeMeta?.supportsAnimations && (
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={themeAnimationsEnabled}
+                      onChange={e => setThemeAnimationsEnabled(e.target.checked)}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                    />
+                    <span>✨ Enable Theme Micro-Animations (Ambient Effects &amp; Parallax Overlays)</span>
+                  </label>
+                )}
               </div>
             )}
 
-            {/* Custom Theme Color Pickers */}
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Theme Color Overrides:</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            {/* Custom Theme Color Overrides (All 5 Palette Channels) */}
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                <h4 style={{ fontSize: '0.92rem', fontWeight: 700, margin: 0 }}>Theme Color Overrides (All 5 Palette Channels):</h4>
+                <button
+                  type="button"
+                  onClick={handleResetToThemeDefaults}
+                  className="btn-secondary"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <RotateCcw size={13} />
+                  <span>Reset to Theme Defaults</span>
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.9rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Base Background</label>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer' }} />
+                    <input type="color" value={toHexInputFallback(bgColor, '#12131c')} onChange={e => setBgColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer' }} />
                     <input type="text" value={bgColor} onChange={e => setBgColor(e.target.value)} style={{ flex: 1, padding: '0.4rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.8rem' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Card Panel Surface</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input type="color" value={toHexInputFallback(cardBgColor, '#181b2b')} onChange={e => setCardBgColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer' }} />
+                    <input type="text" value={cardBgColor} onChange={e => setCardBgColor(e.target.value)} style={{ flex: 1, padding: '0.4rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.8rem' }} />
                   </div>
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Accent Highlight</label>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer' }} />
+                    <input type="color" value={toHexInputFallback(accentColor, '#6366f1')} onChange={e => setAccentColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer' }} />
                     <input type="text" value={accentColor} onChange={e => setAccentColor(e.target.value)} style={{ flex: 1, padding: '0.4rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.8rem' }} />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Text Main</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Main Text Color</label>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer' }} />
+                    <input type="color" value={toHexInputFallback(textColor, '#ffffff')} onChange={e => setTextColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer' }} />
                     <input type="text" value={textColor} onChange={e => setTextColor(e.target.value)} style={{ flex: 1, padding: '0.4rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.8rem' }} />
                   </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Card Border Color</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input type="color" value={toHexInputFallback(borderColor, '#6366f1')} onChange={e => setBorderColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer' }} />
+                    <input type="text" value={borderColor} onChange={e => setBorderColor(e.target.value)} style={{ flex: 1, padding: '0.4rem', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.8rem' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Style & Pop Customization Controls */}
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '0.75rem' }}>Style &amp; Pop Overrides:</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(185px, 1fr))', gap: '0.9rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.3rem' }}>Corner Shape</label>
+                  <select
+                    value={borderRadiusPreset}
+                    onChange={e => setBorderRadiusPreset(e.target.value as BorderRadiusPreset)}
+                    style={{ width: '100%', padding: '0.45rem 0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.82rem' }}
+                  >
+                    <option value="">Theme Default</option>
+                    <option value="sharp">Sharp (2px)</option>
+                    <option value="soft">Soft (10px)</option>
+                    <option value="rounded">Rounded (20px)</option>
+                    <option value="pill">Expressive Pill (28px)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.3rem' }}>Backdrop Glass Blur</label>
+                  <select
+                    value={glassBlurPreset}
+                    onChange={e => setGlassBlurPreset(e.target.value as GlassBlurPreset)}
+                    style={{ width: '100%', padding: '0.45rem 0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.82rem' }}
+                  >
+                    <option value="">Theme Default</option>
+                    <option value="none">Crisp / No Blur</option>
+                    <option value="subtle">Subtle (8px)</option>
+                    <option value="medium">Medium Frost (18px)</option>
+                    <option value="frosted">Heavy Crystal (30px)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.3rem' }}>Panel Accent Glow</label>
+                  <select
+                    value={glowIntensityPreset}
+                    onChange={e => setGlowIntensityPreset(e.target.value as GlowIntensityPreset)}
+                    style={{ width: '100%', padding: '0.45rem 0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.82rem' }}
+                  >
+                    <option value="">Theme Default</option>
+                    <option value="none">Flat / No Glow</option>
+                    <option value="soft">Soft Ambient Halo</option>
+                    <option value="vibrant">Vibrant Neon Pop</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.3rem' }}>Background Pattern</label>
+                  <select
+                    value={bgPatternPreset}
+                    onChange={e => setBgPatternPreset(e.target.value as BgPatternPreset)}
+                    style={{ width: '100%', padding: '0.45rem 0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.82rem' }}
+                  >
+                    <option value="">Theme Default</option>
+                    <option value="none">Solid / Clean Gradient</option>
+                    <option value="dots">Polka Dot Matrix</option>
+                    <option value="grid">Blueprint Grid</option>
+                    <option value="scanlines">CRT Scanlines</option>
+                    <option value="stars">Starfield Sparkle</option>
+                    <option value="diagonal">Retro Diagonal Stripes</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.3rem' }}>Typography Font</label>
+                  <select
+                    value={fontOverridePreset}
+                    onChange={e => setFontOverridePreset(e.target.value as FontOverridePreset)}
+                    style={{ width: '100%', padding: '0.45rem 0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.82rem' }}
+                  >
+                    <option value="">Theme Default</option>
+                    <option value="outfit">Outfit (Modern Clean)</option>
+                    <option value="space-grotesk">Space Grotesk (Geometric Sci-Fi)</option>
+                    <option value="fredoka">Fredoka (Cozy Rounded)</option>
+                    <option value="playfair">Playfair Display (Editorial Serif)</option>
+                    <option value="jetbrains">JetBrains Mono (Developer Terminal)</option>
+                    <option value="vt323">VT323 (Retro CRT Terminal)</option>
+                    <option value="press-start">Press Start 2P (8-Bit Arcade)</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -1467,16 +1695,24 @@ export const NookCustomizerPage: React.FC = () => {
                           onChange={e => setBgMusicTitle(e.target.value)}
                           style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem' }}
                         />
-                        <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
+                        <label className="btn-secondary" style={{ cursor: isUploadingAudio ? 'wait' : 'pointer', opacity: isUploadingAudio ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}>
                           <Upload size={16} />
-                          <span>{audioFileName || 'Choose Audio File...'}</span>
+                          <span>{isUploadingAudio ? 'Uploading & Optimizing...' : (audioFileName || 'Choose Audio File...')}</span>
                           <input
                             type="file"
-                            accept="audio/*"
+                            accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.webm"
+                            disabled={isUploadingAudio}
                             onChange={async (e) => {
-                              const f = e.target.files?.[0];
+                              const inputEl = e.target;
+                              const f = inputEl.files?.[0];
                               if (!f || !token) return;
+                              if (f.size > 50 * 1024 * 1024) {
+                                showToast('Audio file is too large (max 50 MB).', 'error');
+                                inputEl.value = '';
+                                return;
+                              }
                               setAudioFileName(f.name);
+                              setIsUploadingAudio(true);
                               const formData = new FormData();
                               formData.append('music', f);
                               try {
@@ -1485,23 +1721,30 @@ export const NookCustomizerPage: React.FC = () => {
                                   headers: { Authorization: `Bearer ${token}` },
                                   body: formData
                                 });
-                                const data = await res.json();
-                                if (res.ok) {
+                                const rawText = await res.text();
+                                let data: any = {};
+                                try { data = rawText ? JSON.parse(rawText) : {}; } catch { data = {}; }
+                                const uploadedUrl = data.bg_music_url || data.music_url;
+                                if (res.ok && uploadedUrl) {
                                   const track: MusicTrack = {
                                     id: `tr_${Date.now()}`,
-                                    title: bgMusicTitle.trim() || f.name,
+                                    title: bgMusicTitle.trim() || f.name.replace(/\.[^/.]+$/, ''),
                                     type: 'audio',
-                                    url: data.music_url,
+                                    url: uploadedUrl,
                                     autoplay: false
                                   };
                                   updateCardMusic([...cardTracks, track]);
                                   setBgMusicTitle('');
+                                  setAudioFileName('');
                                   showToast('Audio file uploaded to card playlist!', 'success');
                                 } else {
-                                  showToast(data.error || 'Audio upload failed', 'error');
+                                  showToast(data.error || `Audio upload failed (${res.status})`, 'error');
                                 }
                               } catch (err) {
                                 showToast('Error uploading audio file', 'error');
+                              } finally {
+                                setIsUploadingAudio(false);
+                                inputEl.value = '';
                               }
                             }}
                             style={{ display: 'none' }}
@@ -2119,7 +2362,7 @@ export const NookCustomizerPage: React.FC = () => {
                       />
                       <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '0.85rem' }}>
                         <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.6, marginBottom: '0.5rem' }}>HTML CARD PREVIEW:</div>
-                        <div dangerouslySetInnerHTML={{ __html: c.content_html || '' }} />
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.content_html || '') }} />
                       </div>
                     </div>
                   )}
@@ -2230,8 +2473,11 @@ export const NookCustomizerPage: React.FC = () => {
                             <img src={st.sticker_url} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                           )}
                           <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Sticker #{idx + 1}</span>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.6, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.7, background: 'rgba(255,255,255,0.1)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
                             Layer: {st.layer === 'behind_cards' ? 'Behind Cards' : 'Above Cards'}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.78, background: st.anchor_type === 'card' ? 'rgba(99,102,241,0.22)' : 'rgba(255,255,255,0.08)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
+                            {st.anchor_type === 'card' && st.anchor_id ? `Pinned: ${st.anchor_id}` : 'Free Canvas'}
                           </span>
                         </div>
 

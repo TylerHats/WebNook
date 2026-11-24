@@ -1,13 +1,21 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import https from 'https';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { execFile, execSync } from 'child_process';
 import { execute, query, queryOne } from '../db/connection';
 import { authenticateToken, requireAdmin, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { runMigrations } from '../db/migrations';
 import { sendIntegrationErrorEmail, sendAccountDisabledEmail, sendPasswordResetEmail, sendStyledEmail } from '../services/emailService';
+import { validatePasswordComplexity } from './authRoutes';
+import { getEffectiveBaseUrl, safePathInside } from '../utils/security';
+import { invalidateLegalCache } from '../services/legalService';
+import { clearEnsuredUsersCache } from './messageRoutes';
+import { createNotification } from './notificationRoutes';
 
 const router = Router();
 router.use(authenticateToken as any, requireAdmin as any);
@@ -15,47 +23,77 @@ router.use(authenticateToken as any, requireAdmin as any);
 const REPO_OWNER = 'TylerHats';
 const REPO_NAME = 'WebNook';
 
-// Configure Multer for custom branding logo upload (Saved in persistent data dir)
 const dataDir = process.env.DATA_DIR || path.join(__dirname, '../../data');
 const customBrandingDir = path.join(dataDir, 'branding');
 if (!fs.existsSync(customBrandingDir)) {
   fs.mkdirSync(customBrandingDir, { recursive: true });
 }
 
+const BRANDING_MIME_EXT: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif'
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, customBrandingDir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.png';
+    const ext = BRANDING_MIME_EXT[file.mimetype] || '.png';
     cb(null, `logo${ext}`);
   }
 });
-const upload = multer({ storage });
 
-// Helper HTTPS request
-function getGitHubApi(apiPath: string): Promise<any> {
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (BRANDING_MIME_EXT[file.mimetype]) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG, JPG, WebP, or GIF logo images are allowed'));
+    }
+  }
+});
+
+function execFilePromise(file: string, args: string[], cwd?: string): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
+    execFile(file, args, { cwd, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) reject(error);
+      else resolve({ stdout, stderr });
+    });
+  });
+}
+
+function getGitHubApi(apiPath: string): Promise<any> {
+  return new Promise((resolve) => {
     const options = {
       hostname: 'api.github.com',
       path: apiPath,
       headers: { 'User-Agent': 'WebNook-Self-Updater' }
     };
-    https.get(options, (res) => {
+    const req = https.get(options, (res) => {
       let data = '';
-      res.on('data', chunk => data += chunk);
+      res.on('data', chunk => (data += chunk));
       res.on('end', () => {
         try {
           resolve(JSON.parse(data));
-        } catch (e) {
+        } catch {
           resolve(null);
         }
       });
-    }).on('error', () => resolve(null));
+    });
+    req.setTimeout(8000, () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.on('error', () => resolve(null));
   });
 }
 
-// Recursive Directory Size Calculator Helper
 function getDirectorySize(dirPath: string): number {
   let totalSize = 0;
   if (!fs.existsSync(dirPath)) return 0;
@@ -69,14 +107,10 @@ function getDirectorySize(dirPath: string): number {
         try {
           const stats = fs.statSync(filePath);
           totalSize += stats.size;
-        } catch (e) {
-          // ignore stat errors
-        }
+        } catch {}
       }
     }
-  } catch (e) {
-    // ignore readdir errors
-  }
+  } catch {}
   return totalSize;
 }
 
@@ -94,9 +128,7 @@ router.get('/metrics', async (req: AuthenticatedRequest, res: Response) => {
         const stats = fs.statSync(dbPath);
         dbSizeBytes = stats.size;
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch {}
 
     const uploadsDir = path.join(__dirname, '../../uploads');
     const uploadsSizeBytes = getDirectorySize(uploadsDir) + getDirectorySize(customBrandingDir);
@@ -115,19 +147,6 @@ router.get('/metrics', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-import { exec } from 'child_process';
-
-function execPromise(command: string, cwd?: string): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    exec(command, { cwd }, (error, stdout, stderr) => {
-      if (error) reject(error);
-      else resolve({ stdout, stderr });
-    });
-  });
-}
-
 const backupsDir = path.join(dataDir, 'backups');
 if (!fs.existsSync(backupsDir)) {
   fs.mkdirSync(backupsDir, { recursive: true });
@@ -136,7 +155,9 @@ if (!fs.existsSync(backupsDir)) {
 // 2. User Management Suite
 router.get('/users', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const users = await query<any>('SELECT id, username, email, display_name, role, is_totp_enabled, is_disabled, disabled_reason, created_at FROM users ORDER BY id ASC');
+    const users = await query<any>(
+      'SELECT id, username, email, display_name, role, is_totp_enabled, is_disabled, disabled_reason, terms_accepted_version, terms_accepted_at, created_at FROM users ORDER BY id ASC'
+    );
     return res.json({ users });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to list users' });
@@ -198,25 +219,35 @@ router.put('/users/:id/password', async (req: AuthenticatedRequest, res: Respons
       const resetToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 3600000).toISOString();
 
-      await execute('INSERT OR REPLACE INTO password_resets (token, user_id, expires_at) VALUES (?, ?, ?)', [
+      await execute('DELETE FROM password_resets WHERE user_id = ?', [targetUser.id]);
+      await execute('INSERT INTO password_resets (token, user_id, expires_at) VALUES (?, ?, ?)', [
         resetToken,
         targetUser.id,
         expiresAt
       ]);
 
-      const sent = await sendPasswordResetEmail(targetUser.email, targetUser.username, resetToken);
+      const baseUrl = await getEffectiveBaseUrl(req);
+      const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+      const sent = await sendPasswordResetEmail(targetUser.email, targetUser.username, resetToken, baseUrl);
       return res.json({
-        message: sent ? `Password reset email sent to ${targetUser.email}` : `Password reset token generated: ${resetToken}`,
+        message: sent
+          ? `Password reset email sent to ${targetUser.email}`
+          : `SMTP not configured. Share this reset link manually: ${resetUrl}`,
+        reset_url: resetUrl,
         reset_token: resetToken
       });
     }
 
-    if (!new_password || new_password.trim().length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    if (!new_password) {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+    const pwdError = await validatePasswordComplexity(String(new_password));
+    if (pwdError) {
+      return res.status(400).json({ error: pwdError });
     }
 
     const password_hash = await bcrypt.hash(new_password, 10);
-    await execute('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash, userId]);
+    await execute('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [password_hash, userId]);
 
     return res.json({ message: `Password for @${targetUser.username} updated successfully` });
   } catch (err) {
@@ -236,7 +267,6 @@ router.delete('/users/:id', async (req: AuthenticatedRequest, res: Response) => 
     const targetUser = await queryOne<any>('SELECT * FROM users WHERE id = ?', [userId]);
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
-    // Delete DB records
     await execute('DELETE FROM users WHERE id = ?', [userId]);
 
     return res.json({ message: `User @${targetUser.username} and associated profile deleted entirely.` });
@@ -244,8 +274,6 @@ router.delete('/users/:id', async (req: AuthenticatedRequest, res: Response) => 
     return res.status(500).json({ error: 'Failed to delete user' });
   }
 });
-
-import { createNotification } from './notificationRoutes';
 
 // Send Admin System Announcement / Direct Notification
 router.post('/send-notification', async (req: AuthenticatedRequest, res: Response) => {
@@ -283,7 +311,6 @@ router.post('/send-notification', async (req: AuthenticatedRequest, res: Respons
 
       return res.json({ message: `Notification sent successfully to @${targetUser.username}!` });
     } else {
-      // Global broadcast to all registered non-disabled users
       const users = await query<any>('SELECT id FROM users WHERE is_disabled = 0');
       let count = 0;
       for (const u of users) {
@@ -307,9 +334,7 @@ router.post('/send-notification', async (req: AuthenticatedRequest, res: Respons
   }
 });
 
-import { execSync } from 'child_process';
-
-// 3. Self-Updater & Release Channels (PolyPress Style)
+// 3. Self-Updater & Release Channels
 router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const channelRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "update_channel"');
@@ -321,23 +346,41 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
     const installedCommitRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "installed_commit_sha"');
     const installedCommit = installedCommitRow?.value;
 
-    let currentPkgVersion = '1.6.0';
+    let currentPkgVersion = '3.4.0';
     try {
       const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8'));
       if (rootPkg && rootPkg.version) currentPkgVersion = rootPkg.version;
-    } catch (e) {}
+    } catch {}
 
     let localCommitHash = process.env.GIT_COMMIT_HASH || '';
     if (!localCommitHash) {
       try {
         const gitOutput = execSync('git rev-parse --short HEAD 2>/dev/null', { cwd: path.join(__dirname, '../../..') }).toString().trim();
         if (gitOutput && gitOutput !== 'HEAD') localCommitHash = gitOutput;
-      } catch (e) {}
+      } catch {}
     }
 
-    let currentVersion = currentPkgVersion;
+    const pickNewerTag = (a?: string | null, b?: string | null): string => {
+      const cleanA = (a || '').trim();
+      const cleanB = (b || '').trim();
+      if (!cleanA) return cleanB;
+      if (!cleanB) return cleanA;
+      const partsA = cleanA.replace(/^v/i, '').split('.').map(n => parseInt(n, 10));
+      const partsB = cleanB.replace(/^v/i, '').split('.').map(n => parseInt(n, 10));
+      if (partsA.some(Number.isNaN) || partsB.some(Number.isNaN)) return cleanA;
+      for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+        const va = partsA[i] || 0;
+        const vb = partsB[i] || 0;
+        if (va > vb) return cleanA;
+        if (vb > va) return cleanB;
+      }
+      return cleanA;
+    };
+
+    const pkgTag = currentPkgVersion.startsWith('v') ? currentPkgVersion : `v${currentPkgVersion}`;
+    let currentVersion = pkgTag;
     let latestReleaseInfo: any = null;
-    let targetVersion = currentPkgVersion;
+    let targetVersion = pkgTag;
 
     if (channel === 'alpha') {
       const commits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits/main`);
@@ -357,7 +400,7 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
       if (Array.isArray(tags) && tags.length > 0) {
         const latestTag = tags[0];
         targetVersion = latestTag.name;
-        currentVersion = installedVersion || `v${currentPkgVersion}`;
+        currentVersion = pickNewerTag(pkgTag, installedVersion);
 
         let commitNotes = '';
         const tagCommits = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/commits?sha=${latestTag.name}`);
@@ -373,11 +416,10 @@ router.get('/update/check', async (req: AuthenticatedRequest, res: Response) => 
         };
       }
     } else {
-      // Stable channel
       const releases = await getGitHubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`);
       if (releases && releases.tag_name) {
         targetVersion = releases.tag_name;
-        currentVersion = installedVersion || `v${currentPkgVersion}`;
+        currentVersion = pickNewerTag(pkgTag, installedVersion);
 
         latestReleaseInfo = {
           tag: releases.tag_name,
@@ -421,19 +463,15 @@ router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) =>
   try {
     const repoPath = path.join(__dirname, '../../..');
     const { targetVersion } = req.body;
-    let gitPulled = false;
 
     try {
       execSync('git fetch --all && git reset --hard origin/main && git clean -fd', { cwd: repoPath, timeout: 45000 });
-      gitPulled = true;
       try {
         const buildEnv = { ...process.env, NODE_ENV: 'development' };
         execSync('npm run setup', { cwd: repoPath, timeout: 180000, env: buildEnv });
         execSync('npm run build', { cwd: repoPath, timeout: 180000, env: buildEnv });
       } catch (buildErr: any) {
         console.warn('[Self-Updater Warning] In-container build failed:', buildErr.message);
-        if (buildErr.stdout) console.warn('[Self-Updater Stdout]:', buildErr.stdout.toString());
-        if (buildErr.stderr) console.warn('[Self-Updater Stderr]:', buildErr.stderr.toString());
       }
     } catch (gitErr: any) {
       console.warn('[Self-Updater Warning] Git fetch/reset failed:', gitErr.message);
@@ -446,7 +484,6 @@ router.post('/update/apply', async (req: AuthenticatedRequest, res: Response) =>
       await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['installed_commit_sha', String(targetVersion)]);
     }
 
-    // Schedule container process restart to reload Node.js process & migrations
     setTimeout(() => {
       console.log('[Self-Updater] Restarting container process to apply update...');
       process.exit(0);
@@ -514,49 +551,46 @@ export async function createBackupArchiveInternal(): Promise<{ filename: string;
     fs.mkdirSync(backupsDir, { recursive: true });
   }
 
+  // Flush WAL journal into main SQLite file so the snapshot is consistent
+  try {
+    await execute('PRAGMA wal_checkpoint(TRUNCATE)');
+  } catch {}
+
   const uploadsDir = path.join(__dirname, '../../uploads');
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `webnook-backup-${timestamp}.tar.gz`;
   const archivePath = path.join(backupsDir, filename);
 
-  // Stage directory for bundling database, branding, metadata, and user uploads
   const stageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webnook-backup-stage-'));
 
   try {
-    // 1. Copy webnook.db
     const dbPath = path.join(dataDir, 'webnook.db');
     if (fs.existsSync(dbPath)) {
       fs.copyFileSync(dbPath, path.join(stageDir, 'webnook.db'));
     }
 
-    // 2. Create backup_metadata.json
     fs.writeFileSync(path.join(stageDir, 'backup_metadata.json'), JSON.stringify({
       created_at: new Date().toISOString(),
-      version: '2.5.1',
+      version: '3.4.0',
       type: 'full_compressed'
     }, null, 2));
 
-    // 3. Copy branding directory if exists
     if (fs.existsSync(customBrandingDir)) {
       fs.cpSync(customBrandingDir, path.join(stageDir, 'branding'), { recursive: true });
     } else {
       fs.mkdirSync(path.join(stageDir, 'branding'), { recursive: true });
     }
 
-    // 4. Copy uploads directory if exists
     if (fs.existsSync(uploadsDir)) {
       fs.cpSync(uploadsDir, path.join(stageDir, 'uploads'), { recursive: true });
     } else {
       fs.mkdirSync(path.join(stageDir, 'uploads'), { recursive: true });
     }
 
-    // 5. Compress stage directory contents into tar.gz archive
-    const cmd = `tar -czf "${archivePath}" -C "${stageDir}" .`;
-    await execPromise(cmd);
+    await execFilePromise('tar', ['-czf', archivePath, '-C', stageDir, '.']);
 
     const stat = fs.statSync(archivePath);
 
-    // Apply retention cleanup policy
     const retentionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "backup_retention_count"');
     const retentionCount = parseInt(retentionRow?.value || '10', 10);
     purgeExcessBackups(retentionCount);
@@ -567,10 +601,9 @@ export async function createBackupArchiveInternal(): Promise<{ filename: string;
       created_at: stat.mtime
     };
   } finally {
-    // Clean up temporary stage directory
     try {
       fs.rmSync(stageDir, { recursive: true, force: true });
-    } catch (e) {}
+    } catch {}
   }
 }
 
@@ -590,13 +623,15 @@ router.post('/backups/create', async (req: AuthenticatedRequest, res: Response) 
 router.get('/backups/download/:filename', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const filename = path.basename(req.params.filename);
-    const filePath = path.join(backupsDir, filename);
-
-    if (!fs.existsSync(filePath)) {
+    if (!filename.endsWith('.tar.gz') && !filename.endsWith('.db')) {
+      return res.status(400).json({ error: 'Invalid backup file type' });
+    }
+    const filePath = safePathInside(backupsDir, filename);
+    if (!filePath || !fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Backup file not found' });
     }
 
-    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Type', filename.endsWith('.tar.gz') ? 'application/gzip' : 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     fs.createReadStream(filePath).pipe(res);
   } catch (err) {
@@ -604,8 +639,32 @@ router.get('/backups/download/:filename', async (req: AuthenticatedRequest, res:
   }
 });
 
-// Restore Backup Archive with Automatic Database Schema Migration
-const restoreUpload = multer({ dest: path.join(os.tmpdir(), 'webnook-restore') });
+const restoreUpload = multer({
+  dest: path.join(os.tmpdir(), 'webnook-restore'),
+  limits: { fileSize: 512 * 1024 * 1024 }
+});
+
+async function validateTarArchiveSafe(archivePath: string): Promise<void> {
+  const { stdout } = await execFilePromise('tar', ['-tvzf', archivePath]);
+  const lines = stdout.split('\n').map(l => l.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    // Reject symlinks, hardlinks, device files, FIFOs
+    if (/^[lbcph]/i.test(line)) {
+      throw new Error('Archive contains disallowed symlink or special file entry');
+    }
+    const parts = line.split(/\s+/);
+    const entryName = parts[parts.length - 1] || '';
+    const cleaned = entryName.replace(/^\.\//, '').replace(/\/+$/, '');
+    if (!cleaned || cleaned === '.') continue;
+    if (cleaned.startsWith('/') || cleaned.includes('..') || cleaned.includes('\0')) {
+      throw new Error(`Archive contains unsafe path entry: ${entryName}`);
+    }
+    if (!/^(webnook\.db|backup_metadata\.json|branding(\/.*)?|uploads(\/.*)?)$/.test(cleaned)) {
+      throw new Error(`Archive contains unexpected entry outside backup scope: ${entryName}`);
+    }
+  }
+}
 
 router.post('/backups/restore', restoreUpload.single('backup_file'), async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -615,7 +674,8 @@ router.post('/backups/restore', restoreUpload.single('backup_file'), async (req:
     if (req.file) {
       sourcePath = req.file.path;
     } else if (filenameParam) {
-      sourcePath = path.join(backupsDir, path.basename(filenameParam));
+      const safeBackup = safePathInside(backupsDir, path.basename(String(filenameParam)));
+      if (safeBackup) sourcePath = safeBackup;
     }
 
     if (!sourcePath || !fs.existsSync(sourcePath)) {
@@ -623,32 +683,37 @@ router.post('/backups/restore', restoreUpload.single('backup_file'), async (req:
     }
 
     const uploadsDir = path.join(__dirname, '../../uploads');
+    const isTarGz = sourcePath.endsWith('.tar.gz') || Boolean(req.file && req.file.originalname.endsWith('.tar.gz'));
 
-    if (sourcePath.endsWith('.tar.gz') || req.file) {
-      // Create temporary unpack directory
+    if (isTarGz) {
+      await validateTarArchiveSafe(sourcePath);
+
       const unpackDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webnook-restore-unpack-'));
       try {
-        await execPromise(`tar -xzf "${sourcePath}" -C "${unpackDir}"`);
+        await execFilePromise('tar', ['-xzf', sourcePath, '-C', unpackDir, '--no-same-owner']);
 
-        // 1. Restore Database file
         const restoredDbPath = path.join(unpackDir, 'webnook.db');
         if (fs.existsSync(restoredDbPath)) {
+          try { await execute('PRAGMA wal_checkpoint(TRUNCATE)'); } catch {}
+          for (const suffix of ['-wal', '-shm']) {
+            const walFile = path.join(dataDir, `webnook.db${suffix}`);
+            if (fs.existsSync(walFile)) {
+              try { fs.unlinkSync(walFile); } catch {}
+            }
+          }
           fs.copyFileSync(restoredDbPath, path.join(dataDir, 'webnook.db'));
         }
 
-        // 2. Restore Branding directory
         const restoredBrandingDir = path.join(unpackDir, 'branding');
         if (fs.existsSync(restoredBrandingDir)) {
           fs.cpSync(restoredBrandingDir, customBrandingDir, { recursive: true });
         }
 
-        // 3. Restore Uploads directory
         const restoredUploadsDir = path.join(unpackDir, 'uploads');
         if (fs.existsSync(restoredUploadsDir)) {
           fs.cpSync(restoredUploadsDir, uploadsDir, { recursive: true });
         }
 
-        // 4. Restore Metadata file
         const restoredMetaPath = path.join(unpackDir, 'backup_metadata.json');
         if (fs.existsSync(restoredMetaPath)) {
           fs.copyFileSync(restoredMetaPath, path.join(dataDir, 'backup_metadata.json'));
@@ -656,48 +721,71 @@ router.post('/backups/restore', restoreUpload.single('backup_file'), async (req:
       } finally {
         try {
           fs.rmSync(unpackDir, { recursive: true, force: true });
-        } catch (e) {}
+        } catch {}
       }
-    } else if (sourcePath.endsWith('.db')) {
+    } else if (sourcePath.endsWith('.db') || (req.file && req.file.originalname.endsWith('.db'))) {
+      try { await execute('PRAGMA wal_checkpoint(TRUNCATE)'); } catch {}
+      for (const suffix of ['-wal', '-shm']) {
+        const walFile = path.join(dataDir, `webnook.db${suffix}`);
+        if (fs.existsSync(walFile)) {
+          try { fs.unlinkSync(walFile); } catch {}
+        }
+      }
       fs.copyFileSync(sourcePath, path.join(dataDir, 'webnook.db'));
+    } else {
+      return res.status(400).json({ error: 'Backup must be a .tar.gz archive or .db file' });
     }
 
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
 
-    // Execute database migrations gracefully to ensure schema compatibility
     await runMigrations();
+    invalidateLegalCache();
+    clearEnsuredUsersCache();
 
     return res.json({
       success: true,
       message: 'System backup restored successfully! Database, custom branding, and all uploaded media files have been fully restored.'
     });
   } catch (err: any) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+    }
     console.error('Restore error:', err);
     return res.status(500).json({ error: `Restore failed: ${err.message}` });
   }
 });
 
-// 5. System Settings, SMTP Config & Whitelabel Branding Upload
+// 5. System Settings, SMTP Config, Legal Policy Config & Whitelabel Branding Upload
 router.get('/settings', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const rows = await query<any>('SELECT key, value FROM system_settings');
     const settings: Record<string, string> = {
       app_name: 'WebNook',
       logo_url: '/branding/logo.png',
+      site_url: '',
       smtp_host: '',
       smtp_port: '587',
       smtp_user: '',
       smtp_pass: '',
       smtp_from: '',
       smtp_secure: 'false',
+      smtp_allow_self_signed: 'false',
       auto_backup_enabled: 'false',
       auto_backup_interval: 'daily',
       backup_retention_count: '10',
-      last_auto_backup_at: ''
+      last_auto_backup_at: '',
+      legal_version: '1.0',
+      legal_effective_date: new Date().toISOString().slice(0, 10),
+      legal_operator_name: '',
+      legal_contact_email: '',
+      legal_jurisdiction: '',
+      legal_min_age: '13',
+      legal_custom_terms_addendum: '',
+      legal_custom_privacy_addendum: ''
     };
-    rows.forEach(r => settings[r.key] = r.value);
+    rows.forEach(r => (settings[r.key] = r.value));
     return res.json({ settings });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to fetch settings' });
@@ -715,9 +803,57 @@ router.post('/settings', async (req: AuthenticatedRequest, res: Response) => {
       await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', [key, String(value)]);
     }
 
+    invalidateLegalCache();
+
     return res.json({ message: 'Settings saved successfully' });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
+
+// Bump Legal Policy Version & Trigger Re-Acceptance on Next Visit/Login
+router.post('/legal/bump-version', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const currentRow = await queryOne<{ value: string }>('SELECT value FROM system_settings WHERE key = "legal_version"');
+    const current = (currentRow?.value || '1.0').trim();
+
+    let nextVersion = String(req.body?.version || '').trim();
+    if (nextVersion) {
+      if (!/^[a-zA-Z0-9._-]{1,20}$/.test(nextVersion)) {
+        return res.status(400).json({ error: 'Policy version may only contain letters, numbers, dots, hyphens, and underscores (max 20 chars).' });
+      }
+    } else {
+      const parts = current.split('.');
+      const last = parseInt(parts[parts.length - 1], 10);
+      if (!Number.isNaN(last)) {
+        parts[parts.length - 1] = String(last + 1);
+        nextVersion = parts.join('.');
+      } else {
+        nextVersion = `${current}.1`;
+      }
+    }
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['legal_version', nextVersion]);
+    await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['legal_effective_date', todayIso]);
+
+    // Record acceptance for the publishing admin so their active dashboard session can load users immediately
+    if (req.user?.id) {
+      await execute(
+        'UPDATE users SET terms_accepted_version = ?, terms_accepted_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [nextVersion, req.user.id]
+      );
+    }
+
+    invalidateLegalCache();
+
+    return res.json({
+      version: nextVersion,
+      effective_date: todayIso,
+      message: `Published policy version v${nextVersion}. All users will be prompted to accept the updated Terms & Privacy Policy.`
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to bump legal policy version' });
   }
 });
 
@@ -731,11 +867,11 @@ router.post('/integrations/test/steam', async (req: AuthenticatedRequest, res: R
       return res.status(400).json({ status: 'not_configured', error: 'No Steam API Key configured' });
     }
 
-    const testUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${apiKey}&steamids=76561198000000000`;
+    const testUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${encodeURIComponent(apiKey)}&steamids=76561198000000000`;
     const textData = await new Promise<string>((resolve, reject) => {
       https.get(testUrl, (res) => {
         let body = '';
-        res.on('data', chunk => body += chunk);
+        res.on('data', chunk => (body += chunk));
         res.on('end', () => resolve(body));
       }).on('error', reject);
     });
@@ -750,7 +886,7 @@ router.post('/integrations/test/steam', async (req: AuthenticatedRequest, res: R
     }
   } catch (err: any) {
     const errCountRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "steam_consecutive_errors"');
-    const newCount = (parseInt(errCountRow?.value || '0', 10)) + 1;
+    const newCount = parseInt(errCountRow?.value || '0', 10) + 1;
     await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_consecutive_errors', String(newCount)]);
     await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['steam_api_status', 'broken']);
 
@@ -788,7 +924,7 @@ router.post('/integrations/test/spotify', async (req: AuthenticatedRequest, res:
         }
       }, (res) => {
         let body = '';
-        res.on('data', chunk => body += chunk);
+        res.on('data', chunk => (body += chunk));
         res.on('end', () => resolve(body));
       });
       request.on('error', reject);
@@ -806,7 +942,7 @@ router.post('/integrations/test/spotify', async (req: AuthenticatedRequest, res:
     }
   } catch (err: any) {
     const errCountRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "spotify_consecutive_errors"');
-    const newCount = (parseInt(errCountRow?.value || '0', 10)) + 1;
+    const newCount = parseInt(errCountRow?.value || '0', 10) + 1;
     await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['spotify_consecutive_errors', String(newCount)]);
     await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['spotify_api_status', 'broken']);
 
@@ -851,11 +987,11 @@ router.post('/integrations/test/tmdb', async (req: AuthenticatedRequest, res: Re
       return res.status(400).json({ status: 'not_configured', error: 'No TMDB API Key configured' });
     }
 
-    const testUrl = `https://api.themoviedb.org/3/authentication?api_key=${apiKey}`;
+    const testUrl = `https://api.themoviedb.org/3/authentication?api_key=${encodeURIComponent(apiKey)}`;
     const textData = await new Promise<string>((resolve, reject) => {
       https.get(testUrl, (res) => {
         let body = '';
-        res.on('data', (chunk: any) => body += chunk);
+        res.on('data', (chunk: any) => (body += chunk));
         res.on('end', () => resolve(body));
       }).on('error', reject);
     });
@@ -906,6 +1042,7 @@ router.post('/branding/logo', upload.single('logo'), async (req: AuthenticatedRe
 
     const logoUrl = `/branding/${req.file.filename}?v=${Date.now()}`;
     await execute('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['logo_url', logoUrl]);
+    invalidateLegalCache();
 
     return res.json({
       message: 'Branding logo uploaded successfully!',
@@ -922,19 +1059,30 @@ router.post('/system/wipe', async (req: AuthenticatedRequest, res: Response) => 
   try {
     console.log('EXECUTING WEBNOOK SYSTEM FACTORY RESET...');
 
-    // Truncate all database tables
-    await execute('DELETE FROM users');
-    await execute('DELETE FROM nooks');
-    await execute('DELETE FROM nook_widgets');
-    await execute('DELETE FROM nook_stickers');
-    await execute('DELETE FROM friends');
-    await execute('DELETE FROM guestbook_entries');
-    await execute('DELETE FROM passkey_credentials');
-    await execute('DELETE FROM password_resets');
-    await execute('DELETE FROM system_settings');
-    await execute('DELETE FROM schema_migrations');
+    const tablesToClear = [
+      'message_reactions',
+      'messages',
+      'conversation_members',
+      'conversations',
+      'notifications',
+      'guestbook_reactions',
+      'guestbook_entries',
+      'friends',
+      'nook_stickers',
+      'nook_widgets',
+      'nooks',
+      'passkey_credentials',
+      'password_resets',
+      'email_verifications',
+      'spotify_user_tokens',
+      'users',
+      'system_settings',
+      'schema_migrations'
+    ];
+    for (const table of tablesToClear) {
+      try { await execute(`DELETE FROM ${table}`); } catch {}
+    }
 
-    // Clean uploads and custom branding directories
     const uploadsDir = path.join(__dirname, '../../uploads');
     if (fs.existsSync(uploadsDir)) {
       try {
@@ -942,7 +1090,7 @@ router.post('/system/wipe', async (req: AuthenticatedRequest, res: Response) => 
         for (const file of files) {
           fs.rmSync(path.join(uploadsDir, file), { recursive: true, force: true });
         }
-      } catch (e) {}
+      } catch {}
     }
 
     if (fs.existsSync(customBrandingDir)) {
@@ -951,11 +1099,12 @@ router.post('/system/wipe', async (req: AuthenticatedRequest, res: Response) => 
         for (const file of files) {
           fs.rmSync(path.join(customBrandingDir, file), { recursive: true, force: true });
         }
-      } catch (e) {}
+      } catch {}
     }
 
-    // Re-run initial database migrations to ensure clean database state
     await runMigrations();
+    invalidateLegalCache();
+    clearEnsuredUsersCache();
 
     return res.json({
       success: true,

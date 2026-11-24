@@ -31,6 +31,11 @@ body {
   overflow-x: hidden;
 }
 
+[class*="theme-"] {
+  font-family: var(--font-family-main);
+  position: relative;
+}
+
 button {
   font-family: inherit;
   cursor: pointer;
@@ -48,15 +53,21 @@ input, textarea, select {
   color: var(--text-main);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-main);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
   box-shadow: var(--box-shadow);
   padding: 1.5rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.nook-panel:hover {
+  transform: translateY(-2px);
 }
 
 .nook-panel-header {
@@ -76,34 +87,100 @@ input, textarea, select {
   min-width: 0;
 }
 
+/* User Override Modifiers: Glow Intensity */
+.nook-glow-none .nook-panel {
+  box-shadow: none;
+}
+
+.nook-glow-soft .nook-panel {
+  box-shadow: var(--box-shadow), 0 0 18px color-mix(in srgb, var(--accent-color) 28%, transparent);
+}
+
+.nook-glow-vibrant .nook-panel {
+  box-shadow: var(--box-shadow), 0 0 28px color-mix(in srgb, var(--accent-color) 52%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* User Override Modifiers: Background Patterns (non-blocking fixed scrim above background, under content) */
+[class*="nook-pattern-"]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.nook-pattern-dots::before {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1.25px, transparent 1.25px);
+  background-size: 20px 20px;
+}
+
+.nook-pattern-grid::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.nook-pattern-scanlines::before {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.16),
+    rgba(0, 0, 0, 0.16) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+.nook-pattern-stars::before {
+  background-image:
+    radial-gradient(1.5px 1.5px at 20px 30px, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1.5px 1.5px at 85px 70px, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(2px 2px at 140px 25px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 55px 115px, rgba(255, 255, 255, 0.3), transparent);
+  background-size: 180px 140px;
+}
+
+.nook-pattern-diagonal::before {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.04) 6px,
+    transparent 6px,
+    transparent 18px
+  );
+}
+
 /* ========================================================
    THEME 1: Modern Glassmorphism (Default)
    ======================================================== */
 .theme-glassmorphism {
   --bg-primary: #0f101d;
-  --bg-panel: rgba(26, 30, 50, 0.65);
-  --bg-panel-solid: #1a1e32;
+  --bg-panel: rgba(24, 28, 52, 0.62);
+  --bg-panel-solid: #181c34;
   --text-main: #ffffff;
   --text-muted: #a0aec0;
-  --accent-color: #6366f1;
-  --accent-hover: #4f46e5;
-  --border-color: rgba(255, 255, 255, 0.14);
+  --accent-color: #818cf8;
+  --accent-hover: #6366f1;
+  --border-color: rgba(255, 255, 255, 0.16);
   --border-radius-main: 20px;
   --border-radius-btn: 12px;
-  --backdrop-blur: blur(20px);
-  --box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  --font-family-main: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --backdrop-blur: blur(22px) saturate(140%);
+  --box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.24), transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(168, 85, 247, 0.2), transparent 42%),
+    radial-gradient(circle at 50% 90%, rgba(56, 189, 248, 0.14), transparent 50%);
+  background-attachment: fixed;
 }
 
-.theme-glassmorphism .nook-panel {
-  backdrop-filter: var(--backdrop-blur);
-  -webkit-backdrop-filter: var(--backdrop-blur);
+.theme-glassmorphism .nook-panel-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  text-shadow: 0 0 14px rgba(129, 140, 248, 0.35);
 }
 
 /* ========================================================
-   THEME 2: Retro Windows 98 / 95
-   ======================================================== */
-/* ========================================================
-   THEME 2: Retro Windows 9x Classic (Win 95 / 98 / 9X)
+   THEME 2: Retro Windows 9x Classic (Preserved Signature Aesthetic)
    ======================================================== */
 .theme-win98, .theme-win9x {
   --bg-primary: #008080;
@@ -122,11 +199,9 @@ input, textarea, select {
 }
 
 @keyframes win9xFileFly {
-  0% { left: 5%; opacity: 0.3; transform: translateY(-50%) rotate(0deg); }
-  25% { left: 30%; opacity: 1; transform: translateY(-50%) rotate(-6deg); }
-  50% { left: 55%; opacity: 0.4; transform: translateY(-50%) rotate(6deg); }
-  75% { left: 80%; opacity: 1; transform: translateY(-50%) rotate(-4deg); }
-  100% { left: 95%; opacity: 0.3; transform: translateY(-50%) rotate(0deg); }
+  0% { transform: translateX(-100%); opacity: 0.35; }
+  50% { transform: translateX(0%); opacity: 0.65; }
+  100% { transform: translateX(100%); opacity: 0.35; }
 }
 
 @keyframes win9xTitleBarRoll {
@@ -147,6 +222,10 @@ input, textarea, select {
   margin-bottom: 1rem;
   animation: win9xCardPopIn 0.7s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
   position: relative;
+}
+
+.theme-win98 .nook-panel:hover, .theme-win9x .nook-panel:hover {
+  transform: none;
 }
 
 @keyframes win9xScanlineReveal {
@@ -178,17 +257,10 @@ input, textarea, select {
 }
 
 @keyframes win9xCardPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.96) translateY(12px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+  0% { opacity: 0; transform: scale(0.96) translateY(12px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* 90s Early Internet Image Filtering, Dithering & Scanline Reveal */
 .theme-win98 img, .theme-win9x img,
 .theme-win98 .nook-banner-image, .theme-win9x .nook-banner-image {
   image-rendering: pixelated;
@@ -198,7 +270,6 @@ input, textarea, select {
   will-change: clip-path, filter;
 }
 
-/* Staggered / Randomized Loading Delays for Win9x Grid Images & Avatars */
 .theme-win98 div > a:nth-child(1) img, .theme-win9x div > a:nth-child(1) img { animation-delay: 0.1s !important; }
 .theme-win98 div > a:nth-child(2) img, .theme-win9x div > a:nth-child(2) img { animation-delay: 0.75s !important; }
 .theme-win98 div > a:nth-child(3) img, .theme-win9x div > a:nth-child(3) img { animation-delay: 0.35s !important; }
@@ -212,7 +283,6 @@ input, textarea, select {
 .theme-win98 div > a:nth-child(11) img, .theme-win9x div > a:nth-child(11) img { animation-delay: 0.6s !important; }
 .theme-win98 div > a:nth-child(12) img, .theme-win9x div > a:nth-child(12) img { animation-delay: 1.5s !important; }
 
-/* Circular Avatars in Win9X: keep 50% border radius and eliminate square ghost shadows */
 .theme-win98 .nook-header-avatar, .theme-win9x .nook-header-avatar,
 .theme-win98 img.nook-header-avatar, .theme-win9x img.nook-header-avatar,
 .theme-win98 img[style*="border-radius: 50%"], .theme-win9x img[style*="border-radius: 50%"],
@@ -224,18 +294,16 @@ input, textarea, select {
   outline: none !important;
 }
 
-/* Win9X Panel Header Icons: Force light white style to match titlebar text */
 .theme-win98 .nook-panel-header svg,
 .theme-win9x .nook-panel-header svg {
   color: #ffffff !important;
   stroke: #ffffff !important;
 }
 
-/* Retro Scanline Overlay on Panels & Embedded Players (Non-blocking clickability) */
 .theme-win98 .nook-panel::after, .theme-win9x .nook-panel::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  inset: 0;
   background: repeating-linear-gradient(
     0deg,
     rgba(0, 0, 0, 0.07),
@@ -270,46 +338,34 @@ input, textarea, select {
   border-bottom: none;
 }
 
-.theme-win98 .nook-panel-header::before, .theme-win9x .nook-panel-header::before {
-  content: '📄';
-  position: absolute;
-  top: 50%;
-  font-size: 0.8rem;
-  animation: win9xFileFly 3.5s ease-in-out infinite;
-  pointer-events: none;
+.theme-win98 .nook-panel-header > *, .theme-win9x .nook-panel-header > * {
+  position: relative;
   z-index: 2;
 }
 
-/* Staggered out-of-sync animation delays for cards and flying files */
+.theme-win98 .nook-panel-header::before, .theme-win9x .nook-panel-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.14) 50%, transparent 75%);
+  animation: win9xFileFly 4.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .theme-win98 .nook-panel:nth-child(2n) .nook-panel-header,
-.theme-win9x .nook-panel:nth-child(2n) .nook-panel-header {
-  animation-delay: -1.3s;
-}
-
+.theme-win9x .nook-panel:nth-child(2n) .nook-panel-header { animation-delay: -1.3s; }
 .theme-win98 .nook-panel:nth-child(3n) .nook-panel-header,
-.theme-win9x .nook-panel:nth-child(3n) .nook-panel-header {
-  animation-delay: -2.7s;
-}
-
+.theme-win9x .nook-panel:nth-child(3n) .nook-panel-header { animation-delay: -2.7s; }
 .theme-win98 .nook-panel:nth-child(4n) .nook-panel-header,
-.theme-win9x .nook-panel:nth-child(4n) .nook-panel-header {
-  animation-delay: -0.8s;
-}
+.theme-win9x .nook-panel:nth-child(4n) .nook-panel-header { animation-delay: -0.8s; }
 
 .theme-win98 .nook-panel:nth-child(2n) .nook-panel-header::before,
-.theme-win9x .nook-panel:nth-child(2n) .nook-panel-header::before {
-  animation-delay: -1.6s;
-}
-
+.theme-win9x .nook-panel:nth-child(2n) .nook-panel-header::before { animation-delay: -1.6s; }
 .theme-win98 .nook-panel:nth-child(3n) .nook-panel-header::before,
-.theme-win9x .nook-panel:nth-child(3n) .nook-panel-header::before {
-  animation-delay: -2.9s;
-}
-
+.theme-win9x .nook-panel:nth-child(3n) .nook-panel-header::before { animation-delay: -2.9s; }
 .theme-win98 .nook-panel:nth-child(4n) .nook-panel-header::before,
-.theme-win9x .nook-panel:nth-child(4n) .nook-panel-header::before {
-  animation-delay: -1.1s;
-}
+.theme-win9x .nook-panel:nth-child(4n) .nook-panel-header::before { animation-delay: -1.1s; }
 
 .theme-win98 .nook-panel-header::after, .theme-win9x .nook-panel-header::after {
   content: 'X';
@@ -328,8 +384,8 @@ input, textarea, select {
   flex-shrink: 0;
 }
 
-.theme-win98 button, .theme-win98 .btn-primary, .theme-win98 .btn-secondary,
-.theme-win9x button, .theme-win9x .btn-primary, .theme-win9x .btn-secondary {
+.theme-win98 .btn-primary, .theme-win98 .btn-secondary,
+.theme-win9x .btn-primary, .theme-win9x .btn-secondary {
   background: #c0c0c0 !important;
   color: #000000 !important;
   border-top: 2px solid #ffffff !important;
@@ -343,12 +399,14 @@ input, textarea, select {
   transition: none;
 }
 
-.theme-win98 button:hover, .theme-win9x button:hover {
+.theme-win98 .btn-primary:hover, .theme-win9x .btn-primary:hover,
+.theme-win98 .btn-secondary:hover, .theme-win9x .btn-secondary:hover {
   outline: 1px dotted #000000;
   outline-offset: -4px;
 }
 
-.theme-win98 button:active, .theme-win9x button:active {
+.theme-win98 .btn-primary:active, .theme-win9x .btn-primary:active,
+.theme-win98 .btn-secondary:active, .theme-win9x .btn-secondary:active {
   border-top: 2px solid #000000 !important;
   border-left: 2px solid #000000 !important;
   border-right: 2px solid #ffffff !important;
@@ -357,253 +415,303 @@ input, textarea, select {
 }
 
 /* ========================================================
-   THEME 3: Windows 7 Frutiger Aero
+   THEME 3: Frutiger Aero (Windows 7 Glossy Sky & Aurora)
    ======================================================== */
 .theme-frutiger-aero {
-  --bg-primary: #1c3b6f;
-  --bg-panel: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(210, 235, 255, 0.7) 100%);
-  --bg-panel-solid: #e2f1ff;
+  --bg-primary: #144d8f;
+  --bg-panel: linear-gradient(155deg, rgba(255, 255, 255, 0.88) 0%, rgba(215, 240, 255, 0.72) 100%);
+  --bg-panel-solid: #e3f3ff;
   --text-main: #0c2340;
-  --text-muted: #4a6572;
-  --accent-color: #0080ff;
-  --accent-hover: #0066cc;
-  --border-color: rgba(255, 255, 255, 0.9);
+  --text-muted: #3b5978;
+  --accent-color: #0078d7;
+  --accent-hover: #005a9e;
+  --border-color: rgba(255, 255, 255, 0.92);
   --border-radius-main: 16px;
   --border-radius-btn: 20px;
-  --backdrop-blur: blur(14px);
-  --box-shadow: 0 8px 28px rgba(0, 100, 200, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.9);
+  --font-family-main: 'Outfit', 'Segoe UI', sans-serif;
+  --backdrop-blur: blur(18px) saturate(150%);
+  --box-shadow: 0 12px 32px rgba(0, 75, 160, 0.35), inset 0 2px 3px rgba(255, 255, 255, 0.95);
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(125, 249, 255, 0.45), transparent 48%),
+    radial-gradient(ellipse at 85% 30%, rgba(52, 211, 153, 0.32), transparent 45%),
+    linear-gradient(180deg, #0ea5e9 0%, #0369a1 55%, #164e63 100%);
+  background-attachment: fixed;
 }
 
 .theme-frutiger-aero .nook-panel {
-  background: var(--bg-panel);
-  backdrop-filter: var(--backdrop-blur);
-  -webkit-backdrop-filter: var(--backdrop-blur);
-  border: 2px solid var(--border-color);
-  border-radius: var(--border-radius-main);
-  box-shadow: var(--box-shadow);
-  padding: 1.5rem;
-  color: var(--text-main);
+  border-width: 2px;
 }
 
 .theme-frutiger-aero .nook-panel-header {
-  color: var(--accent-color);
-  font-size: 1.2rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(186, 230, 253, 0.55) 50%, rgba(125, 211, 252, 0.5) 100%);
+  color: #0c3b75;
+  padding: 0.55rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 #ffffff, 0 2px 6px rgba(2, 132, 199, 0.15);
   font-weight: 800;
-  border-bottom: 2px solid rgba(0, 128, 255, 0.3);
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem;
 }
 
-.theme-frutiger-aero button, .theme-frutiger-aero .btn-primary {
-  background: linear-gradient(180deg, #66b2ff 0%, #0066cc 50%, #004c99 100%) !important;
-  color: #ffffff !important;
-  border-radius: 20px !important;
-  padding: 8px 20px;
-  font-weight: 700;
-  box-shadow: 0 4px 14px rgba(0, 102, 204, 0.4), inset 0 2px 2px rgba(255, 255, 255, 0.8) !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.6) !important;
+.theme-frutiger-aero .btn-primary {
+  background: linear-gradient(180deg, #7cc4ff 0%, #0ea5e9 49%, #0284c7 51%, #0369a1 100%);
+  color: #ffffff;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.theme-frutiger-aero .btn-secondary {
+  background: rgba(255, 255, 255, 0.72);
+  color: #0c3b75;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
 }
 
 /* ========================================================
-   THEME 4: Cyberpunk / Neon Y2K
+   THEME 4: Cyberpunk Y2K
    ======================================================== */
 .theme-cyberpunk {
-  --bg-primary: #0a0512;
-  --bg-panel: rgba(20, 10, 35, 0.85);
-  --bg-panel-solid: #150a26;
-  --text-main: #00f3ff;
-  --text-muted: #ff007f;
+  --bg-primary: #090411;
+  --bg-panel: rgba(18, 9, 34, 0.88);
+  --bg-panel-solid: #120922;
+  --text-main: #d8fcff;
+  --text-muted: #f472b6;
   --accent-color: #ff007f;
   --accent-hover: #d00068;
   --border-color: #00f3ff;
   --border-radius-main: 4px;
   --border-radius-btn: 2px;
-  --backdrop-blur: blur(8px);
-  --box-shadow: 0 0 18px rgba(0, 243, 255, 0.35), inset 0 0 10px rgba(255, 0, 127, 0.2);
+  --font-family-main: 'Space Grotesk', 'JetBrains Mono', sans-serif;
+  --backdrop-blur: blur(10px);
+  --box-shadow: 0 0 18px rgba(0, 243, 255, 0.3), inset 0 0 12px rgba(255, 0, 127, 0.16);
+  background-image:
+    radial-gradient(circle at 12% 20%, rgba(255, 0, 127, 0.2), transparent 40%),
+    radial-gradient(circle at 88% 75%, rgba(0, 243, 255, 0.16), transparent 45%),
+    repeating-linear-gradient(90deg, rgba(0, 243, 255, 0.035) 0 1px, transparent 1px 48px);
+  background-attachment: fixed;
 }
 
 @keyframes cyberpunkNeonPulse {
-  0% {
-    border-color: #00f3ff;
-    box-shadow: 0 0 16px rgba(0, 243, 255, 0.6), inset 0 0 10px rgba(0, 243, 255, 0.25);
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(0, 243, 255, 0.45), inset 0 0 10px rgba(0, 243, 255, 0.18);
   }
   50% {
-    border-color: #ff007f;
-    box-shadow: 0 0 24px rgba(255, 0, 127, 0.8), inset 0 0 14px rgba(255, 0, 127, 0.35);
-  }
-  100% {
-    border-color: #00f3ff;
-    box-shadow: 0 0 16px rgba(0, 243, 255, 0.6), inset 0 0 10px rgba(0, 243, 255, 0.25);
+    box-shadow: 0 0 24px rgba(255, 0, 127, 0.6), inset 0 0 14px rgba(255, 0, 127, 0.25);
   }
 }
 
 @keyframes cyberpunkSparkRain {
-  0% {
-    transform: translate(0, 0) scale(1.6);
-    opacity: 1;
-    filter: brightness(1.6);
-  }
-  70% {
-    opacity: 0.85;
-  }
-  100% {
-    transform: translate(var(--vx), var(--vy)) scale(0.1);
-    opacity: 0;
-    filter: brightness(0.6);
-  }
+  0% { transform: translate(0, 0) scale(1.6); opacity: 1; filter: brightness(1.6); }
+  70% { opacity: 0.85; }
+  100% { transform: translate(var(--vx), var(--vy)) scale(0.1); opacity: 0; filter: brightness(0.6); }
 }
 
 .theme-cyberpunk .nook-panel {
-  background: var(--bg-panel);
-  border: 1.5px solid var(--border-color);
-  box-shadow: var(--box-shadow);
-  padding: 1.25rem;
-  color: var(--text-main);
-  animation: cyberpunkNeonPulse 3.5s linear infinite !important;
+  border-width: 1.5px;
+  border-left: 4px solid var(--accent-color);
+  animation: cyberpunkNeonPulse 4s ease-in-out infinite;
 }
 
 .theme-cyberpunk .nook-panel-header {
-  color: var(--accent-color);
-  text-shadow: 0 0 8px var(--accent-color);
+  color: #00f3ff;
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
   border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem;
+  background: linear-gradient(90deg, rgba(255, 0, 127, 0.18), transparent 80%);
+  padding: 0.45rem 0.75rem;
 }
 
-.theme-cyberpunk button, .theme-cyberpunk .btn-primary {
-  background: var(--accent-color) !important;
-  color: #ffffff !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: 0 0 12px var(--accent-color) !important;
-  font-weight: bold;
+.theme-cyberpunk .btn-primary {
+  background: linear-gradient(135deg, #ff007f 0%, #a21caf 100%);
+  color: #ffffff;
+  border: 1px solid #00f3ff;
+  box-shadow: 0 0 12px rgba(255, 0, 127, 0.65);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  border-radius: 2px !important;
+  letter-spacing: 0.8px;
+}
+
+.theme-cyberpunk .btn-secondary {
+  background: rgba(0, 243, 255, 0.1);
+  color: #00f3ff;
+  border: 1px solid rgba(0, 243, 255, 0.55);
 }
 
 /* ========================================================
    THEME 5: Synthwave Neon
    ======================================================== */
 .theme-synthwave {
-  --bg-primary: #0d0221;
-  --bg-panel: rgba(25, 11, 52, 0.85);
-  --bg-panel-solid: #190b34;
-  --text-main: #00f5d4;
-  --text-muted: #ff007f;
-  --accent-color: #ff007f;
-  --accent-hover: #e0006c;
-  --border-color: #ff007f;
+  --bg-primary: #0f0326;
+  --bg-panel: rgba(26, 10, 56, 0.82);
+  --bg-panel-solid: #1a0a38;
+  --text-main: #fdf4ff;
+  --text-muted: #f472b6;
+  --accent-color: #ff2a85;
+  --accent-hover: #e11d74;
+  --border-color: #f43f5e;
   --border-radius-main: 12px;
   --border-radius-btn: 8px;
-  --box-shadow: 0 0 20px rgba(255, 0, 127, 0.4), inset 0 0 10px rgba(0, 245, 212, 0.15);
+  --font-family-main: 'Space Grotesk', sans-serif;
+  --backdrop-blur: blur(12px);
+  --box-shadow: 0 10px 28px rgba(255, 42, 133, 0.35), inset 0 1px 0 rgba(0, 245, 212, 0.25);
+  background-image:
+    radial-gradient(circle at 50% 15%, rgba(251, 146, 60, 0.28) 0%, rgba(236, 72, 153, 0.22) 28%, transparent 55%),
+    linear-gradient(180deg, #160538 0%, #2e0656 50%, #0d0221 100%);
+  background-attachment: fixed;
 }
 
 .theme-synthwave .nook-panel {
-  background: var(--bg-panel);
-  color: var(--text-main);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--box-shadow);
+  border-width: 1.5px;
+  border-top: 2px solid #00f5d4;
 }
 
 .theme-synthwave .nook-panel-header {
-  color: var(--accent-color);
-  border-bottom: 1px solid var(--accent-color);
+  background: linear-gradient(90deg, rgba(255, 42, 133, 0.32), rgba(245, 158, 11, 0.18), transparent);
+  color: #00f5d4;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.5rem 0.85rem;
+  border-radius: calc(var(--border-radius-main) - 4px) calc(var(--border-radius-main) - 4px) 0 0;
+  text-shadow: 0 0 10px rgba(0, 245, 212, 0.5);
+  letter-spacing: 0.6px;
+}
+
+.theme-synthwave .btn-primary {
+  background: linear-gradient(90deg, #f97316 0%, #ec4899 55%, #8b5cf6 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(236, 72, 153, 0.5);
 }
 
 /* ========================================================
    THEME 6: Y2K Retro Pastel
    ======================================================== */
 .theme-pastel {
-  --bg-primary: #fef2f2;
-  --bg-panel: #ffffff;
+  --bg-primary: #fff1f5;
+  --bg-panel: rgba(255, 255, 255, 0.92);
   --bg-panel-solid: #ffffff;
-  --text-main: #1f2937;
-  --text-muted: #6b7280;
+  --text-main: #3b1d36;
+  --text-muted: #7c4d70;
   --accent-color: #ec4899;
   --accent-hover: #db2777;
-  --border-color: #f472b6;
+  --border-color: #f9a8d4;
   --border-radius-main: 24px;
   --border-radius-btn: 16px;
-  --box-shadow: 0 8px 24px rgba(236, 72, 153, 0.15);
+  --font-family-main: 'Fredoka', 'Outfit', sans-serif;
+  --backdrop-blur: blur(8px);
+  --box-shadow: 0 10px 26px rgba(236, 72, 153, 0.16), 0 3px 0 #fbcfe8;
+  background-image:
+    radial-gradient(circle at 18% 20%, rgba(167, 243, 208, 0.45), transparent 45%),
+    radial-gradient(circle at 82% 25%, rgba(251, 207, 232, 0.55), transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(196, 181, 253, 0.4), transparent 50%);
+  background-attachment: fixed;
 }
 
 .theme-pastel .nook-panel {
-  background: var(--bg-panel);
-  color: var(--text-main);
-  border: 2px solid var(--border-color);
-  border-radius: var(--border-radius-main);
-  box-shadow: var(--box-shadow);
+  border-width: 2px;
 }
 
 .theme-pastel .nook-panel-header {
-  color: var(--accent-color);
+  background: linear-gradient(90deg, #fce7f3 0%, #ede9fe 100%);
+  color: #be185d;
   border-bottom: 2px dashed var(--border-color);
+  padding: 0.55rem 0.9rem;
+  border-radius: 14px;
+}
+
+.theme-pastel .btn-primary {
+  background: linear-gradient(135deg, #f472b6 0%, #a855f7 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+}
+
+.theme-pastel .btn-secondary {
+  background: #fdf2f8;
+  color: #9d174d;
+  border: 1px solid #f9a8d4;
 }
 
 /* ========================================================
    THEME 7: Cozy Coffee
    ======================================================== */
 .theme-coffee {
-  --bg-primary: #1c1917;
-  --bg-panel: #292524;
-  --bg-panel-solid: #292524;
-  --text-main: #f5f5f4;
-  --text-muted: #a8a29e;
+  --bg-primary: #1a1412;
+  --bg-panel: rgba(44, 34, 30, 0.9);
+  --bg-panel-solid: #2c221e;
+  --text-main: #f5ebe0;
+  --text-muted: #c2b2a3;
   --accent-color: #d97706;
   --accent-hover: #b45309;
-  --border-color: #78350f;
+  --border-color: #854d0e;
   --border-radius-main: 14px;
   --border-radius-btn: 10px;
-  --box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --font-family-main: 'Playfair Display', 'Outfit', Georgia, serif;
+  --backdrop-blur: blur(8px);
+  --box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(245, 158, 11, 0.16);
+  background-image:
+    radial-gradient(circle at 25% 15%, rgba(180, 83, 9, 0.24), transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(120, 53, 15, 0.22), transparent 50%);
+  background-attachment: fixed;
 }
 
 .theme-coffee .nook-panel {
-  background: var(--bg-panel);
-  color: var(--text-main);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--box-shadow);
+  border-width: 1.5px;
 }
 
 .theme-coffee .nook-panel-header {
-  color: var(--accent-color);
-  border-bottom: 1px solid var(--border-color);
+  color: #fbbf24;
+  border-bottom: 2px solid rgba(217, 119, 6, 0.45);
+  background: linear-gradient(90deg, rgba(146, 64, 14, 0.32), transparent);
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+}
+
+.theme-coffee .btn-primary {
+  background: linear-gradient(135deg, #d97706 0%, #92400e 100%);
+  color: #fffbeb;
 }
 
 /* ========================================================
    THEME 8: Midnight Velvet
    ======================================================== */
 .theme-velvet {
-  --bg-primary: #09090b;
-  --bg-panel: #18181b;
-  --bg-panel-solid: #18181b;
-  --text-main: #fafafa;
-  --text-muted: #a1a1aa;
-  --accent-color: #a855f7;
-  --accent-hover: #9333ea;
-  --border-color: #3f3f46;
+  --bg-primary: #090612;
+  --bg-panel: rgba(24, 16, 40, 0.88);
+  --bg-panel-solid: #181028;
+  --text-main: #f5f3ff;
+  --text-muted: #c4b5fd;
+  --accent-color: #c084fc;
+  --accent-hover: #a855f7;
+  --border-color: rgba(192, 132, 252, 0.42);
   --border-radius-main: 16px;
   --border-radius-btn: 10px;
-  --box-shadow: 0 10px 30px rgba(168, 85, 247, 0.2);
-}
-
-.theme-velvet .nook-panel {
-  background: var(--bg-panel);
-  color: var(--text-main);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--box-shadow);
+  --font-family-main: 'Playfair Display', 'Outfit', serif;
+  --backdrop-blur: blur(12px);
+  --box-shadow: 0 14px 36px rgba(88, 28, 135, 0.45), inset 0 1px 0 rgba(216, 180, 254, 0.2);
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.26), transparent 52%),
+    radial-gradient(circle at 15% 80%, rgba(236, 72, 153, 0.14), transparent 45%);
+  background-attachment: fixed;
 }
 
 .theme-velvet .nook-panel-header {
-  color: var(--accent-color);
-  border-bottom: 1px solid var(--border-color);
+  color: #e9d5ff;
+  border-bottom: 1px solid rgba(234, 179, 8, 0.4);
+  background: linear-gradient(90deg, rgba(126, 34, 206, 0.28), transparent);
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+}
+
+.theme-velvet .btn-primary {
+  background: linear-gradient(135deg, #9333ea 0%, #581c87 100%);
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  color: #ffffff;
 }
 
 /* ========================================================
-   THEME 9: 🐾 Cozy Cat Café
+   THEME 9: Cozy Cat Cafe
    ======================================================== */
 .theme-cat-cafe {
   --bg-primary: #fbf4eb;
@@ -613,10 +721,16 @@ input, textarea, select {
   --text-muted: #9a3412;
   --accent-color: #f43f5e;
   --accent-hover: #e11d48;
-  --border-color: #fbcfe8;
+  --border-color: #f472b6;
   --border-radius-main: 24px;
   --border-radius-btn: 18px;
-  --box-shadow: 0 10px 25px rgba(244, 63, 94, 0.12);
+  --font-family-main: 'Fredoka', 'Outfit', sans-serif;
+  --backdrop-blur: none;
+  --box-shadow: 0 10px 26px rgba(244, 63, 94, 0.14);
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(253, 186, 116, 0.3), transparent 42%),
+    radial-gradient(circle at 85% 80%, rgba(251, 207, 232, 0.35), transparent 45%);
+  background-attachment: fixed;
 }
 
 @keyframes pawBob {
@@ -633,48 +747,43 @@ input, textarea, select {
 }
 
 .theme-cat-cafe .nook-panel {
-  background: var(--bg-panel);
-  background-image: radial-gradient(#fbcfe8 1px, transparent 1px);
+  background-image: radial-gradient(rgba(244, 114, 182, 0.18) 1px, transparent 1px);
   background-size: 18px 18px;
-  color: var(--text-main);
-  border: 3px dashed #f472b6 !important;
-  border-radius: 24px !important;
-  box-shadow: var(--box-shadow);
+  border-width: 2.5px;
+  border-style: dashed;
 }
 
 .theme-cat-cafe .nook-panel-header {
   color: var(--accent-color);
-  border-bottom: 2px dashed #f472b6;
+  border-bottom: 2px dashed var(--border-color);
   font-weight: 800;
-  display: flex;
-  align-items: center;
 }
 
 .theme-cat-cafe .nook-panel-header::after {
   content: '🐾';
   margin-left: auto;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
 }
 
-.theme-cat-cafe button, .theme-cat-cafe .btn-primary {
-  background: #f43f5e !important;
-  color: #ffffff !important;
-  border-radius: 18px !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.theme-cat-cafe .btn-primary {
+  background: #f43f5e;
+  color: #ffffff;
+  border-radius: 18px;
 }
 
-.theme-cat-cafe button:hover {
+.theme-cat-cafe .btn-primary:hover {
   animation: pawBob 0.6s ease infinite;
 }
 
-/* ========================================================
-   THEME 10: ☁️ Fluffy Cloud Dream
-   ======================================================== */
-@keyframes cloudBgDrift {
-  0% { background-position: 0 0; }
-  100% { background-position: 1000px 0; }
+.theme-cat-cafe .btn-secondary {
+  background: #fff1f2;
+  color: #9f1239;
+  border: 1.5px solid #fda4af;
 }
 
+/* ========================================================
+   THEME 10: Fluffy Cloud Dream
+   ======================================================== */
 .theme-cloud-dream {
   --bg-primary: #38bdf8;
   --bg-panel: rgba(255, 255, 255, 0.94);
@@ -684,24 +793,22 @@ input, textarea, select {
   --accent-color: #0284c7;
   --accent-hover: #0369a1;
   --border-color: #7dd3fc;
-  --border-radius-main: 32px 16px 32px 16px;
-  --border-radius-btn: 50px;
-  --box-shadow: 0 14px 35px rgba(2, 132, 199, 0.35), inset 0 2px 5px rgba(255, 255, 255, 0.9);
-  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 40%, #7dd3fc 100%);
+  --border-radius-main: 26px;
+  --border-radius-btn: 999px;
+  --font-family-main: 'Fredoka', 'Outfit', sans-serif;
+  --backdrop-blur: blur(12px);
+  --box-shadow: 0 14px 35px rgba(2, 132, 199, 0.32), inset 0 2px 5px rgba(255, 255, 255, 0.9);
+  background-image: linear-gradient(180deg, #38bdf8 0%, #0284c7 45%, #7dd3fc 100%);
   background-attachment: fixed;
 }
 
 @keyframes cloudDrift {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  50% { transform: translateY(-4px); }
 }
 
 .theme-cloud-dream .nook-panel {
-  background: var(--bg-panel);
-  border: 2px solid var(--border-color);
-  border-radius: 35px 14px 35px 14px !important;
-  box-shadow: var(--box-shadow);
-  backdrop-filter: blur(10px);
+  border-width: 2px;
 }
 
 .theme-cloud-dream .nook-panel-header {
@@ -710,64 +817,76 @@ input, textarea, select {
   animation: cloudDrift 3.5s ease-in-out infinite;
 }
 
-.theme-cloud-dream button, .theme-cloud-dream .btn-primary {
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%) !important;
-  color: #ffffff !important;
-  border-radius: 50px !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35) !important;
+.theme-cloud-dream .btn-primary {
+  background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+  color: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.35);
+}
+
+.theme-cloud-dream .btn-secondary {
+  background: #f0f9ff;
+  color: #0369a1;
+  border: 1.5px solid #bae6fd;
 }
 
 /* ========================================================
-   THEME 11: 👾 8-Bit Pixel Arcade
+   THEME 11: 8-Bit Pixel Arcade
    ======================================================== */
 .theme-pixel-arcade {
   --bg-primary: #0c051a;
   --bg-panel: #190a38;
   --bg-panel-solid: #190a38;
   --text-main: #00ffcc;
-  --text-muted: #ff007f;
+  --text-muted: #ff5ca8;
   --accent-color: #ff007f;
   --accent-hover: #e0006c;
   --border-color: #ff007f;
   --border-radius-main: 0px;
   --border-radius-btn: 0px;
-  --font-family-main: monospace;
+  --font-family-main: 'VT323', 'JetBrains Mono', monospace;
+  --backdrop-blur: none;
   --box-shadow: 4px 4px 0px #00ffcc, -2px -2px 0px #ff007f;
+  background-image:
+    radial-gradient(circle at 20% 25%, rgba(255, 0, 127, 0.16), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(0, 255, 204, 0.14), transparent 45%);
+  background-attachment: fixed;
 }
 
 .theme-pixel-arcade .nook-panel {
-  background: var(--bg-panel);
-  color: var(--text-main);
-  border: 3px solid var(--border-color) !important;
-  border-radius: 0px !important;
-  box-shadow: 4px 4px 0px #00ffcc !important;
+  border-width: 3px;
 }
 
 .theme-pixel-arcade .nook-panel-header {
-  color: var(--accent-color);
-  border-bottom: 3px solid var(--accent-color);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.92rem;
+  color: #facc15;
+  border-bottom: 3px solid var(--border-color);
   text-transform: uppercase;
   letter-spacing: 1px;
-  font-family: monospace;
 }
 
-.theme-pixel-arcade button, .theme-pixel-arcade .btn-primary {
-  background: #ff007f !important;
-  color: #ffffff !important;
-  border: 2px solid #00ffcc !important;
-  border-radius: 0px !important;
-  box-shadow: 3px 3px 0px #000000 !important;
-  font-family: monospace;
-  font-weight: bold;
+.theme-pixel-arcade .btn-primary {
+  background: #ff007f;
+  color: #ffffff;
+  border: 2px solid #00ffcc;
+  box-shadow: 3px 3px 0px #000000;
+  font-weight: 700;
 }
 
-.theme-pixel-arcade button:active {
+.theme-pixel-arcade .btn-secondary {
+  background: #12062b;
+  color: #00ffcc;
+  border: 2px solid #ff007f;
+}
+
+.theme-pixel-arcade .btn-primary:active {
   transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px #000000 !important;
+  box-shadow: 1px 1px 0px #000000;
 }
 
 /* ========================================================
-   THEME 12: ✨ Magical Girl Kawaii
+   THEME 12: Magical Girl Kawaii
    ======================================================== */
 .theme-magical-girl {
   --bg-primary: #fff0f6;
@@ -777,246 +896,445 @@ input, textarea, select {
   --text-muted: #be185d;
   --accent-color: #ec4899;
   --accent-hover: #db2777;
-  --border-color: #facc15;
+  --border-color: #f472b6;
   --border-radius-main: 20px;
   --border-radius-btn: 24px;
-  --box-shadow: 0 10px 30px rgba(236, 72, 153, 0.25), 0 0 15px rgba(250, 204, 21, 0.4);
+  --font-family-main: 'Fredoka', 'Outfit', sans-serif;
+  --backdrop-blur: none;
+  --box-shadow: 0 10px 30px rgba(236, 72, 153, 0.24), 0 0 15px rgba(250, 204, 21, 0.35);
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(250, 204, 21, 0.25), transparent 40%),
+    radial-gradient(circle at 80% 30%, rgba(244, 114, 182, 0.28), transparent 45%);
+  background-attachment: fixed;
 }
 
 @keyframes magicalSparkle {
-  0% { box-shadow: 0 10px 25px rgba(236, 72, 153, 0.25), 0 0 10px rgba(250, 204, 21, 0.4); }
-  50% { box-shadow: 0 10px 35px rgba(236, 72, 153, 0.4), 0 0 20px rgba(250, 204, 21, 0.8); }
-  100% { box-shadow: 0 10px 25px rgba(236, 72, 153, 0.25), 0 0 10px rgba(250, 204, 21, 0.4); }
+  0%, 100% { box-shadow: 0 10px 25px rgba(236, 72, 153, 0.22), 0 0 10px rgba(250, 204, 21, 0.38); }
+  50% { box-shadow: 0 10px 34px rgba(236, 72, 153, 0.36), 0 0 20px rgba(250, 204, 21, 0.65); }
 }
 
 .theme-magical-girl .nook-panel {
-  background: var(--bg-panel);
-  color: var(--text-main);
-  border: 3px double #f472b6 !important;
+  border-width: 3px;
+  border-style: double;
   outline: 2px solid #facc15;
-  outline-offset: -2px;
-  border-radius: 20px !important;
-  animation: magicalSparkle 3s ease-in-out infinite;
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+  outline-offset: -3px;
+  animation: magicalSparkle 3.5s ease-in-out infinite;
 }
 
 .theme-magical-girl .nook-panel-header {
   color: var(--accent-color);
-  border-bottom: 2px dashed #f472b6;
+  border-bottom: 2px dashed var(--border-color);
   font-weight: 800;
 }
 
-.theme-magical-girl button, .theme-magical-girl .btn-primary {
-  background: linear-gradient(135deg, #f472b6 0%, #facc15 100%) !important;
-  color: #ffffff !important;
-  border-radius: 24px !important;
-  box-shadow: 0 4px 15px rgba(244, 114, 182, 0.4) !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+.theme-magical-girl .btn-primary {
+  background: linear-gradient(135deg, #f472b6 0%, #f59e0b 100%);
+  color: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 4px 15px rgba(244, 114, 182, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
-/* --- Christmas Theme --- */
-.theme-christmas {
-  --bg-color: #064e3b;
-  --card-bg: rgba(15, 23, 42, 0.78);
-  --accent-color: #dc2626;
-  --text-main: #ffffff;
-  --border-color: #f59e0b;
-}
-.theme-christmas .nook-panel {
-  background: rgba(15, 23, 42, 0.85) !important;
-  border: 2px solid #f59e0b !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 32px rgba(220, 38, 38, 0.25) !important;
-}
-.theme-christmas .nook-panel-header {
-  background: linear-gradient(90deg, #064e3b 0%, #dc2626 100%) !important;
-  color: #ffffff !important;
-  padding: 0.6rem 1rem !important;
-  border-radius: 12px 12px 0 0 !important;
+.theme-magical-girl .btn-secondary {
+  background: #fff0f6;
+  color: #9d174d;
+  border: 1.5px solid #f472b6;
 }
 
-/* --- Hanukkah Theme --- */
-.theme-hanukkah {
-  --bg-color: #0f172a;
-  --card-bg: rgba(30, 58, 138, 0.65);
-  --accent-color: #38bdf8;
-  --text-main: #ffffff;
-  --border-color: #facc15;
-}
-.theme-hanukkah .nook-panel {
-  background: rgba(30, 58, 138, 0.75) !important;
-  border: 2px solid #facc15 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 32px rgba(56, 189, 248, 0.3) !important;
-}
-.theme-hanukkah .nook-panel-header {
-  background: linear-gradient(90deg, #1d4ed8 0%, #0284c7 100%) !important;
-  color: #ffffff !important;
-  padding: 0.6rem 1rem !important;
-}
-
-/* --- Halloween Theme --- */
-.theme-halloween {
-  --bg-color: #0f051d;
-  --card-bg: rgba(30, 10, 50, 0.75);
-  --accent-color: #f97316;
-  --text-main: #f3e8ff;
-  --border-color: #a855f7;
-}
-.theme-halloween .nook-panel {
-  background: rgba(30, 10, 50, 0.85) !important;
-  border: 2px solid #a855f7 !important;
-  border-radius: 14px !important;
-  box-shadow: 0 8px 32px rgba(249, 115, 22, 0.35) !important;
-}
-.theme-halloween .nook-panel-header {
-  background: linear-gradient(90deg, #7e22ce 0%, #ea580c 100%) !important;
-  color: #ffffff !important;
-}
-
-/* --- Spring Blossom Theme --- */
-.theme-spring {
-  --bg-color: #fdf2f8;
-  --card-bg: rgba(255, 255, 255, 0.85);
-  --accent-color: #ec4899;
-  --text-main: #831843;
-  --border-color: #f472b6;
-}
-.theme-spring .nook-panel {
-  background: rgba(255, 255, 255, 0.9) !important;
-  border: 2px solid #f472b6 !important;
-  border-radius: 18px !important;
-  box-shadow: 0 8px 24px rgba(244, 114, 182, 0.25) !important;
-}
-.theme-spring .nook-panel-header {
-  background: linear-gradient(90deg, #f472b6 0%, #34d399 100%) !important;
-  color: #ffffff !important;
-}
-
-/* --- Summer Theme --- */
-.theme-summer {
-  --bg-color: #082f49;
-  --card-bg: rgba(12, 74, 96, 0.75);
-  --accent-color: #38bdf8;
-  --text-main: #f0f9ff;
-  --border-color: #f59e0b;
-}
-.theme-summer .nook-panel {
-  background: rgba(12, 74, 96, 0.85) !important;
-  border: 2px solid #f59e0b !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 32px rgba(56, 189, 248, 0.3) !important;
-}
-.theme-summer .nook-panel-header {
-  background: linear-gradient(90deg, #0284c7 0%, #f59e0b 100%) !important;
-  color: #ffffff !important;
-}
-
-/* --- Autumn Theme --- */
-.theme-autumn {
-  --bg-color: #2d140a;
-  --card-bg: rgba(67, 24, 12, 0.8);
-  --accent-color: #ea580c;
-  --text-main: #ffedd5;
-  --border-color: #f59e0b;
-}
-.theme-autumn .nook-panel {
-  background: rgba(67, 24, 12, 0.85) !important;
-  border: 2px solid #f59e0b !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 32px rgba(234, 88, 12, 0.3) !important;
-}
-.theme-autumn .nook-panel-header {
-  background: linear-gradient(90deg, #991b1b 0%, #ea580c 100%) !important;
-  color: #ffffff !important;
-}
-
-/* --- Windows 11 Modern Theme --- */
-.theme-win11 {
-  --bg-color: #0f172a;
-  --card-bg: rgba(30, 41, 59, 0.65);
+/* ========================================================
+   THEME 13: Winter Wonderland (seasonal-winter)
+   ======================================================== */
+.theme-seasonal-winter, .theme-winter {
+  --bg-primary: #0b243b;
+  --bg-panel: rgba(239, 248, 255, 0.9);
+  --bg-panel-solid: #eff8ff;
+  --text-main: #0c3152;
+  --text-muted: #2e5d84;
   --accent-color: #0284c7;
-  --text-main: #f8fafc;
-  --border-color: rgba(255, 255, 255, 0.15);
-}
-.theme-win11 .nook-panel {
-  background: rgba(30, 41, 59, 0.75) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
-}
-.theme-win11 .nook-panel-header {
-  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%) !important;
-  color: #ffffff !important;
-  border-radius: 14px 14px 0 0 !important;
+  --accent-hover: #0369a1;
+  --border-color: #7dd3fc;
+  --border-radius-main: 18px;
+  --border-radius-btn: 12px;
+  --font-family-main: 'Outfit', sans-serif;
+  --backdrop-blur: blur(14px);
+  --box-shadow: 0 12px 32px rgba(56, 189, 248, 0.25), inset 0 2px 6px rgba(255, 255, 255, 0.95);
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(186, 230, 253, 0.35), transparent 45%),
+    linear-gradient(180deg, #0c2d4d 0%, #1e4d75 100%);
+  background-attachment: fixed;
 }
 
-/* --- Discord Dark Theme --- */
-.theme-discord {
-  --bg-color: #1e1f22;
-  --card-bg: #2b2d31;
-  --accent-color: #5865f2;
-  --text-main: #f2f3f5;
-  --border-color: #383a40;
-}
-.theme-discord .nook-panel {
-  background: #2b2d31 !important;
-  border: 1px solid #383a40 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
-}
-.theme-discord .nook-panel-header {
-  background: #1e1f22 !important;
-  color: #f2f3f5 !important;
-  border-bottom: 1px solid #383a40 !important;
+.theme-seasonal-winter .nook-panel, .theme-winter .nook-panel {
+  border-width: 2px;
 }
 
-/* --- Liquid Crystal Glass Theme --- */
-.theme-liquid-glass {
-  --bg-color: #050814;
-  --card-bg: rgba(255, 255, 255, 0.08);
-  --accent-color: #38bdf8;
+.theme-seasonal-winter .nook-panel-header, .theme-winter .nook-panel-header {
+  background: linear-gradient(90deg, #e0f2fe 0%, #bae6fd 100%);
+  color: #075985;
+  padding: 0.5rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+  border-bottom: 1px solid #7dd3fc;
+}
+
+.theme-seasonal-winter .btn-secondary, .theme-winter .btn-secondary {
+  background: rgba(255, 255, 255, 0.78);
+  color: #0c3152;
+  border: 1px solid #7dd3fc;
+}
+
+/* ========================================================
+   THEME 14: Cozy Christmas Eve
+   ======================================================== */
+.theme-christmas {
+  --bg-primary: #063d2d;
+  --bg-panel: rgba(15, 29, 44, 0.86);
+  --bg-panel-solid: #0f1d2c;
+  --text-main: #fefce8;
+  --text-muted: #fde68a;
+  --accent-color: #dc2626;
+  --accent-hover: #b91c1c;
+  --border-color: #f59e0b;
+  --border-radius-main: 16px;
+  --border-radius-btn: 12px;
+  --font-family-main: 'Playfair Display', 'Outfit', serif;
+  --backdrop-blur: blur(12px);
+  --box-shadow: 0 12px 32px rgba(220, 38, 38, 0.25), inset 0 1px 0 rgba(251, 191, 36, 0.28);
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(220, 38, 38, 0.24), transparent 45%),
+    radial-gradient(circle at 80% 75%, rgba(245, 158, 11, 0.16), transparent 45%),
+    linear-gradient(180deg, #052e22 0%, #064e3b 60%, #142b23 100%);
+  background-attachment: fixed;
+}
+
+.theme-christmas .nook-panel {
+  border-width: 2px;
+}
+
+.theme-christmas .nook-panel-header {
+  background: linear-gradient(90deg, #065f46 0%, #b91c1c 100%);
+  color: #fef3c7;
+  padding: 0.55rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+  border-bottom: 2px solid #f59e0b;
+}
+
+.theme-christmas .btn-primary {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  border: 1px solid #fbbf24;
+  color: #fff;
+}
+
+/* ========================================================
+   THEME 15: Festival of Lights (Hanukkah)
+   ======================================================== */
+.theme-hanukkah {
+  --bg-primary: #0b1636;
+  --bg-panel: rgba(23, 47, 110, 0.78);
+  --bg-panel-solid: #172f6e;
   --text-main: #ffffff;
-  --border-color: rgba(255, 255, 255, 0.25);
-}
-.theme-liquid-glass .nook-panel {
-  background: rgba(255, 255, 255, 0.12) !important;
-  backdrop-filter: blur(28px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
-  border-radius: 24px !important;
-  box-shadow: 0 12px 40px rgba(56, 189, 248, 0.3) !important;
-}
-.theme-liquid-glass .nook-panel-header {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.4) 0%, rgba(192, 132, 252, 0.4) 100%) !important;
-  color: #ffffff !important;
-  border-radius: 22px 22px 0 0 !important;
+  --text-muted: #bae6fd;
+  --accent-color: #38bdf8;
+  --accent-hover: #0284c7;
+  --border-color: #facc15;
+  --border-radius-main: 16px;
+  --border-radius-btn: 12px;
+  --font-family-main: 'Outfit', sans-serif;
+  --backdrop-blur: blur(12px);
+  --box-shadow: 0 12px 32px rgba(56, 189, 248, 0.28), inset 0 1px 0 rgba(250, 204, 21, 0.35);
+  background-image:
+    radial-gradient(circle at 50% 10%, rgba(250, 204, 21, 0.18), transparent 45%),
+    radial-gradient(circle at 80% 75%, rgba(56, 189, 248, 0.22), transparent 50%);
+  background-attachment: fixed;
 }
 
-/* --- Material You Expressive Theme --- */
+.theme-hanukkah .nook-panel {
+  border-width: 2px;
+}
+
+.theme-hanukkah .nook-panel-header {
+  background: linear-gradient(90deg, #1d4ed8 0%, #0284c7 100%);
+  color: #fef08a;
+  padding: 0.55rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+  border-bottom: 2px solid #facc15;
+}
+
+/* ========================================================
+   THEME 16: Spooky Halloween Night
+   ======================================================== */
+.theme-halloween {
+  --bg-primary: #0f051d;
+  --bg-panel: rgba(31, 12, 52, 0.88);
+  --bg-panel-solid: #1f0c34;
+  --text-main: #f3e8ff;
+  --text-muted: #fdba74;
+  --accent-color: #f97316;
+  --accent-hover: #ea580c;
+  --border-color: #a855f7;
+  --border-radius-main: 14px;
+  --border-radius-btn: 10px;
+  --font-family-main: 'Space Grotesk', sans-serif;
+  --backdrop-blur: blur(10px);
+  --box-shadow: 0 12px 32px rgba(249, 115, 22, 0.3), inset 0 1px 0 rgba(168, 85, 247, 0.28);
+  background-image:
+    radial-gradient(circle at 18% 20%, rgba(249, 115, 22, 0.22), transparent 42%),
+    radial-gradient(circle at 85% 80%, rgba(168, 85, 247, 0.24), transparent 45%);
+  background-attachment: fixed;
+}
+
+.theme-halloween .nook-panel {
+  border-width: 2px;
+}
+
+.theme-halloween .nook-panel-header {
+  background: linear-gradient(90deg, #6b21a8 0%, #ea580c 100%);
+  color: #ffffff;
+  padding: 0.55rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+  border-bottom: 2px solid #f97316;
+}
+
+/* ========================================================
+   THEME 17: Spring Blossom
+   ======================================================== */
+.theme-spring {
+  --bg-primary: #fdf2f8;
+  --bg-panel: rgba(255, 255, 255, 0.9);
+  --bg-panel-solid: #ffffff;
+  --text-main: #701a3e;
+  --text-muted: #9d174d;
+  --accent-color: #ec4899;
+  --accent-hover: #db2777;
+  --border-color: #f472b6;
+  --border-radius-main: 18px;
+  --border-radius-btn: 14px;
+  --font-family-main: 'Fredoka', 'Outfit', sans-serif;
+  --backdrop-blur: blur(8px);
+  --box-shadow: 0 10px 26px rgba(244, 114, 182, 0.22);
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(167, 243, 208, 0.45), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(251, 207, 232, 0.55), transparent 45%);
+  background-attachment: fixed;
+}
+
+.theme-spring .nook-panel {
+  border-width: 2px;
+}
+
+.theme-spring .nook-panel-header {
+  background: linear-gradient(90deg, #f472b6 0%, #34d399 100%);
+  color: #ffffff;
+  padding: 0.55rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+}
+
+.theme-spring .btn-secondary {
+  background: #fdf2f8;
+  color: #831843;
+  border: 1px solid #f472b6;
+}
+
+/* ========================================================
+   THEME 18: Tropical Summer Sun
+   ======================================================== */
+.theme-summer {
+  --bg-primary: #082f49;
+  --bg-panel: rgba(12, 74, 96, 0.84);
+  --bg-panel-solid: #0c4a60;
+  --text-main: #f0f9ff;
+  --text-muted: #fde68a;
+  --accent-color: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --border-color: #f59e0b;
+  --border-radius-main: 16px;
+  --border-radius-btn: 14px;
+  --font-family-main: 'Outfit', sans-serif;
+  --backdrop-blur: blur(10px);
+  --box-shadow: 0 12px 32px rgba(56, 189, 248, 0.26);
+  background-image:
+    radial-gradient(circle at 82% 12%, rgba(251, 191, 36, 0.28), transparent 40%),
+    linear-gradient(180deg, #075985 0%, #082f49 55%, #064e3b 100%);
+  background-attachment: fixed;
+}
+
+.theme-summer .nook-panel {
+  border-width: 2px;
+}
+
+.theme-summer .nook-panel-header {
+  background: linear-gradient(90deg, #0284c7 0%, #f59e0b 100%);
+  color: #ffffff;
+  padding: 0.55rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+}
+
+/* ========================================================
+   THEME 19: Autumn Harvest & Leaves
+   ======================================================== */
+.theme-autumn {
+  --bg-primary: #2d140a;
+  --bg-panel: rgba(67, 24, 12, 0.86);
+  --bg-panel-solid: #43180c;
+  --text-main: #ffedd5;
+  --text-muted: #fdba74;
+  --accent-color: #ea580c;
+  --accent-hover: #c2410c;
+  --border-color: #f59e0b;
+  --border-radius-main: 16px;
+  --border-radius-btn: 10px;
+  --font-family-main: 'Playfair Display', 'Outfit', serif;
+  --backdrop-blur: blur(8px);
+  --box-shadow: 0 12px 32px rgba(234, 88, 12, 0.28);
+  background-image:
+    radial-gradient(circle at 18% 25%, rgba(245, 158, 11, 0.22), transparent 45%),
+    radial-gradient(circle at 82% 75%, rgba(153, 27, 27, 0.28), transparent 45%);
+  background-attachment: fixed;
+}
+
+.theme-autumn .nook-panel {
+  border-width: 2px;
+}
+
+.theme-autumn .nook-panel-header {
+  background: linear-gradient(90deg, #991b1b 0%, #ea580c 100%);
+  color: #fff7ed;
+  padding: 0.55rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+}
+
+/* ========================================================
+   THEME 20: Fluent OS (Windows 11 Mica)
+   ======================================================== */
+.theme-win11 {
+  --bg-primary: #0b1324;
+  --bg-panel: rgba(28, 39, 58, 0.72);
+  --bg-panel-solid: #1c273a;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent-color: #38bdf8;
+  --accent-hover: #0284c7;
+  --border-color: rgba(255, 255, 255, 0.16);
+  --border-radius-main: 16px;
+  --border-radius-btn: 8px;
+  --font-family-main: 'Outfit', 'Segoe UI', sans-serif;
+  --backdrop-blur: blur(22px) saturate(140%);
+  --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  background-image:
+    radial-gradient(circle at 25% 20%, rgba(56, 189, 248, 0.24), transparent 48%),
+    radial-gradient(circle at 80% 75%, rgba(99, 102, 241, 0.22), transparent 48%);
+  background-attachment: fixed;
+}
+
+.theme-win11 .nook-panel-header {
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+  color: #ffffff;
+  padding: 0.55rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+  border-bottom: none;
+}
+
+/* ========================================================
+   THEME 21: Gamer Dark (Discord Inspired)
+   ======================================================== */
+.theme-discord {
+  --bg-primary: #1e1f22;
+  --bg-panel: #2b2d31;
+  --bg-panel-solid: #2b2d31;
+  --text-main: #f2f3f5;
+  --text-muted: #b5bac1;
+  --accent-color: #5865f2;
+  --accent-hover: #4752c4;
+  --border-color: #3f4147;
+  --border-radius-main: 12px;
+  --border-radius-btn: 8px;
+  --font-family-main: 'Outfit', sans-serif;
+  --backdrop-blur: none;
+  --box-shadow: 0 6px 22px rgba(0, 0, 0, 0.42);
+  background-image: radial-gradient(circle at 85% 15%, rgba(88, 101, 242, 0.14), transparent 45%);
+  background-attachment: fixed;
+}
+
+.theme-discord .nook-panel-header {
+  background: #1e1f22;
+  color: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-color);
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+}
+
+/* ========================================================
+   THEME 22: Liquid Crystal Glass
+   ======================================================== */
+.theme-liquid-glass {
+  --bg-primary: #060919;
+  --bg-panel: rgba(255, 255, 255, 0.11);
+  --bg-panel-solid: #111834;
+  --text-main: #ffffff;
+  --text-muted: #cbd5e1;
+  --accent-color: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --border-color: rgba(255, 255, 255, 0.3);
+  --border-radius-main: 24px;
+  --border-radius-btn: 999px;
+  --font-family-main: 'Space Grotesk', sans-serif;
+  --backdrop-blur: blur(28px) saturate(180%);
+  --box-shadow: 0 14px 40px rgba(56, 189, 248, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  background-image:
+    radial-gradient(circle at 18% 25%, rgba(56, 189, 248, 0.34), transparent 45%),
+    radial-gradient(circle at 82% 20%, rgba(192, 132, 252, 0.3), transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(45, 212, 191, 0.2), transparent 50%);
+  background-attachment: fixed;
+}
+
+.theme-liquid-glass .nook-panel {
+  border-width: 1.5px;
+}
+
+.theme-liquid-glass .nook-panel-header {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.36) 0%, rgba(192, 132, 252, 0.36) 100%);
+  color: #ffffff;
+  padding: 0.55rem 0.9rem;
+  border-radius: calc(var(--border-radius-main) - 4px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+/* ========================================================
+   THEME 23: Material You Expressive
+   ======================================================== */
 .theme-material-expressive {
-  --bg-color: #1c1b1f;
-  --card-bg: rgba(230, 225, 229, 0.08);
+  --bg-primary: #1a1820;
+  --bg-panel: rgba(45, 40, 56, 0.88);
+  --bg-panel-solid: #2d2838;
+  --text-main: #f4effa;
+  --text-muted: #cac4d0;
   --accent-color: #d0bcff;
-  --text-main: #e6e1e5;
-  --border-color: rgba(208, 188, 255, 0.3);
+  --accent-hover: #b69df8;
+  --border-color: rgba(208, 188, 255, 0.35);
+  --border-radius-main: 26px;
+  --border-radius-btn: 999px;
+  --font-family-main: 'Outfit', sans-serif;
+  --backdrop-blur: blur(12px);
+  --box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(208, 188, 255, 0.2), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(255, 180, 171, 0.16), transparent 45%);
+  background-attachment: fixed;
 }
-.theme-material-expressive .nook-panel {
-  background: rgba(230, 225, 229, 0.12) !important;
-  border: 1px solid rgba(208, 188, 255, 0.35) !important;
-  border-radius: 28px !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
-}
+
 .theme-material-expressive .nook-panel-header {
-  background: linear-gradient(90deg, #d0bcff 0%, #ffb4ab 100%) !important;
-  color: #1c1b1f !important;
-  font-weight: 800 !important;
-  border-radius: 26px 26px 0 0 !important;
+  background: linear-gradient(90deg, #d0bcff 0%, #ffb4ab 100%);
+  color: #1c1b1f;
+  font-weight: 800;
+  padding: 0.55rem 0.95rem;
+  border-radius: calc(var(--border-radius-main) - 6px);
+  border-bottom: none;
+}
+
+.theme-material-expressive .btn-primary {
+  background: #d0bcff;
+  color: #21005d;
+  font-weight: 700;
 }
 
 /* Custom Keyframe Overlay Animations */
@@ -1049,8 +1367,9 @@ input, textarea, select {
 }
 
 @keyframes sparkleShimmer {
-  0% { transform: scale(0.8) rotate(0deg); opacity: 0.3; }
-  100% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
+  0% { transform: scale(0.85) rotate(0deg); opacity: 0.35; }
+  50% { transform: scale(1.15) rotate(90deg); opacity: 0.8; }
+  100% { transform: scale(0.85) rotate(180deg); opacity: 0.35; }
 }
 
 @keyframes pawDropFade {
@@ -1063,6 +1382,17 @@ input, textarea, select {
   0% { transform: translateY(0) scale(0.5); opacity: 1; }
   35% { transform: translateY(-40px) scale(1.3); opacity: 1; }
   100% { transform: translateY(-75px) scale(0.9); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nook-panel,
+  .nook-panel-header,
+  .nook-panel-header::before,
+  .theme-win98 img,
+  .theme-win9x img {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* Messages Conversation Pin Button Hover Styles */
@@ -1294,7 +1624,6 @@ input, textarea, select {
 
   .nook-panel {
     padding: 0.75rem 0.6rem !important;
-    border-radius: 12px !important;
   }
 }
 
@@ -1305,7 +1634,6 @@ input, textarea, select {
 
   .nook-panel {
     padding: 0.6rem 0.45rem !important;
-    border-radius: 10px !important;
   }
 
   .nook-panel-header {
@@ -1322,7 +1650,5 @@ input, textarea, select {
 
   .nook-panel {
     padding: 0.5rem 0.35rem !important;
-    border-radius: 8px !important;
   }
 }
-

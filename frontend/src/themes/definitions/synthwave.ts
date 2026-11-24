@@ -14,18 +14,29 @@ export const synthwaveTheme: ThemeDefinition = {
     border: '#ff007f'
   },
   supportsSounds: true,
-  supportsAnimations: false,
+  supportsAnimations: true,
   soundPreset: 'cyberpunk',
-  animationPreset: 'none',
+  animationPreset: 'cyberpunk',
   cssClass: 'theme-synthwave',
   previewStyle: {
+    fontFamily: "'Space Grotesk', sans-serif",
     borderRadius: '12px',
     borderStyle: 'solid',
     borderWidth: '1px',
-    borderColor: '#ff007f',
-    headerBg: 'linear-gradient(90deg, #ff007f 0%, #7b2cbf 100%)',
-    cardBg: '#190b34',
-    accentGlow: '0 0 15px rgba(255, 0, 127, 0.6)',
-    badge: '🌆'
+    borderColor: '#f43f5e',
+    headerBg: 'linear-gradient(90deg, #ff2a85 0%, #f97316 55%, #7b2cbf 100%)',
+    cardBg: '#1a0a38',
+    accentGlow: '0 0 15px rgba(255, 42, 133, 0.6)',
+    badge: '🌆',
+    decorIcons: ['🌆', '🌴', '💿']
+  },
+  defaultCardTitles: {
+    bio: 'Neon Driver Bio',
+    music: 'Outrun Cassette Deck',
+    friends: 'Nightcruise Crew',
+    hobbies: 'Synth & Arcade',
+    movies: 'Midnight VHS Picks',
+    books: 'Retro Sci-Fi Shelf',
+    steam: 'Cyber Arcade Scores'
   }
 };

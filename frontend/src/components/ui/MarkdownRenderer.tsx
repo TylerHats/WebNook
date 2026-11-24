@@ -1,4 +1,5 @@
 import React from 'react';
+import { isSafeUrl } from '../../utils/sanitize';
 
 interface MarkdownRendererProps {
   content: string;
@@ -24,10 +25,13 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sty
       // Image: ![alt](url)
       const imgMatch = part.match(/^!\[(.*?)\]\((.*?)\)$/);
       if (imgMatch) {
+        if (!isSafeUrl(imgMatch[2], true, false)) {
+          return imgMatch[1] || null;
+        }
         return (
           <img
             key={idx}
-            src={imgMatch[2]}
+            src={imgMatch[2].trim()}
             alt={imgMatch[1] || 'Markdown Image'}
             style={{
               maxWidth: '100%',
@@ -49,10 +53,13 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sty
       // Link: [text](url)
       const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
       if (linkMatch) {
+        if (!isSafeUrl(linkMatch[2], true, true)) {
+          return <span key={idx}>{linkMatch[1]}</span>;
+        }
         return (
           <a
             key={idx}
-            href={linkMatch[2]}
+            href={linkMatch[2].trim()}
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'var(--accent-color, #38bdf8)', textDecoration: 'underline', fontWeight: 600 }}

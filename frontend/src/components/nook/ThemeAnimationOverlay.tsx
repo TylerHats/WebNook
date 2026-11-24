@@ -606,9 +606,10 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
   if (normalizedTheme === 'coffee' || normalizedTheme === 'theme-coffee') {
     const coffeeItems = [
       { icon: '☕', left: '10%', size: '1.6rem', speed: '9s', delay: '0s' },
-      { icon: '🫘', left: '32%', size: '1.3rem', speed: '7.5s', delay: '-2.5s' },
-      { icon: '🥐', left: '55%', size: '1.5rem', speed: '11s', delay: '-1s' },
-      { icon: '☕', left: '78%', size: '1.6rem', speed: '8.5s', delay: '-4s' }
+      { icon: '💨', left: '24%', size: '1.4rem', speed: '7s', delay: '-1.5s' },
+      { icon: '🫘', left: '42%', size: '1.3rem', speed: '7.8s', delay: '-2.5s' },
+      { icon: '🥐', left: '62%', size: '1.5rem', speed: '11s', delay: '-1s' },
+      { icon: '💨', left: '84%', size: '1.45rem', speed: '8.2s', delay: '-3.5s' }
     ];
     return (
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
@@ -620,7 +621,7 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
               bottom: '-10%',
               left: item.left,
               fontSize: item.size,
-              opacity: 0.38,
+              opacity: 0.36,
               animation: `floatUpDrift ${item.speed} linear infinite`,
               animationDelay: item.delay
             }}
@@ -692,30 +693,101 @@ export const ThemeAnimationOverlay: React.FC<ThemeAnimationOverlayProps> = ({ th
   }
 
   if (normalizedTheme === 'frutiger-aero' || normalizedTheme === 'theme-frutiger-aero') {
-    const aeroItems = [
-      { icon: '💧', left: '10%', size: '1.5rem', speed: '8s', delay: '0s' },
-      { icon: '🫧', left: '32%', size: '1.6rem', speed: '10.5s', delay: '-3s' },
-      { icon: '🌊', left: '56%', size: '1.4rem', speed: '7.8s', delay: '-1.5s' },
-      { icon: '💧', left: '78%', size: '1.5rem', speed: '9s', delay: '-4.2s' }
+    const aeroBubbles = [
+      { left: '10%', size: '36px', speed: '9s', delay: '0s' },
+      { left: '28%', size: '24px', speed: '11.5s', delay: '-3s' },
+      { left: '52%', size: '44px', speed: '10s', delay: '-1.5s' },
+      { left: '74%', size: '28px', speed: '8.5s', delay: '-4.2s' },
+      { left: '89%', size: '34px', speed: '12s', delay: '-2.2s' }
     ];
     return (
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
-        {aeroItems.map((item, i) => (
+        {aeroBubbles.map((b, i) => (
           <div
             key={i}
             style={{
               position: 'absolute',
-              bottom: '-10%',
-              left: item.left,
-              fontSize: item.size,
-              opacity: 0.4,
-              animation: `floatUpDrift ${item.speed} linear infinite`,
-              animationDelay: item.delay
+              bottom: '-12%',
+              left: b.left,
+              width: b.size,
+              height: b.size,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.85), rgba(125,211,252,0.28) 60%, rgba(14,165,233,0.12))',
+              border: '1px solid rgba(255,255,255,0.65)',
+              boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.8), 0 4px 12px rgba(14,165,233,0.2)',
+              opacity: 0.45,
+              animation: `floatUpDrift ${b.speed} linear infinite`,
+              animationDelay: b.delay
             }}
-          >
-            {item.icon}
-          </div>
+          />
         ))}
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'synthwave' || normalizedTheme === 'theme-synthwave') {
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: '8%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '220px',
+            height: '220px',
+            borderRadius: '50%',
+            background: 'linear-gradient(180deg, rgba(251,146,60,0.28) 0%, rgba(236,72,153,0.18) 65%, transparent 100%)',
+            boxShadow: '0 0 60px rgba(236, 72, 153, 0.25)'
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: '32%',
+            backgroundImage:
+              'linear-gradient(rgba(255, 42, 133, 0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 245, 212, 0.14) 1px, transparent 1px)',
+            backgroundSize: '42px 26px',
+            maskImage: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)',
+            WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)'
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (normalizedTheme === 'glassmorphism' || normalizedTheme === 'theme-glassmorphism') {
+    return (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: '-10%',
+            left: '12%',
+            width: '320px',
+            height: '320px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(99,102,241,0.18), transparent 68%)',
+            filter: 'blur(24px)',
+            animation: 'win9xIconFloat 8s ease-in-out infinite'
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '5%',
+            right: '10%',
+            width: '280px',
+            height: '280px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(56,189,248,0.14), transparent 68%)',
+            filter: 'blur(24px)',
+            animation: 'win9xIconFloat 10s ease-in-out infinite 2s'
+          }}
+        />
       </div>
     );
   }

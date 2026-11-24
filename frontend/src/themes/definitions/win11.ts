@@ -19,7 +19,7 @@ export const win11Theme: ThemeDefinition = {
   animationPreset: 'none',
   cssClass: 'theme-win11',
   previewStyle: {
-    fontFamily: "'Segoe UI Variable', 'Segoe UI', sans-serif",
+    fontFamily: "'Outfit', 'Segoe UI', sans-serif",
     borderRadius: '16px',
     borderStyle: 'solid',
     borderWidth: '1px',
@@ -29,5 +29,14 @@ export const win11Theme: ThemeDefinition = {
     accentGlow: '0 8px 32px rgba(2, 132, 199, 0.35)',
     badge: '🪟',
     decorIcons: ['🪟', '✨']
+  },
+  defaultCardTitles: {
+    bio: 'Fluent User Card',
+    music: 'Focus Audio Mix',
+    friends: 'Pinned Contacts',
+    hobbies: 'Widgets & Interests',
+    movies: 'Streaming Queue',
+    books: 'Reading List',
+    steam: 'Xbox & PC Library'
   }
 };

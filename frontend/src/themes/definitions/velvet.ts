@@ -19,13 +19,24 @@ export const velvetTheme: ThemeDefinition = {
   animationPreset: 'none',
   cssClass: 'theme-velvet',
   previewStyle: {
+    fontFamily: "'Playfair Display', serif",
     borderRadius: '16px',
     borderStyle: 'solid',
     borderWidth: '1px',
-    borderColor: '#3f3f46',
+    borderColor: 'rgba(192, 132, 252, 0.42)',
     headerBg: 'linear-gradient(135deg, #581c87 0%, #a855f7 100%)',
-    cardBg: '#18181b',
-    accentGlow: '0 0 15px rgba(168, 85, 247, 0.4)',
-    badge: '🌙'
+    cardBg: '#181028',
+    accentGlow: '0 0 15px rgba(168, 85, 247, 0.45)',
+    badge: '🌙',
+    decorIcons: ['🌙', '🔮', '✨']
+  },
+  defaultCardTitles: {
+    bio: 'Moonlit Bio',
+    music: 'Nocturne Vinyls',
+    friends: 'Inner Circle',
+    hobbies: 'Evening Passions',
+    movies: 'Late Night Screenings',
+    books: 'Velvet Library',
+    steam: 'Midnight Games'
   }
 };

@@ -19,7 +19,7 @@ export const christmasTheme: ThemeDefinition = {
   animationPreset: 'none',
   cssClass: 'theme-christmas',
   previewStyle: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: "'Playfair Display', serif",
     borderRadius: '16px',
     borderStyle: 'solid',
     borderWidth: '2px',
@@ -29,5 +29,14 @@ export const christmasTheme: ThemeDefinition = {
     accentGlow: '0 0 16px rgba(220, 38, 38, 0.4)',
     badge: '🎄',
     decorIcons: ['🎄', '❄️', '🎁']
+  },
+  defaultCardTitles: {
+    bio: 'Holiday Greetings',
+    music: 'Fireside Carols',
+    friends: 'Nice List Crew',
+    hobbies: 'Winter Crafts',
+    movies: 'Holiday Classics',
+    books: 'Winter Tales',
+    steam: 'Snowy Co-Op Games'
   }
 };

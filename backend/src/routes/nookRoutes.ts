@@ -1,9 +1,13 @@
 import { Router, Request, Response } from 'express';
-import { execute, query, queryOne } from '../db/connection';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware';
-import jwt from 'jsonwebtoken';
-import { JWT_SECRET } from '../middleware/authMiddleware';
+import fs from 'fs';
+import path from 'path';
 import os from 'os';
+import multer from 'multer';
+import jwt from 'jsonwebtoken';
+import { execute, query, queryOne } from '../db/connection';
+import { authenticateToken, AuthenticatedRequest, JWT_SECRET } from '../middleware/authMiddleware';
+import { processImageUpload, processAudioUpload } from '../services/mediaService';
+import { parseCookies, sanitizeCss, sanitizeHtml } from '../utils/security';
 
 const router = Router();
 
@@ -34,20 +38,18 @@ router.get('/about', async (req: Request, res: Response) => {
     const channel = channelRow?.value || 'stable';
 
     const installedVersionRow = await queryOne<any>('SELECT value FROM system_settings WHERE key = "installed_version"');
-    let version = installedVersionRow?.value || '3.3.2';
-
-    let currentPkgVersion = '3.3.2';
+    let currentPkgVersion = '3.4.0';
     try {
       const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../package.json'), 'utf8'));
       if (rootPkg && rootPkg.version) currentPkgVersion = rootPkg.version;
-    } catch (e) {}
+    } catch {}
 
-    if (!version) version = currentPkgVersion;
+    let version = currentPkgVersion || installedVersionRow?.value || '3.4.0';
 
     const latestRelease = {
       tag: version.startsWith('v') ? version : `v${version}`,
       name: `WebNook ${version.startsWith('v') ? version : `v${version}`}`,
-      notes: `WebNook Release ${version.startsWith('v') ? version : `v${version}`} — Features custom whitelabel branding, real-time messaging & reactions, responsive nook customization, theme engine, visual sticker studio, PWA support, and self-updater migrations.`,
+      notes: `WebNook Release ${version.startsWith('v') ? version : `v${version}`} — Features custom whitelabel branding, real-time messaging & reactions, responsive nook customization, enhanced themes, anchored Visual Sticker Studio, PWA support, and security hardening.`,
       published_at: new Date().toISOString()
     };
 
@@ -84,17 +86,20 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
     const { username } = req.params;
     const cleanUsername = username.trim().toLowerCase();
 
-    // Check optional token header for logged in visitor
+    // Check optional token header or cookie for logged in visitor
     let visitorId: number | null = null;
     const authHeader = req.headers['authorization'];
-    if (authHeader) {
+    const cookies = parseCookies(req.headers.cookie);
+    const token = (authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : undefined) || cookies.token;
+
+    if (token) {
       try {
-        const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, JWT_SECRET) as any;
-        visitorId = decoded.id;
-      } catch (e) {
-        // ignore invalid token for public view
-      }
+        const visitor = await queryOne<any>('SELECT id, is_disabled FROM users WHERE id = ?', [decoded.id]);
+        if (visitor && !visitor.is_disabled) {
+          visitorId = visitor.id;
+        }
+      } catch {}
     }
 
     const owner = await queryOne<any>(
@@ -108,7 +113,6 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
 
     const relationship = await getRelationship(visitorId, owner.id);
 
-    // Fetch Nook style configuration
     let nookSettings = await queryOne<any>('SELECT * FROM nooks WHERE user_id = ?', [owner.id]);
     if (!nookSettings) {
       await execute('INSERT INTO nooks (user_id) VALUES (?)', [owner.id]);
@@ -168,16 +172,13 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
       });
     }
 
-    // Fetch widgets enabled for nook
     const widgets = await query<any>(
       'SELECT * FROM nook_widgets WHERE user_id = ? AND is_enabled = 1 ORDER BY column_name, position_order ASC',
       [owner.id]
     );
 
-    // Fetch stickers attached to nook
     const stickers = await query<any>('SELECT * FROM nook_stickers WHERE user_id = ?', [owner.id]);
 
-    // Fetch Top Friends for Top 8/12 grid (Unidirectional: Only friends that owner.id favorited)
     const topFriends = await query<any>(
       `SELECT f.top_position, u.id, u.username, u.display_name, u.avatar_url, u.status_message, u.status_emoji 
        FROM friends f 
@@ -207,37 +208,76 @@ router.get('/profile/:username', async (req: Request, res: Response) => {
   }
 });
 
-import fs from 'fs';
-import path from 'path';
-import multer from 'multer';
-
-// Configure Multer Storage for Media Uploads (Avatars, Banners, Music files)
+// Configure Multer Storage for Media Uploads (Images vs Audio strictly validated)
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
+
+const IMAGE_MIME_MAP: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif'
+};
+
+const AUDIO_MIME_SET = new Set([
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/wave',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/x-m4a',
+  'audio/aac',
+  'audio/flac',
+  'audio/x-flac',
+  'audio/webm'
+]);
+
+const AUDIO_EXT_SET = new Set(['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.webm']);
 
 const mediaStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '';
+    const ext = (path.extname(file.originalname) || '').toLowerCase().replace(/[^a-z0-9.]/g, '');
+    const safeField = file.fieldname.replace(/[^a-zA-Z0-9_-]/g, '');
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+    cb(null, `${safeField}-${uniqueSuffix}${ext}`);
   }
 });
 
-const uploadMedia = multer({
+const uploadImage = multer({
   storage: mediaStorage,
-  limits: { fileSize: 50 * 1024 * 1024 } // Generous 50MB max file size limit
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (IMAGE_MIME_MAP[file.mimetype]) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG, JPG, WebP, and GIF images are allowed'));
+    }
+  }
 });
 
-import { processImageUpload, processAudioUpload } from '../services/mediaService';
+const uploadAudio = multer({
+  storage: mediaStorage,
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (AUDIO_MIME_SET.has(file.mimetype) || AUDIO_EXT_SET.has(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only MP3, WAV, OGG, M4A, AAC, FLAC, or WebM audio files are allowed'));
+    }
+  }
+});
 
 // Upload User Avatar Image File
-// Upload User Avatar Image File
-router.post('/upload/avatar', authenticateToken, uploadMedia.fields([{ name: 'avatar', maxCount: 1 }, { name: 'avatar_original', maxCount: 1 }]), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/upload/avatar', authenticateToken, uploadImage.fields([{ name: 'avatar', maxCount: 1 }, { name: 'avatar_original', maxCount: 1 }]), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     const avatarFile = files?.['avatar']?.[0] || req.file;
@@ -247,7 +287,6 @@ router.post('/upload/avatar', authenticateToken, uploadMedia.fields([{ name: 'av
       return res.status(400).json({ error: 'No avatar image file uploaded' });
     }
 
-    const isRecrop = req.query.is_recrop === 'true' || req.body?.is_recrop === 'true';
     const webpFilename = await processImageUpload(avatarFile.path, uploadsDir, 'avatar');
     const avatarUrl = `/uploads/${webpFilename}`;
 
@@ -287,7 +326,7 @@ router.post('/upload/avatar', authenticateToken, uploadMedia.fields([{ name: 'av
 });
 
 // Upload User Banner Image File
-router.post('/upload/banner', authenticateToken, uploadMedia.fields([{ name: 'banner', maxCount: 1 }, { name: 'banner_original', maxCount: 1 }]), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/upload/banner', authenticateToken, uploadImage.fields([{ name: 'banner', maxCount: 1 }, { name: 'banner_original', maxCount: 1 }]), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     const bannerFile = files?.['banner']?.[0] || req.file;
@@ -297,7 +336,6 @@ router.post('/upload/banner', authenticateToken, uploadMedia.fields([{ name: 'ba
       return res.status(400).json({ error: 'No banner image file uploaded' });
     }
 
-    const isRecrop = req.query.is_recrop === 'true' || req.body?.is_recrop === 'true';
     const webpFilename = await processImageUpload(bannerFile.path, uploadsDir, 'banner');
     const bannerUrl = `/uploads/${webpFilename}`;
 
@@ -336,8 +374,25 @@ router.post('/upload/banner', authenticateToken, uploadMedia.fields([{ name: 'ba
   }
 });
 
+// Upload Group Chat Icon Image File
+router.post('/upload/group-avatar', authenticateToken, uploadImage.single('avatar'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No group avatar image uploaded' });
+    }
+
+    const webpFilename = await processImageUpload(req.file.path, uploadsDir, 'group');
+    const avatarUrl = `/uploads/${webpFilename}`;
+
+    return res.json({ message: 'Group avatar uploaded successfully', avatar_url: avatarUrl });
+  } catch (err: any) {
+    console.error('Group avatar upload error:', err);
+    return res.status(500).json({ error: 'Failed to upload group avatar' });
+  }
+});
+
 // Upload Custom Sticker Image File
-router.post('/upload/sticker', authenticateToken, uploadMedia.single('sticker'), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/upload/sticker', authenticateToken, uploadImage.single('sticker'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No sticker image file uploaded' });
@@ -353,8 +408,8 @@ router.post('/upload/sticker', authenticateToken, uploadMedia.single('sticker'),
   }
 });
 
-// Upload Background Anthem Audio File (MP3 / WAV / OGG)
-router.post('/upload/music', authenticateToken, uploadMedia.single('music'), async (req: AuthenticatedRequest, res: Response) => {
+// Upload Background Anthem / Playlist Audio File (MP3 / WAV / OGG / M4A / FLAC)
+router.post('/upload/music', authenticateToken, uploadAudio.single('music'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No audio file uploaded' });
@@ -362,12 +417,17 @@ router.post('/upload/music', authenticateToken, uploadMedia.single('music'), asy
 
     const mp3Filename = await processAudioUpload(req.file.path, uploadsDir, 'music');
     const musicUrl = `/uploads/${mp3Filename}`;
+    await execute('INSERT OR IGNORE INTO nooks (user_id) VALUES (?)', [req.user!.id]);
     await execute('UPDATE nooks SET bg_music_url = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?', [
       musicUrl,
       req.user!.id
     ]);
 
-    return res.json({ message: 'Background music uploaded & processed to standard MP3', bg_music_url: musicUrl });
+    return res.json({
+      message: 'Audio file uploaded & processed successfully',
+      bg_music_url: musicUrl,
+      music_url: musicUrl
+    });
   } catch (err: any) {
     console.error('Music upload error:', err);
     return res.status(500).json({ error: 'Failed to upload audio file' });
@@ -457,11 +517,10 @@ router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
   }
 });
 
-// Update Nook Customization (Theme, CSS, Colors, Music, Steam, Card Visibility & Colors)
+// Update Nook Customization (Theme, CSS, Colors, Music, Steam, Card Visibility & Layout)
 router.put('/customization', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    // Ensure nook row exists for this user before updating
     await execute('INSERT OR IGNORE INTO nooks (user_id) VALUES (?)', [userId]);
 
     const {
@@ -494,6 +553,32 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
       theme_animations_enabled
     } = req.body;
 
+    const cleanCustomCss = custom_css !== undefined && custom_css !== null ? sanitizeCss(String(custom_css)) : null;
+
+    // Sanitize any custom HTML cards inside card_layout_json before saving
+    let sanitizedLayoutValue: any = card_layout_json;
+    if (card_layout_json !== undefined && card_layout_json !== null) {
+      let parsedLayout: any = card_layout_json;
+      if (typeof card_layout_json === 'string') {
+        try {
+          parsedLayout = JSON.parse(card_layout_json);
+        } catch {
+          parsedLayout = null;
+        }
+      }
+      if (Array.isArray(parsedLayout)) {
+        const cleanedLayout = parsedLayout.map((card: any) => {
+          if (card && card.type === 'html' && typeof card.content_html === 'string') {
+            return { ...card, content_html: sanitizeHtml(card.content_html) };
+          }
+          return card;
+        });
+        sanitizedLayoutValue = JSON.stringify(cleanedLayout);
+      } else if (typeof card_layout_json === 'object') {
+        sanitizedLayoutValue = JSON.stringify(card_layout_json);
+      }
+    }
+
     const cardVisString = typeof card_visibility_json === 'object' ? JSON.stringify(card_visibility_json) : card_visibility_json;
     const cardColorsString = typeof card_colors_json === 'object' ? JSON.stringify(card_colors_json) : card_colors_json;
     const cardTitlesString = typeof card_titles_json === 'object' ? JSON.stringify(card_titles_json) : card_titles_json;
@@ -502,7 +587,6 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
     const favMoviesString = typeof favorite_movies_json === 'object' ? JSON.stringify(favorite_movies_json) : favorite_movies_json;
     const favBooksString = typeof favorite_books_json === 'object' ? JSON.stringify(favorite_books_json) : favorite_books_json;
     const hobbiesString = typeof hobbies_json === 'object' ? JSON.stringify(hobbies_json) : hobbies_json;
-    const cardLayoutString = typeof card_layout_json === 'object' ? JSON.stringify(card_layout_json) : card_layout_json;
 
     await execute(
       `UPDATE nooks SET 
@@ -537,7 +621,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
        WHERE user_id = ?`,
       [
         theme,
-        custom_css,
+        cleanCustomCss,
         bg_color,
         text_color,
         accent_color,
@@ -558,7 +642,7 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
         favMoviesString,
         favBooksString,
         hobbiesString,
-        cardLayoutString,
+        sanitizedLayoutValue,
         storygraph_username,
         spotify_personal_mode,
         theme_sounds_enabled !== undefined ? (theme_sounds_enabled ? 1 : 0) : null,
@@ -575,7 +659,11 @@ router.put('/customization', authenticateToken, async (req: AuthenticatedRequest
 });
 
 // StoryGraph CSV Import Endpoint
-const csvUpload = multer({ dest: path.join(os.tmpdir(), 'webnook-storygraph') });
+const csvUpload = multer({
+  dest: path.join(os.tmpdir(), 'webnook-storygraph'),
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
 router.post('/import/storygraph', authenticateToken, csvUpload.single('csv'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.file || !fs.existsSync(req.file.path)) {
@@ -597,7 +685,6 @@ router.post('/import/storygraph', authenticateToken, csvUpload.single('csv'), as
 
     const importedBooks: any[] = [];
     for (let i = 1; i < lines.length && importedBooks.length < 15; i++) {
-      // Basic CSV regex split taking quotes into account
       const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
       const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
 
@@ -630,13 +717,12 @@ router.post('/import/storygraph', authenticateToken, csvUpload.single('csv'), as
 router.put('/widgets', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { widgets } = req.body; // Array of widgets
+    const { widgets } = req.body;
 
     if (!Array.isArray(widgets)) {
       return res.status(400).json({ error: 'Widgets array expected' });
     }
 
-    // Delete current widgets and re-insert
     await execute('DELETE FROM nook_widgets WHERE user_id = ?', [userId]);
 
     for (let i = 0; i < widgets.length; i++) {
@@ -661,7 +747,7 @@ router.put('/widgets', authenticateToken, async (req: AuthenticatedRequest, res:
   }
 });
 
-// Update Stickers (Add, position, scale, rotate, layer, delete)
+// Update Stickers (Add, position, scale, rotate, layer, anchor, delete)
 router.put('/stickers', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -675,17 +761,39 @@ router.put('/stickers', authenticateToken, async (req: AuthenticatedRequest, res
 
     for (let i = 0; i < stickers.length; i++) {
       const s = stickers[i];
+      if (!s || !s.sticker_url) continue;
+
+      const rawPosX = typeof s.pos_x === 'number' && Number.isFinite(s.pos_x) ? s.pos_x : 50;
+      const rawPosY = typeof s.pos_y === 'number' && Number.isFinite(s.pos_y) ? s.pos_y : 50;
+      const posX = Math.round(Math.max(0, Math.min(100, rawPosX)) * 100) / 100;
+      const posY = Math.round(Math.max(0, Math.min(100, rawPosY)) * 100) / 100;
+
+      const rawScale = typeof s.scale === 'number' && Number.isFinite(s.scale) ? s.scale : 1.0;
+      const scale = Math.round(Math.max(0.2, Math.min(4.0, rawScale)) * 100) / 100;
+
+      const rawRot = typeof s.rotation === 'number' && Number.isFinite(s.rotation) ? s.rotation : 0;
+      const rotation = Math.max(-180, Math.min(180, Math.round(rawRot)));
+
+      const zIndex = typeof s.z_index === 'number' && Number.isFinite(s.z_index) ? Math.round(s.z_index) : i + 1;
+      const layer = s.layer === 'behind_cards' ? 'behind_cards' : 'above_cards';
+      const anchorType = s.anchor_type === 'card' ? 'card' : 'container';
+      const anchorId = anchorType === 'card' && typeof s.anchor_id === 'string'
+        ? s.anchor_id.trim().slice(0, 64)
+        : '';
+
       await execute(
-        'INSERT INTO nook_stickers (user_id, sticker_url, pos_x, pos_y, scale, rotation, z_index, layer) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO nook_stickers (user_id, sticker_url, pos_x, pos_y, scale, rotation, z_index, layer, anchor_type, anchor_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           userId,
-          s.sticker_url,
-          s.pos_x || 50,
-          s.pos_y || 50,
-          s.scale || 1.0,
-          s.rotation || 0,
-          s.z_index || i + 1,
-          s.layer || 'above_cards'
+          String(s.sticker_url),
+          posX,
+          posY,
+          scale,
+          rotation,
+          zIndex,
+          layer,
+          anchorType,
+          anchorId
         ]
       );
     }
@@ -701,7 +809,6 @@ router.delete('/account', authenticateToken, async (req: AuthenticatedRequest, r
   try {
     const userId = req.user!.id;
 
-    // 1. Anonymize user record placeholders & clear credentials
     const deletedUsername = `deleted_user_${userId}`;
     const deletedEmail = `deleted_${userId}_${Date.now()}@webnook.local`;
 
@@ -724,7 +831,6 @@ router.delete('/account', authenticateToken, async (req: AuthenticatedRequest, r
       [deletedUsername, deletedEmail, userId]
     );
 
-    // 2. Remove user relationships and personal settings
     await execute('DELETE FROM friends WHERE user_id = ? OR friend_id = ?', [userId, userId]);
     await execute('DELETE FROM nooks WHERE user_id = ?', [userId]);
     await execute('DELETE FROM nook_widgets WHERE user_id = ?', [userId]);
@@ -735,6 +841,7 @@ router.delete('/account', authenticateToken, async (req: AuthenticatedRequest, r
     await execute('DELETE FROM notifications WHERE user_id = ? OR sender_id = ?', [userId, userId]);
     await execute('DELETE FROM conversation_members WHERE user_id = ?', [userId]);
 
+    res.clearCookie('token', { path: '/' });
     return res.json({ message: 'Account deleted successfully' });
   } catch (err) {
     console.error('Account deletion error:', err);

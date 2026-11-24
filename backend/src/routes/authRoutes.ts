@@ -2,14 +2,40 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { execute, queryOne } from '../db/connection';
+import { execute, query, queryOne } from '../db/connection';
 import { JWT_SECRET, authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { authenticator } from 'otplib';
-import { sendEmailVerificationEmail } from '../services/emailService';
-
-import { query } from '../db/connection';
+import { sendEmailVerificationEmail, sendPasswordResetEmail, getSmtpSettings } from '../services/emailService';
+import { createRateLimiter, getEffectiveBaseUrl } from '../utils/security';
+import { getCurrentLegalVersion } from '../services/legalService';
 
 const router = Router();
+
+const loginLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Too many login attempts. Please wait a few minutes before trying again.'
+});
+
+const registerLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 15,
+  message: 'Too many registration attempts from this IP. Please try again later.'
+});
+
+const resetLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: 'Too many password reset requests. Please try again later.'
+});
+
+function isHttpsRequest(req: Request): boolean {
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || '')
+    .split(',')[0]
+    .trim()
+    .toLowerCase();
+  return req.secure || proto === 'https';
+}
 
 export async function getPasswordRequirements() {
   const rows = await query<any>('SELECT key, value FROM system_settings WHERE key LIKE "pwd_%"');
@@ -20,7 +46,7 @@ export async function getPasswordRequirements() {
     pwd_require_number: 'true',
     pwd_require_special: 'false'
   };
-  rows.forEach(r => settings[r.key] = r.value);
+  rows.forEach(r => (settings[r.key] = r.value));
   return {
     minLength: parseInt(settings.pwd_min_length, 10) || 8,
     requireUppercase: settings.pwd_require_uppercase === 'true',
@@ -61,12 +87,29 @@ router.get('/password-requirements', async (req: Request, res: Response) => {
 });
 
 // Register new user
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', registerLimiter, async (req: Request, res: Response) => {
   try {
-    const { username, email, password, display_name } = req.body;
+    const { username, email, password, display_name, accepted_terms, accepted_terms_version } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'Username, email, and password are required' });
+    }
+
+    const currentLegalVersion = await getCurrentLegalVersion();
+    if (accepted_terms !== true) {
+      return res.status(400).json({
+        error: 'You must read and accept the Terms & Conditions and Privacy Policy to create an account.'
+      });
+    }
+    if (accepted_terms_version && String(accepted_terms_version).trim() !== currentLegalVersion) {
+      return res.status(400).json({
+        error: 'The site policies have been updated. Please refresh and accept the current Terms & Conditions and Privacy Policy.'
+      });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
     }
 
     const pwdError = await validatePasswordComplexity(password);
@@ -80,13 +123,13 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     // Check if username or email already exists
-    const existingUser = await queryOne('SELECT id FROM users WHERE username = ? OR email = ?', [cleanUsername, email.toLowerCase()]);
+    const existingUser = await queryOne('SELECT id FROM users WHERE username = ? OR email = ?', [cleanUsername, cleanEmail]);
     if (existingUser) {
       return res.status(400).json({ error: 'Username or Email is already taken' });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
-    
+
     // Check if this is the first user (make first user admin & auto-verify)
     const userCount = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM users');
     const isFirstUser = !userCount || userCount.count === 0;
@@ -95,8 +138,8 @@ router.post('/register', async (req: Request, res: Response) => {
     const onboardingCompleted = isFirstUser ? 1 : 0;
 
     const result = await execute(
-      'INSERT INTO users (username, email, password_hash, display_name, role, is_email_verified, onboarding_completed) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [cleanUsername, email.toLowerCase(), password_hash, display_name || cleanUsername, role, isEmailVerified, onboardingCompleted]
+      'INSERT INTO users (username, email, password_hash, display_name, role, is_email_verified, onboarding_completed, terms_accepted_version, terms_accepted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+      [cleanUsername, cleanEmail, password_hash, display_name || cleanUsername, role, isEmailVerified, onboardingCompleted, currentLegalVersion]
     );
 
     const userId = result.lastID;
@@ -122,9 +165,8 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     // Send Verification Email if not pre-verified admin
-    let verifyToken = '';
     if (!isEmailVerified) {
-      verifyToken = crypto.randomBytes(32).toString('hex');
+      const verifyToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 86400000).toISOString(); // 24 hours
       await execute('INSERT INTO email_verifications (token, user_id, expires_at) VALUES (?, ?, ?)', [
         verifyToken,
@@ -132,20 +174,22 @@ router.post('/register', async (req: Request, res: Response) => {
         expiresAt
       ]);
 
-      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-      const host = req.headers['x-forwarded-host'] || req.headers.host;
-      const baseUrl = `${protocol}://${host}`;
-
-      sendEmailVerificationEmail(email.toLowerCase(), cleanUsername, verifyToken, baseUrl);
+      const baseUrl = await getEffectiveBaseUrl(req);
+      sendEmailVerificationEmail(cleanEmail, cleanUsername, verifyToken, baseUrl);
     }
 
     const token = jwt.sign(
-      { id: userId, username: cleanUsername, email: email.toLowerCase(), role },
+      { id: userId, username: cleanUsername, email: cleanEmail, role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    res.cookie('token', token, { maxAge: 7 * 86400 * 1000, sameSite: 'lax', path: '/' });
+    res.cookie('token', token, {
+      maxAge: 7 * 86400 * 1000,
+      sameSite: 'lax',
+      path: '/',
+      secure: isHttpsRequest(req)
+    });
 
     return res.json({
       message: isEmailVerified ? 'Account registered successfully' : 'Account registered! Please check your email to verify your address.',
@@ -153,11 +197,14 @@ router.post('/register', async (req: Request, res: Response) => {
       user: {
         id: userId,
         username: cleanUsername,
-        email: email.toLowerCase(),
+        email: cleanEmail,
         display_name: display_name || cleanUsername,
         role,
         is_email_verified: !!isEmailVerified,
-        onboarding_completed: !!onboardingCompleted
+        onboarding_completed: !!onboardingCompleted,
+        terms_accepted_version: currentLegalVersion,
+        required_terms_version: currentLegalVersion,
+        requires_terms_acceptance: false
       }
     });
   } catch (err: any) {
@@ -167,7 +214,7 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // Login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { usernameOrEmail, password, totp_code } = req.body;
 
@@ -211,13 +258,22 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     }
 
+    const currentLegalVersion = await getCurrentLegalVersion();
+    const acceptedVersion = (user.terms_accepted_version || '').trim();
+    const requiresTermsAcceptance = acceptedVersion !== currentLegalVersion;
+
     const token = jwt.sign(
       { id: user.id, username: user.username, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    res.cookie('token', token, { maxAge: 7 * 86400 * 1000, sameSite: 'lax', path: '/' });
+    res.cookie('token', token, {
+      maxAge: 7 * 86400 * 1000,
+      sameSite: 'lax',
+      path: '/',
+      secure: isHttpsRequest(req)
+    });
 
     return res.json({
       token,
@@ -234,7 +290,10 @@ router.post('/login', async (req: Request, res: Response) => {
         role: user.role,
         is_totp_enabled: !!user.is_totp_enabled,
         is_email_verified: !!user.is_email_verified,
-        onboarding_completed: !!user.onboarding_completed
+        onboarding_completed: !!user.onboarding_completed,
+        terms_accepted_version: acceptedVersion,
+        required_terms_version: currentLegalVersion,
+        requires_terms_acceptance: requiresTermsAcceptance
       }
     });
   } catch (err: any) {
@@ -247,25 +306,71 @@ router.post('/login', async (req: Request, res: Response) => {
 router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = await queryOne<any>(
-      'SELECT id, username, email, display_name, bio, avatar_url, banner_url, avatar_original_url, banner_original_url, status_message, status_emoji, role, is_totp_enabled, is_email_verified, onboarding_completed, privacy_default, notify_email_guestbook, notify_email_friends, notify_email_system, notify_email_messages, reaction_picker_json, default_reaction, created_at FROM users WHERE id = ?',
+      'SELECT id, username, email, display_name, bio, avatar_url, banner_url, avatar_original_url, banner_original_url, status_message, status_emoji, role, is_totp_enabled, is_email_verified, onboarding_completed, privacy_default, notify_email_guestbook, notify_email_friends, notify_email_system, notify_email_messages, reaction_picker_json, default_reaction, terms_accepted_version, terms_accepted_at, created_at FROM users WHERE id = ?',
       [req.user!.id]
     );
 
     if (!user) {
-      return res.status(440).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'User not found' });
     }
+
+    const currentLegalVersion = await getCurrentLegalVersion();
+    const acceptedVersion = (user.terms_accepted_version || '').trim();
+    const requiresTermsAcceptance = acceptedVersion !== currentLegalVersion;
 
     return res.json({
       user: {
         ...user,
         is_totp_enabled: !!user.is_totp_enabled,
         is_email_verified: !!user.is_email_verified,
-        onboarding_completed: !!user.onboarding_completed
+        onboarding_completed: !!user.onboarding_completed,
+        terms_accepted_version: acceptedVersion,
+        required_terms_version: currentLegalVersion,
+        requires_terms_acceptance: requiresTermsAcceptance
       }
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to fetch user' });
   }
+});
+
+// Accept current Terms & Conditions and Privacy Policy
+router.post('/accept-terms', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { accepted, version } = req.body;
+    if (accepted !== true) {
+      return res.status(400).json({ error: 'You must confirm acceptance of the Terms & Conditions and Privacy Policy.' });
+    }
+
+    const currentLegalVersion = await getCurrentLegalVersion();
+    if (version && String(version).trim() !== currentLegalVersion) {
+      return res.status(409).json({
+        error: 'A newer version of the Terms & Conditions / Privacy Policy has been published. Please review and accept the latest version.',
+        required_terms_version: currentLegalVersion
+      });
+    }
+
+    await execute(
+      'UPDATE users SET terms_accepted_version = ?, terms_accepted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [currentLegalVersion, req.user!.id]
+    );
+
+    return res.json({
+      accepted: true,
+      terms_accepted_version: currentLegalVersion,
+      required_terms_version: currentLegalVersion,
+      requires_terms_acceptance: false,
+      message: 'Terms & Conditions and Privacy Policy accepted.'
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to record terms acceptance' });
+  }
+});
+
+// Logout endpoint to clear session cookie cleanly
+router.post('/logout', (req: Request, res: Response) => {
+  res.clearCookie('token', { path: '/' });
+  return res.json({ message: 'Logged out successfully' });
 });
 
 // Verify Email Token
@@ -316,6 +421,13 @@ router.post('/resend-verification', authenticateToken, async (req: Authenticated
       return res.json({ message: 'Your email address is already verified.' });
     }
 
+    const smtpConfig = await getSmtpSettings();
+    if (!smtpConfig.smtp_host) {
+      return res.status(503).json({
+        error: 'Email delivery is not configured on this server. Please contact your instance administrator.'
+      });
+    }
+
     const verifyToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 86400000).toISOString();
 
@@ -326,14 +438,14 @@ router.post('/resend-verification', authenticateToken, async (req: Authenticated
       expiresAt
     ]);
 
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.headers.host;
-    const baseUrl = `${protocol}://${host}`;
-
+    const baseUrl = await getEffectiveBaseUrl(req);
     const sent = await sendEmailVerificationEmail(user.email, user.username, verifyToken, baseUrl);
+    if (!sent) {
+      return res.status(502).json({ error: 'Failed to deliver verification email. Please check SMTP configuration or try again later.' });
+    }
+
     return res.json({
-      message: sent ? `Verification email resent to ${user.email}` : `Verification token generated: ${verifyToken}`,
-      token: verifyToken
+      message: `Verification email resent to ${user.email}`
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to resend verification email' });
@@ -341,59 +453,88 @@ router.post('/resend-verification', authenticateToken, async (req: Authenticated
 });
 
 // Forgot Password / Password Reset Request
-router.post('/forgot-password', async (req: Request, res: Response) => {
+router.post('/forgot-password', resetLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
-
-    const user = await queryOne<any>('SELECT id, username FROM users WHERE email = ?', [email.trim().toLowerCase()]);
-    if (!user) {
-      // Don't leak user existence
-      return res.json({ message: 'If an account exists with that email, a password reset token has been issued.' });
+    if (!email || !String(email).trim()) {
+      return res.status(400).json({ error: 'Email address is required' });
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 3600000).toISOString(); // 1 hour
+    const smtpConfig = await getSmtpSettings();
+    if (!smtpConfig.smtp_host) {
+      return res.status(503).json({
+        error: 'Password reset emails are not configured on this server. Please contact your instance administrator to reset your password.'
+      });
+    }
 
-    await execute(
-      'INSERT OR REPLACE INTO password_resets (token, user_id, expires_at) VALUES (?, ?, ?)',
-      [resetToken, user.id, expiresAt]
-    );
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await queryOne<any>('SELECT id, username, email, is_disabled FROM users WHERE email = ?', [cleanEmail]);
+    if (user && !user.is_disabled) {
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 3600000).toISOString(); // 1 hour
+
+      await execute('DELETE FROM password_resets WHERE user_id = ?', [user.id]);
+      await execute(
+        'INSERT INTO password_resets (token, user_id, expires_at) VALUES (?, ?, ?)',
+        [resetToken, user.id, expiresAt]
+      );
+
+      const baseUrl = await getEffectiveBaseUrl(req);
+      await sendPasswordResetEmail(user.email, user.username, resetToken, baseUrl);
+    }
 
     return res.json({
-      message: 'Password reset token generated.',
-      reset_token: resetToken // In self-hosted environments without SMTP configured, returns token directly for admin/local use
+      message: 'If an account exists with that email address, a password reset link has been sent.'
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to process password reset' });
   }
 });
 
-// Reset Password confirmation
-router.post('/reset-password', async (req: Request, res: Response) => {
+// Validate Password Reset Token
+router.get('/reset-password/validate', resetLimiter, async (req: Request, res: Response) => {
   try {
-    const { reset_token, new_password } = req.body;
-    if (!reset_token || !new_password) {
+    const token = String(req.query.token || '').trim();
+    if (!token) {
+      return res.json({ valid: false });
+    }
+    const record = await queryOne<any>(
+      'SELECT token FROM password_resets WHERE token = ? AND expires_at > ?',
+      [token, new Date().toISOString()]
+    );
+    return res.json({ valid: !!record });
+  } catch {
+    return res.status(500).json({ valid: false, error: 'Failed to validate token' });
+  }
+});
+
+// Reset Password confirmation
+router.post('/reset-password', resetLimiter, async (req: Request, res: Response) => {
+  try {
+    const resetToken = String(req.body.reset_token || req.body.token || '').trim();
+    const newPassword = req.body.new_password;
+
+    if (!resetToken || !newPassword) {
       return res.status(400).json({ error: 'Reset token and new password are required' });
     }
 
-    const pwdError = await validatePasswordComplexity(new_password);
+    const pwdError = await validatePasswordComplexity(newPassword);
     if (pwdError) {
       return res.status(400).json({ error: pwdError });
     }
 
     const resetRecord = await queryOne<any>(
       'SELECT * FROM password_resets WHERE token = ? AND expires_at > ?',
-      [reset_token, new Date().toISOString()]
+      [resetToken, new Date().toISOString()]
     );
 
     if (!resetRecord) {
       return res.status(400).json({ error: 'Invalid or expired password reset token' });
     }
 
-    const password_hash = await bcrypt.hash(new_password, 10);
-    await execute('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash, resetRecord.user_id]);
-    await execute('DELETE FROM password_resets WHERE token = ?', [reset_token]);
+    const password_hash = await bcrypt.hash(newPassword, 10);
+    await execute('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [password_hash, resetRecord.user_id]);
+    await execute('DELETE FROM password_resets WHERE user_id = ?', [resetRecord.user_id]);
 
     return res.json({ message: 'Password reset successfully. You may now login.' });
   } catch (err: any) {

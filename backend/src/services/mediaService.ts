@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
 
-const FFMPEG_PATH = process.env.FFMPEG_PATH || '/usr/bin/ffmpeg';
+const FFMPEG_PATH = process.env.FFMPEG_PATH || (fs.existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg');
 
 /**
  * Converts an uploaded image to lossless WebP format, preserving transparency,
@@ -23,7 +23,8 @@ export function processImageUpload(inputPath: string, targetDir: string, filenam
       FFMPEG_PATH,
       ['-i', inputPath, '-c:v', 'libwebp', '-lossless', '1', '-y', outputPath],
       (error) => {
-        if (!error && fs.existsSync(outputPath)) {
+        const hasValidOutput = !error && fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0;
+        if (hasValidOutput) {
           // Success: clean up input file
           if (fs.existsSync(inputPath)) {
             try { fs.unlinkSync(inputPath); } catch (e) {}
@@ -31,7 +32,10 @@ export function processImageUpload(inputPath: string, targetDir: string, filenam
           return resolve(outputFilename);
         }
 
-        console.warn('[MediaService Warning] FFmpeg conversion failed, using fallback copy:', error?.message);
+        if (fs.existsSync(outputPath)) {
+          try { fs.unlinkSync(outputPath); } catch (e) {}
+        }
+        console.warn('[MediaService Warning] FFmpeg conversion failed, using fallback copy:', error?.message || 'empty output');
         // Fallback: move/copy original input file to target directory
         const fallbackFilename = `${filenamePrefix}_${Date.now()}${ext}`;
         const fallbackPath = path.join(targetDir, fallbackFilename);
@@ -70,7 +74,8 @@ export function processAudioUpload(inputPath: string, targetDir: string, filenam
       FFMPEG_PATH,
       ['-i', inputPath, '-ar', '44100', '-ac', '2', '-b:a', '190k', '-y', outputPath],
       (error) => {
-        if (!error && fs.existsSync(outputPath)) {
+        const hasValidOutput = !error && fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0;
+        if (hasValidOutput) {
           // Success: clean up input file
           if (fs.existsSync(inputPath)) {
             try { fs.unlinkSync(inputPath); } catch (e) {}
@@ -78,7 +83,10 @@ export function processAudioUpload(inputPath: string, targetDir: string, filenam
           return resolve(outputFilename);
         }
 
-        console.warn('[MediaService Warning] FFmpeg audio conversion failed, using fallback copy:', error?.message);
+        if (fs.existsSync(outputPath)) {
+          try { fs.unlinkSync(outputPath); } catch (e) {}
+        }
+        console.warn('[MediaService Warning] FFmpeg audio conversion failed, using fallback copy:', error?.message || 'empty output');
         const fallbackFilename = `${filenamePrefix}_${Date.now()}${ext}`;
         const fallbackPath = path.join(targetDir, fallbackFilename);
 

@@ -19,6 +19,7 @@ export const magicalGirlTheme: ThemeDefinition = {
   animationPreset: 'magical-girl',
   cssClass: 'theme-magical-girl',
   previewStyle: {
+    fontFamily: "'Fredoka', sans-serif",
     borderRadius: '18px',
     borderStyle: 'double',
     borderWidth: '3px',
@@ -27,5 +28,14 @@ export const magicalGirlTheme: ThemeDefinition = {
     cardBg: '#fff8fa',
     badge: '✨',
     decorIcons: ['✨', '🌙', '🪄']
+  },
+  defaultCardTitles: {
+    bio: 'Starlight Profile',
+    music: 'Crystal Chime Playlist',
+    friends: 'Guardian Squad',
+    hobbies: 'Charms & Daydreams',
+    movies: 'Sparkle Cinema',
+    books: 'Spellbound Stories',
+    steam: 'Kawaii Quest Log'
   }
 };

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { PasswordComplexityIndicator } from '../components/ui/PasswordComplexityIndicator';
-import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send, Gamepad2, Film, BookOpen, Bell, Clock } from 'lucide-react';
+import { isSafeUrl } from '../utils/sanitize';
+import { Shield, Activity, Users, Download, Upload, RefreshCw, Radio, HardDrive, Settings, Save, CheckCircle2, Image, Mail, Trash2, Key, AlertTriangle, X, Power, Send, Gamepad2, Film, BookOpen, Bell, Clock, FileText, Globe } from 'lucide-react';
 
 // Render Markdown helper for Release Notes
 const renderMarkdown = (text: string) => {
@@ -39,6 +41,9 @@ const renderMarkdown = (text: string) => {
           }
           const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
           if (linkMatch) {
+            if (!isSafeUrl(linkMatch[2], true, true)) {
+              return <span key={pIdx}>{linkMatch[1]}</span>;
+            }
             return <a key={pIdx} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>{linkMatch[1]}</a>;
           }
           return part;
@@ -125,15 +130,26 @@ export const AdminDashboardPage: React.FC = () => {
   const [settings, setSettings] = useState<Record<string, string>>({
     app_name: 'WebNook',
     logo_url: '/branding/logo.png',
+    site_url: '',
     smtp_host: '',
     smtp_port: '587',
     smtp_user: '',
     smtp_pass: '',
     smtp_from: '',
     smtp_secure: 'false',
+    smtp_allow_self_signed: 'false',
     auto_backup_enabled: 'false',
-    auto_backup_interval: 'daily'
+    auto_backup_interval: 'daily',
+    legal_operator_name: '',
+    legal_contact_email: '',
+    legal_jurisdiction: '',
+    legal_min_age: '13',
+    legal_version: '1.0',
+    legal_effective_date: '',
+    legal_custom_terms_addendum: '',
+    legal_custom_privacy_addendum: ''
   });
+  const [isBumpingLegal, setIsBumpingLegal] = useState(false);
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -285,9 +301,74 @@ export const AdminDashboardPage: React.FC = () => {
       });
       if (res.ok) {
         showToast('System configuration saved!', 'success');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Failed to save settings', 'error');
       }
     } catch (e) {
       showToast('Failed to save settings', 'error');
+    }
+  };
+
+  const handleBumpLegalVersion = async () => {
+    if (!token) return;
+    setIsBumpingLegal(true);
+    try {
+      const saveRes = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ settings })
+      });
+      if (!saveRes.ok) {
+        showToast('Failed to save legal policy text before publishing', 'error');
+        return;
+      }
+
+      const res = await fetch('/api/admin/legal/bump-version', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSettings(prev => ({
+          ...prev,
+          legal_version: data.version,
+          legal_effective_date: data.effective_date
+        }));
+        loadUsers();
+        showToast(data.message || `Published legal policy v${data.version}`, 'success');
+      } else {
+        showToast(data.error || 'Failed to publish new policy version', 'error');
+      }
+    } catch {
+      showToast('Error publishing new policy version', 'error');
+    } finally {
+      setIsBumpingLegal(false);
+    }
+  };
+
+  const handleDownloadBackup = async (filename: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/admin/backups/download/${encodeURIComponent(filename)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        showToast('Failed to download backup archive', 'error');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast('Error downloading backup archive', 'error');
     }
   };
 
@@ -783,6 +864,7 @@ export const AdminDashboardPage: React.FC = () => {
                     <th style={{ padding: '0.6rem' }}>User</th>
                     <th style={{ padding: '0.6rem' }}>Email</th>
                     <th style={{ padding: '0.6rem' }}>Role</th>
+                    <th style={{ padding: '0.6rem' }}>Terms</th>
                     <th style={{ padding: '0.6rem' }}>Status</th>
                     <th style={{ padding: '0.6rem' }}>Actions</th>
                   </tr>
@@ -797,6 +879,17 @@ export const AdminDashboardPage: React.FC = () => {
                         <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: u.role === 'admin' ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
                           {u.role}
                         </span>
+                      </td>
+                      <td style={{ padding: '0.6rem' }}>
+                        {u.terms_accepted_version === (settings.legal_version || '1.0') ? (
+                          <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', fontSize: '0.72rem', fontWeight: 700 }}>
+                            v{u.terms_accepted_version}
+                          </span>
+                        ) : (
+                          <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', fontSize: '0.72rem', fontWeight: 700 }}>
+                            {u.terms_accepted_version ? `v${u.terms_accepted_version} (Outdated)` : 'Pending'}
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: '0.6rem' }}>
                         {u.is_disabled ? (
@@ -901,6 +994,30 @@ export const AdminDashboardPage: React.FC = () => {
               </div>
 
               <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>
+                  Public Site URL (for Email Links &amp; Legal Policies)
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <input
+                    type="url"
+                    placeholder="https://nook.example.com"
+                    value={settings.site_url || ''}
+                    onChange={e => setSettings({ ...settings, site_url: e.target.value })}
+                    style={{ flex: 1, minWidth: '220px', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, site_url: window.location.origin })}
+                    className="btn-secondary"
+                    style={{ fontSize: '0.8rem', padding: '0.5rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <Globe size={14} />
+                    <span>Use Current Origin</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Current Logo</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '10px', width: 'fit-content' }}>
                   <img src={settings.logo_url} alt="Logo" style={{ height: '48px', maxWidth: '200px', objectFit: 'contain' }} />
@@ -909,14 +1026,14 @@ export const AdminDashboardPage: React.FC = () => {
               </div>
 
               <form onSubmit={handleLogoUpload} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.04)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Upload New Logo Image (PNG / JPG / SVG)</label>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Upload New Logo Image (PNG / JPG / WebP / GIF)</label>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                   <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
                     <Image size={15} />
                     <span>{logoFile ? logoFile.name : 'Choose Logo Image...'}</span>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
                       onChange={e => setLogoFile(e.target.files?.[0] || null)}
                       style={{ display: 'none' }}
                     />
@@ -1010,7 +1127,18 @@ export const AdminDashboardPage: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={settings.smtp_allow_self_signed === 'true'}
+                  onChange={e => setSettings({ ...settings, smtp_allow_self_signed: String(e.target.checked) })}
+                />
+                <span>Allow Self-Signed TLS Certificates (for local/homelab SMTP relays)</span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
               <button onClick={handleSaveSettings} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                 <Save size={16} style={{ flexShrink: 0 }} />
                 <span>Save SMTP Settings</span>
@@ -1083,6 +1211,121 @@ export const AdminDashboardPage: React.FC = () => {
               <Save size={16} style={{ flexShrink: 0 }} />
               <span>Save Password Policy</span>
             </button>
+          </div>
+
+          {/* Card 3.5: Dynamic Legal Policies & Compliance */}
+          <div className="nook-panel">
+            <div className="nook-panel-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileText size={20} />
+                <span>Terms &amp; Privacy Policy Generator</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem' }}>
+                <span style={{ background: 'rgba(99, 102, 241, 0.2)', border: '1px solid rgba(99, 102, 241, 0.4)', padding: '0.18rem 0.55rem', borderRadius: '999px', fontWeight: 700 }}>
+                  Active v{settings.legal_version || '1.0'}
+                </span>
+                {settings.legal_effective_date && (
+                  <span style={{ opacity: 0.75 }}>Effective {settings.legal_effective_date}</span>
+                )}
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', opacity: 0.8, marginBottom: '1rem', lineHeight: 1.5 }}>
+              Terms &amp; Conditions and Privacy Policy documents are automatically generated for this instance based on your branding, operator contact details, and active third-party integrations.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Operator / Organization Name</label>
+                <input
+                  type="text"
+                  placeholder={`${settings.app_name || 'WebNook'} Administrator`}
+                  value={settings.legal_operator_name || ''}
+                  onChange={e => setSettings({ ...settings, legal_operator_name: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Legal / Privacy Contact Email</label>
+                <input
+                  type="email"
+                  placeholder={settings.smtp_from || user.email}
+                  value={settings.legal_contact_email || ''}
+                  onChange={e => setSettings({ ...settings, legal_contact_email: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Governing Jurisdiction</label>
+                <input
+                  type="text"
+                  placeholder="e.g. United States / Applicable Local Law"
+                  value={settings.legal_jurisdiction || ''}
+                  onChange={e => setSettings({ ...settings, legal_jurisdiction: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Minimum Age Requirement</label>
+                <input
+                  type="number"
+                  min={13}
+                  max={21}
+                  value={settings.legal_min_age || '13'}
+                  onChange={e => setSettings({ ...settings, legal_min_age: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1.15rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Custom Terms Addendum (Optional)</label>
+                <textarea
+                  rows={3}
+                  placeholder="Additional community guidelines or instance-specific rules..."
+                  value={settings.legal_custom_terms_addendum || ''}
+                  onChange={e => setSettings({ ...settings, legal_custom_terms_addendum: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', resize: 'vertical' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Custom Privacy Addendum (Optional)</label>
+                <textarea
+                  rows={3}
+                  placeholder="Additional hosting region, retention, or data handling notes..."
+                  value={settings.legal_custom_privacy_addendum || ''}
+                  onChange={e => setSettings({ ...settings, legal_custom_privacy_addendum: e.target.value })}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--border-radius-btn)', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--text-main)', resize: 'vertical' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button onClick={handleSaveSettings} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Save size={16} />
+                <span>Save Legal Settings</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleBumpLegalVersion}
+                disabled={isBumpingLegal}
+                className="btn-secondary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', borderColor: 'rgba(245, 158, 11, 0.5)', color: '#fbbf24' }}
+              >
+                <RefreshCw size={15} />
+                <span>{isBumpingLegal ? 'Publishing...' : 'Publish New Policy Version & Re-Prompt Users'}</span>
+              </button>
+              <Link to="/terms" target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ textDecoration: 'none', fontSize: '0.84rem' }}>
+                Preview Terms ↗
+              </Link>
+              <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ textDecoration: 'none', fontSize: '0.84rem' }}>
+                Preview Privacy ↗
+              </Link>
+            </div>
           </div>
 
           {/* Card 3: Compressed Backup & Schema-Aware Restore Suite */}
@@ -1191,10 +1434,10 @@ export const AdminDashboardPage: React.FC = () => {
                         <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{formatBytes(b.sizeBytes)} • {new Date(b.created_at).toLocaleString()}</div>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <a href={`/api/admin/backups/download/${b.filename}?token=${token}`} download className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
+                        <button onClick={() => handleDownloadBackup(b.filename)} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
                           <Download size={14} />
                           <span>Download</span>
-                        </a>
+                        </button>
                         <button onClick={() => handleRestoreSubmit(b.filename)} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: '#3b82f6' }} disabled={isRestoring}>
                           <RefreshCw size={14} />
                           <span>Restore</span>

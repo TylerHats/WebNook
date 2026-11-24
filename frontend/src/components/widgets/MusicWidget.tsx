@@ -53,6 +53,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const activeTrack = playlist[activeTrackIndex];
@@ -65,13 +66,14 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
   useEffect(() => {
     setCurrentTime(0);
     setDuration(0);
+    setAudioError(null);
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       if (isPlaying && playlist[activeTrackIndex]?.type === 'audio') {
         audioRef.current.play().catch(console.error);
       }
     }
-  }, [activeTrackIndex]);
+  }, [activeTrackIndex, activeTrack?.url]);
 
   const handleTimeUpdate = () => {
     if (audioRef.current && !isSeeking) {
@@ -325,19 +327,29 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
                   <audio
                     ref={audioRef}
                     src={activeTrack.url}
+                    preload="metadata"
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
                     onDurationChange={handleLoadedMetadata}
                     onEnded={handleTrackEnded}
+                    onError={() => {
+                      setIsPlaying(false);
+                      setAudioError('Unable to load or play this audio track.');
+                    }}
                     style={{ display: 'none' }}
                   />
+                  {audioError && (
+                    <div style={{ marginTop: '0.45rem', fontSize: '0.75rem', color: '#f87171', fontWeight: 600 }}>
+                      {audioError}
+                    </div>
+                  )}
                 </div>
               )}
 
               {(activeTrack.type === 'spotify' || activeTrack.type === 'apple') && (
                 <div style={{
                   fontSize: '0.73rem',
-                  opacity: 0.85,
+                  opacity: 0.9,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.35rem',
@@ -348,7 +360,18 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({
                   border: '1px solid var(--border-color)'
                 }}>
                   <span>💡</span>
-                  <span>Sign in to <strong>{activeTrack.type === 'spotify' ? 'Spotify' : 'Apple Music'}</strong> in your browser to hear full-length tracks!</span>
+                  <span>
+                    Sign in to{' '}
+                    <a
+                      href={activeTrack.type === 'spotify' ? 'https://open.spotify.com' : 'https://music.apple.com'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent-color, #38bdf8)', textDecoration: 'underline', fontWeight: 700 }}
+                    >
+                      {activeTrack.type === 'spotify' ? 'Spotify' : 'Apple Music'}
+                    </a>{' '}
+                    in your browser to hear full-length tracks!
+                  </span>
                 </div>
               )}
 

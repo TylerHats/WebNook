@@ -1,8 +1,43 @@
 import { Router, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import { execute, query, queryOne } from '../db/connection';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware';
+import { authenticateToken, AuthenticatedRequest, JWT_SECRET } from '../middleware/authMiddleware';
+import { createNotification } from './notificationRoutes';
+import { parseCookies } from '../utils/security';
 
 const router = Router();
+
+// Helper to verify whether a visitor can access a target Nook's guestbook
+async function canAccessNookGuestbook(visitorId: number | null, visitorRole: string | null, owner: any): Promise<{ allowed: boolean; status?: number; error?: string }> {
+  if (!owner) return { allowed: false, status: 404, error: 'Nook owner not found' };
+  if (owner.is_disabled) return { allowed: false, status: 403, error: 'This account is disabled' };
+
+  if (visitorId && (visitorId === owner.id || visitorRole === 'admin')) {
+    return { allowed: true };
+  }
+
+  const nook = await queryOne<any>('SELECT visibility_nook FROM nooks WHERE user_id = ?', [owner.id]);
+  const visibility = nook?.visibility_nook || 'private';
+
+  if (visibility === 'public') {
+    return { allowed: true };
+  }
+
+  if (!visitorId) {
+    return { allowed: false, status: 403, error: 'This guestbook belongs to a private Nook' };
+  }
+
+  const friendRow = await queryOne<any>(
+    `SELECT id FROM friends WHERE status = 'accepted' AND ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))`,
+    [visitorId, owner.id, owner.id, visitorId]
+  );
+
+  if (!friendRow) {
+    return { allowed: false, status: 403, error: 'Only accepted friends can view or sign this private Nook guestbook' };
+  }
+
+  return { allowed: true };
+}
 
 // ======================== FRIEND REQUESTS & TOP FRIENDS ========================
 
@@ -11,7 +46,6 @@ router.get('/friends', authenticateToken, async (req: AuthenticatedRequest, res:
   try {
     const userId = req.user!.id;
 
-    // Accepted friends
     const friends = await query<any>(
       `SELECT f.id as friendship_id, f.top_position, u.id, u.username, u.display_name, u.avatar_url, u.status_message, u.status_emoji 
        FROM friends f 
@@ -21,7 +55,6 @@ router.get('/friends', authenticateToken, async (req: AuthenticatedRequest, res:
       [userId, userId, userId]
     );
 
-    // Pending incoming requests
     const incomingRequests = await query<any>(
       `SELECT f.id as request_id, u.id as user_id, u.username, u.display_name, u.avatar_url 
        FROM friends f 
@@ -30,7 +63,6 @@ router.get('/friends', authenticateToken, async (req: AuthenticatedRequest, res:
       [userId]
     );
 
-    // Sent outgoing requests
     const outgoingRequests = await query<any>(
       `SELECT f.id as request_id, u.id as user_id, u.username, u.display_name, u.avatar_url 
        FROM friends f 
@@ -57,7 +89,6 @@ router.post('/friends/request', authenticateToken, async (req: AuthenticatedRequ
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
     if (targetUser.id === userId) return res.status(400).json({ error: 'You cannot send a friend request to yourself' });
 
-    // Check existing relation
     const existing = await queryOne<any>(
       'SELECT id, status FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)',
       [userId, targetUser.id, targetUser.id, userId]
@@ -80,7 +111,7 @@ router.post('/friends/request', authenticateToken, async (req: AuthenticatedRequ
 router.post('/friends/respond', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { request_id, action } = req.body; // 'accept' or 'decline'
+    const { request_id, action } = req.body;
 
     if (!request_id || !action) return res.status(400).json({ error: 'Request ID and Action required' });
 
@@ -103,11 +134,10 @@ router.post('/friends/respond', authenticateToken, async (req: AuthenticatedRequ
 router.put('/friends/top-grid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { top_friends } = req.body; // Array of friend_user_ids in order 1..12
+    const { top_friends } = req.body;
 
     if (!Array.isArray(top_friends)) return res.status(400).json({ error: 'Array of top_friends expected' });
 
-    // Reset top_positions for user's friendships
     await execute(
       'UPDATE friends SET top_position = 0 WHERE user_id = ? OR friend_id = ?',
       [userId, userId]
@@ -132,24 +162,33 @@ router.put('/friends/top-grid', authenticateToken, async (req: AuthenticatedRequ
 
 // ======================== GUESTBOOK ========================
 
-import jwt from 'jsonwebtoken';
-const JWT_SECRET = process.env.JWT_SECRET || 'webnook_secret_key_change_in_prod';
-
-// Get Guestbook entries for a user Nook (with reactions)
+// Get Guestbook entries for a user Nook (with batched reactions & privacy enforcement)
 router.get('/guestbook/:username', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
-    const owner = await queryOne<any>('SELECT id FROM users WHERE username = ?', [username.trim().toLowerCase()]);
+    const owner = await queryOne<any>('SELECT id, is_disabled FROM users WHERE username = ?', [username.trim().toLowerCase()]);
     if (!owner) return res.status(404).json({ error: 'Nook owner not found' });
 
-    let currentUserId = 0;
+    let currentUserId: number | null = null;
+    let currentUserRole: string | null = null;
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    const cookies = parseCookies(req.headers.cookie);
+    const token = (authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : undefined) || cookies.token;
+
+    if (token) {
       try {
-        const token = authHeader.substring(7);
         const decoded = jwt.verify(token, JWT_SECRET) as any;
-        if (decoded?.id) currentUserId = decoded.id;
-      } catch (e) {}
+        const visitor = await queryOne<any>('SELECT id, role, is_disabled FROM users WHERE id = ?', [decoded.id]);
+        if (visitor && !visitor.is_disabled) {
+          currentUserId = visitor.id;
+          currentUserRole = visitor.role;
+        }
+      } catch {}
+    }
+
+    const access = await canAccessNookGuestbook(currentUserId, currentUserRole, owner);
+    if (!access.allowed) {
+      return res.status(access.status || 403).json({ error: access.error || 'Access denied' });
     }
 
     const rawEntries = await query<any>(
@@ -161,42 +200,47 @@ router.get('/guestbook/:username', async (req: Request, res: Response) => {
       [owner.id]
     );
 
-    const entries = [];
-    for (const entry of rawEntries) {
-      const reactionRows = await query<any>(`
-        SELECT gr.emoji, gr.user_id, u.username
-        FROM guestbook_reactions gr
-        JOIN users u ON gr.user_id = u.id
-        WHERE gr.entry_id = ?
-        ORDER BY gr.created_at ASC
-      `, [entry.id]);
+    const reactionsByEntry = new Map<number, Map<string, { emoji: string; count: number; user_reacted: boolean; users: string[] }>>();
+    if (rawEntries.length > 0) {
+      const entryIds = rawEntries.map(e => e.id);
+      const placeholders = entryIds.map(() => '?').join(',');
+      const reactionRows = await query<any>(
+        `SELECT gr.entry_id, gr.emoji, gr.user_id, u.username
+         FROM guestbook_reactions gr
+         JOIN users u ON gr.user_id = u.id
+         WHERE gr.entry_id IN (${placeholders})
+         ORDER BY gr.created_at ASC`,
+        entryIds
+      );
 
-      const reactionMap = new Map<string, { emoji: string; count: number; user_reacted: boolean; users: string[] }>();
       for (const r of reactionRows) {
-        if (!reactionMap.has(r.emoji)) {
-          reactionMap.set(r.emoji, { emoji: r.emoji, count: 0, user_reacted: false, users: [] });
+        let map = reactionsByEntry.get(r.entry_id);
+        if (!map) {
+          map = new Map();
+          reactionsByEntry.set(r.entry_id, map);
         }
-        const item = reactionMap.get(r.emoji)!;
+        if (!map.has(r.emoji)) {
+          map.set(r.emoji, { emoji: r.emoji, count: 0, user_reacted: false, users: [] });
+        }
+        const item = map.get(r.emoji)!;
         item.count += 1;
         item.users.push(r.username);
-        if (r.user_id === currentUserId) {
+        if (currentUserId && r.user_id === currentUserId) {
           item.user_reacted = true;
         }
       }
-
-      entries.push({
-        ...entry,
-        reactions: Array.from(reactionMap.values())
-      });
     }
+
+    const entries = rawEntries.map(entry => ({
+      ...entry,
+      reactions: Array.from(reactionsByEntry.get(entry.id)?.values() || [])
+    }));
 
     return res.json({ entries });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to fetch guestbook' });
   }
 });
-
-import { createNotification } from './notificationRoutes';
 
 // Post Guestbook Entry
 router.post('/guestbook/:username', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
@@ -207,15 +251,19 @@ router.post('/guestbook/:username', authenticateToken, async (req: Authenticated
 
     if (!content || !content.trim()) return res.status(400).json({ error: 'Comment content is required' });
 
-    const owner = await queryOne<any>('SELECT id FROM users WHERE username = ?', [username.trim().toLowerCase()]);
+    const owner = await queryOne<any>('SELECT id, is_disabled FROM users WHERE username = ?', [username.trim().toLowerCase()]);
     if (!owner) return res.status(404).json({ error: 'Nook owner not found' });
+
+    const access = await canAccessNookGuestbook(authorId, req.user!.role, owner);
+    if (!access.allowed) {
+      return res.status(access.status || 403).json({ error: access.error || 'Not allowed to sign this guestbook' });
+    }
 
     const result = await execute(
       'INSERT INTO guestbook_entries (nook_user_id, author_user_id, content, status) VALUES (?, ?, ?, ?)',
       [owner.id, authorId, content.trim(), 'approved']
     );
 
-    // Notify Nook owner about the new guestbook note!
     if (owner.id !== authorId) {
       await createNotification(
         owner.id,

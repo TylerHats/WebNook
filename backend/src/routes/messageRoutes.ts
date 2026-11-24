@@ -3,8 +3,17 @@ import { execute, query, queryOne } from '../db/connection';
 import { authenticateToken, requireAdmin, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { createNotification } from './notificationRoutes';
 import { sendStyledEmail } from '../services/emailService';
+import { escapeHtml } from '../utils/security';
 
 const router = Router();
+
+const ensuredSystemUsers = new Set<number>();
+let legacyBugReportsCleaned = false;
+
+export function clearEnsuredUsersCache() {
+  ensuredSystemUsers.clear();
+  legacyBugReportsCleaned = false;
+}
 
 // Helper to get or create the System Bot User (System Announcements)
 export async function getSystemBotUser() {
@@ -52,15 +61,17 @@ async function ensureSystemDM(userId: number) {
 
 // Helper to ensure single global Bug Reports & Feature Requests channel exists and user is a member
 export async function ensureBugReportsChannel(userId: number) {
-  try {
-    // Clean up legacy 1-on-1 DM bug report conversations if present
-    const oldBugUsers = await query<any>('SELECT id FROM users WHERE username = "bug_reports"');
-    if (oldBugUsers.length > 0) {
-      const oldUserIds = oldBugUsers.map(u => u.id).join(',');
-      await execute(`DELETE FROM conversations WHERE type = 'direct' AND (creator_user_id IN (${oldUserIds}) OR name LIKE '%Bug Reports%')`);
-      await execute(`DELETE FROM users WHERE username = 'bug_reports'`);
-    }
-  } catch (e) {}
+  if (!legacyBugReportsCleaned) {
+    legacyBugReportsCleaned = true;
+    try {
+      const oldBugUsers = await query<any>('SELECT id FROM users WHERE username = "bug_reports"');
+      if (oldBugUsers.length > 0) {
+        const oldUserIds = oldBugUsers.map(u => u.id).join(',');
+        await execute(`DELETE FROM conversations WHERE type = 'direct' AND (creator_user_id IN (${oldUserIds}) OR name LIKE '%Bug Reports%')`);
+        await execute(`DELETE FROM users WHERE username = 'bug_reports'`);
+      }
+    } catch {}
+  }
 
   let conv = await queryOne<any>("SELECT id FROM conversations WHERE type = 'bug_reports' OR name LIKE '%Bug Reports%'");
   if (!conv) {
@@ -73,14 +84,20 @@ export async function ensureBugReportsChannel(userId: number) {
       "INSERT INTO messages (conversation_id, sender_id, content, is_system_notice) VALUES (?, 0, ?, 0)",
       [
         conv.id,
-        "Welcome to Bug Reports & Feature Requests 🐛!\n\nSubmit your bugs, issue reports, or feature ideas here. Your submissions are sent directly to WebNook Administrators. When an admin replies to your report, their response will appear here as a direct reply."
+        "Welcome to Bug Reports & Feature Requests 🐛!\n\nSubmit your bugs, issue reports, or feature ideas here. Your submissions are sent directly to Administrators. When an admin replies to your report, their response will appear here as a direct reply."
       ]
     );
   }
 
-  // Ensure requesting user is added to conversation members
   await execute("INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)", [conv.id, userId]);
   return conv.id;
+}
+
+async function ensureUserDefaultChannels(userId: number) {
+  if (ensuredSystemUsers.has(userId)) return;
+  await ensureSystemDM(userId);
+  await ensureBugReportsChannel(userId);
+  ensuredSystemUsers.add(userId);
 }
 
 // Helper: Check if two users are accepted friends
@@ -99,8 +116,7 @@ async function areAcceptedFriends(userA: number, userB: number): Promise<boolean
 router.get('/unread-count', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    await ensureSystemDM(userId);
-    await ensureBugReportsChannel(userId);
+    await ensureUserDefaultChannels(userId);
 
     const result = await queryOne<{ total_unread: number }>(`
       SELECT COUNT(m.id) as total_unread
@@ -123,31 +139,17 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
   try {
     const userId = req.user!.id;
     const isAdmin = req.user!.role === 'admin';
-    await ensureSystemDM(userId);
-    await ensureBugReportsChannel(userId);
+    await ensureUserDefaultChannels(userId);
 
-    let convRows: any[] = [];
-    try {
-      convRows = await query<any>(`
-        SELECT 
-          c.id, c.type, c.name, c.avatar_url, c.creator_user_id, c.created_at, c.updated_at,
-          cm.is_muted, COALESCE(cm.is_pinned, 0) as is_pinned, cm.last_read_at
-        FROM conversations c
-        JOIN conversation_members cm ON c.id = cm.conversation_id
-        WHERE cm.user_id = ?
-        ORDER BY COALESCE(cm.is_pinned, 0) DESC, c.updated_at DESC
-      `, [userId]);
-    } catch (e) {
-      convRows = await query<any>(`
-        SELECT 
-          c.id, c.type, c.name, c.avatar_url, c.creator_user_id, c.created_at, c.updated_at,
-          cm.is_muted, 0 as is_pinned, cm.last_read_at
-        FROM conversations c
-        JOIN conversation_members cm ON c.id = cm.conversation_id
-        WHERE cm.user_id = ?
-        ORDER BY c.updated_at DESC
-      `, [userId]);
-    }
+    const convRows = await query<any>(`
+      SELECT 
+        c.id, c.type, c.name, c.avatar_url, c.creator_user_id, c.created_at, c.updated_at,
+        cm.is_muted, COALESCE(cm.is_pinned, 0) as is_pinned, cm.last_read_at
+      FROM conversations c
+      JOIN conversation_members cm ON c.id = cm.conversation_id
+      WHERE cm.user_id = ?
+      ORDER BY COALESCE(cm.is_pinned, 0) DESC, c.updated_at DESC
+    `, [userId]);
 
     const conversations = [];
     const seenSystemUserIds = new Set<number>();
@@ -155,7 +157,6 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
     for (const c of convRows) {
       const isBugReports = c.type === 'bug_reports' || c.name.includes('Bug Reports');
 
-      // Unread count
       let unreadCount = 0;
       if (isBugReports && !isAdmin) {
         const unreadRow = await queryOne<{ count: number }>(`
@@ -173,7 +174,6 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
         unreadCount = unreadRow?.count || 0;
       }
 
-      // Fetch members
       const members = await query<any>(`
         SELECT 
           u.id, u.username, u.display_name, u.avatar_url, u.role,
@@ -185,13 +185,12 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
       `, [c.id]);
 
       let isLocked = false;
-      let otherMember = members.find((m: any) => m.id !== userId);
+      const otherMember = members.find((m: any) => m.id !== userId);
 
-      // Deduplicate direct system bot conversations if duplicate rows exist
       if (c.type === 'direct' && otherMember) {
         if (otherMember.role === 'system' || otherMember.username === 'system') {
           if (seenSystemUserIds.has(otherMember.id)) {
-            continue; // Skip duplicate conversation
+            continue;
           }
           seenSystemUserIds.add(otherMember.id);
         }
@@ -204,7 +203,6 @@ router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest
         }
       }
 
-      // Latest message (filtered for regular users on bug_reports)
       let lastMessage = null;
       if (isBugReports && !isAdmin) {
         lastMessage = await queryOne<any>(`
@@ -309,7 +307,6 @@ router.post('/conversations/group', authenticateToken, async (req: Authenticated
       return res.status(400).json({ error: 'Please select valid group members' });
     }
 
-    // Verify creator is accepted friends with EACH member
     for (const mId of cleanMemberIds) {
       const isFriend = await areAcceptedFriends(userId, mId);
       if (!isFriend) {
@@ -334,7 +331,6 @@ router.post('/conversations/group', authenticateToken, async (req: Authenticated
     }
 
     const creatorUser = await queryOne<any>('SELECT username FROM users WHERE id = ?', [userId]);
-    // Centered inline notice for group creation
     await execute(
       'INSERT INTO messages (conversation_id, sender_id, content, is_system_notice) VALUES (?, ?, ?, 1)',
       [convId, userId, `@${creatorUser?.username || 'User'} created the group chat "${groupName}"`]
@@ -347,26 +343,23 @@ router.post('/conversations/group', authenticateToken, async (req: Authenticated
   }
 });
 
-// 5. Get Messages for a Conversation (with Bug Reports Privacy Isolation, Replies & Reactions)
+// 5. Get Messages for a Conversation (Batched reactions & replies, Bug Reports Privacy Isolation)
 router.get('/conversations/:id/messages', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const convId = req.params.id;
     const isAdmin = req.user!.role === 'admin';
 
-    // Verify membership
     const memberCheck = await queryOne<any>('SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [convId, userId]);
     if (!memberCheck) {
       return res.status(403).json({ error: 'You are not a member of this conversation' });
     }
 
-    // Check conversation metadata & locking
     const conv = await queryOne<any>('SELECT type, name, avatar_url, creator_user_id FROM conversations WHERE id = ?', [convId]);
     let isLocked = false;
     let lockedReason = '';
 
     const systemBot = await getSystemBotUser();
-
     const isBugReportsChat = conv?.type === 'bug_reports' || conv?.name?.includes('Bug Reports');
 
     const isSystemChat = systemBot && (await queryOne<any>(
@@ -374,7 +367,6 @@ router.get('/conversations/:id/messages', authenticateToken, async (req: Authent
       [convId, systemBot.id]
     ));
 
-    // Lock non-admin users out of posting to System Announcement channel
     if (isSystemChat && !isAdmin) {
       isLocked = true;
       lockedReason = 'Only administrators can post to System Announcements.';
@@ -395,44 +387,25 @@ router.get('/conversations/:id/messages', authenticateToken, async (req: Authent
       }
     }
 
-    // Mark as read
     await execute('UPDATE conversation_members SET last_read_at = CURRENT_TIMESTAMP WHERE conversation_id = ? AND user_id = ?', [convId, userId]);
 
-    // Fetch messages with Bug Reports privacy filtering
     let rawMessages: any[] = [];
-
-    if (isBugReportsChat) {
-      if (isAdmin) {
-        // Admins see all bug reports & feature requests in the channel
-        rawMessages = await query<any>(`
-          SELECT 
-            m.id, m.conversation_id, m.sender_id, m.content, m.reply_to_id, m.is_system_notice, m.created_at,
-            u.username as sender_username, u.display_name as sender_display_name, u.avatar_url as sender_avatar_url, u.role as sender_role,
-            n.theme as sender_theme, n.bg_color as sender_bg_color, n.accent_color as sender_accent_color, n.text_color as sender_text_color
-          FROM messages m
-          LEFT JOIN users u ON m.sender_id = u.id
-          LEFT JOIN nooks n ON n.user_id = u.id
-          WHERE m.conversation_id = ?
-          ORDER BY m.created_at ASC
-        `, [convId]);
-      } else {
-        // Regular users ONLY see their own bug reports AND admin replies to their messages
-        rawMessages = await query<any>(`
-          SELECT 
-            m.id, m.conversation_id, m.sender_id, m.content, m.reply_to_id, m.is_system_notice, m.created_at,
-            u.username as sender_username, u.display_name as sender_display_name, u.avatar_url as sender_avatar_url, u.role as sender_role,
-            n.theme as sender_theme, n.bg_color as sender_bg_color, n.accent_color as sender_accent_color, n.text_color as sender_text_color
-          FROM messages m
-          LEFT JOIN users u ON m.sender_id = u.id
-          LEFT JOIN nooks n ON n.user_id = u.id
-          WHERE m.conversation_id = ?
-            AND (
-              m.sender_id = ? 
-              OR m.reply_to_id IN (SELECT id FROM messages WHERE sender_id = ?)
-            )
-          ORDER BY m.created_at ASC
-        `, [convId, userId, userId]);
-      }
+    if (isBugReportsChat && !isAdmin) {
+      rawMessages = await query<any>(`
+        SELECT 
+          m.id, m.conversation_id, m.sender_id, m.content, m.reply_to_id, m.is_system_notice, m.created_at,
+          u.username as sender_username, u.display_name as sender_display_name, u.avatar_url as sender_avatar_url, u.role as sender_role,
+          n.theme as sender_theme, n.bg_color as sender_bg_color, n.accent_color as sender_accent_color, n.text_color as sender_text_color
+        FROM messages m
+        LEFT JOIN users u ON m.sender_id = u.id
+        LEFT JOIN nooks n ON n.user_id = u.id
+        WHERE m.conversation_id = ?
+          AND (
+            m.sender_id = ? 
+            OR m.reply_to_id IN (SELECT id FROM messages WHERE sender_id = ? AND conversation_id = ?)
+          )
+        ORDER BY m.created_at ASC
+      `, [convId, userId, userId, convId]);
     } else {
       rawMessages = await query<any>(`
         SELECT 
@@ -447,58 +420,66 @@ router.get('/conversations/:id/messages', authenticateToken, async (req: Authent
       `, [convId]);
     }
 
-    // Attach reactions & reply_to details to each message
-    const formattedMessages = [];
-    for (const msg of rawMessages) {
-      // Reactions with usernames list for hover tooltips
+    // Batch fetch reactions for all messages in this result
+    const reactionsByMsg = new Map<number, Map<string, { emoji: string; count: number; user_reacted: boolean; users: string[] }>>();
+    const replyTargetMap = new Map<number, { id: number; sender_username: string; content: string }>();
+
+    if (rawMessages.length > 0) {
+      const msgIds = rawMessages.map(m => m.id);
+      const msgPlaceholders = msgIds.map(() => '?').join(',');
       const reactionRows = await query<any>(`
-        SELECT mr.emoji, mr.user_id, u.username
+        SELECT mr.message_id, mr.emoji, mr.user_id, u.username
         FROM message_reactions mr
         JOIN users u ON mr.user_id = u.id
-        WHERE mr.message_id = ?
+        WHERE mr.message_id IN (${msgPlaceholders})
         ORDER BY mr.created_at ASC
-      `, [msg.id]);
+      `, msgIds);
 
-      const reactionMap = new Map<string, { emoji: string; count: number; user_reacted: boolean; users: string[] }>();
       for (const r of reactionRows) {
-        if (!reactionMap.has(r.emoji)) {
-          reactionMap.set(r.emoji, { emoji: r.emoji, count: 0, user_reacted: false, users: [] });
+        let map = reactionsByMsg.get(r.message_id);
+        if (!map) {
+          map = new Map();
+          reactionsByMsg.set(r.message_id, map);
         }
-        const entry = reactionMap.get(r.emoji)!;
+        if (!map.has(r.emoji)) {
+          map.set(r.emoji, { emoji: r.emoji, count: 0, user_reacted: false, users: [] });
+        }
+        const entry = map.get(r.emoji)!;
         entry.count += 1;
         entry.users.push(r.username);
         if (r.user_id === userId) {
           entry.user_reacted = true;
         }
       }
-      const reactions = Array.from(reactionMap.values());
 
-      // Reply_to details
-      let replyTo = null;
-      if (msg.reply_to_id) {
-        const parentMsg = await queryOne<any>(`
+      // Batch fetch reply targets strictly scoped to THIS conversation_id
+      const replyIds = Array.from(new Set(rawMessages.map(m => m.reply_to_id).filter((id: any) => id !== null && id !== undefined)));
+      if (replyIds.length > 0) {
+        const replyPlaceholders = replyIds.map(() => '?').join(',');
+        const parentRows = await query<any>(`
           SELECT m.id, m.content, u.username as sender_username
           FROM messages m
           LEFT JOIN users u ON m.sender_id = u.id
-          WHERE m.id = ?
-        `, [msg.reply_to_id]);
-        if (parentMsg) {
-          replyTo = {
-            id: parentMsg.id,
-            sender_username: parentMsg.sender_username || 'User',
-            content: parentMsg.content
-          };
+          WHERE m.id IN (${replyPlaceholders}) AND m.conversation_id = ?
+        `, [...replyIds, convId]);
+
+        for (const p of parentRows) {
+          replyTargetMap.set(p.id, {
+            id: p.id,
+            sender_username: p.sender_username || 'User',
+            content: p.content
+          });
         }
       }
-
-      formattedMessages.push({
-        ...msg,
-        sender_username: msg.sender_username || 'System',
-        is_system_notice: !!msg.is_system_notice,
-        reactions,
-        reply_to: replyTo
-      });
     }
+
+    const formattedMessages = rawMessages.map(msg => ({
+      ...msg,
+      sender_username: msg.sender_username || 'System',
+      is_system_notice: !!msg.is_system_notice,
+      reactions: Array.from(reactionsByMsg.get(msg.id)?.values() || []),
+      reply_to: msg.reply_to_id ? (replyTargetMap.get(msg.reply_to_id) || null) : null
+    }));
 
     return res.json({
       messages: formattedMessages,
@@ -513,7 +494,7 @@ router.get('/conversations/:id/messages', authenticateToken, async (req: Authent
   }
 });
 
-// 6. Post Message in Conversation (Checks system locks & supports reply_to_id)
+// 6. Post Message in Conversation (Validates reply_to_id scoping & system locks)
 router.post('/conversations/:id/messages', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -543,7 +524,6 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: Authen
       return res.status(403).json({ error: 'Only administrators can post to System Announcements.' });
     }
 
-    // Check lock status for 1-on-1 DMs
     if (conv?.type === 'direct' && !isSystemChat) {
       const members = await query<any>('SELECT user_id FROM conversation_members WHERE conversation_id = ?', [convId]);
       const other = members.find((m: any) => m.user_id !== userId);
@@ -561,6 +541,34 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: Authen
     const cleanContent = content.trim();
     const replyId = reply_to_id ? Number(reply_to_id) : null;
 
+    // Validate reply_to_id strictly belongs to this conversation (prevents cross-conversation IDOR)
+    let verifiedParent: any = null;
+    if (replyId !== null) {
+      if (!Number.isFinite(replyId)) {
+        return res.status(400).json({ error: 'Invalid reply target' });
+      }
+      verifiedParent = await queryOne<any>(
+        `SELECT m.id, m.sender_id, m.reply_to_id, m.content, u.username as sender_username
+         FROM messages m
+         LEFT JOIN users u ON m.sender_id = u.id
+         WHERE m.id = ? AND m.conversation_id = ?`,
+        [replyId, convId]
+      );
+      if (!verifiedParent) {
+        return res.status(400).json({ error: 'Reply target message does not belong to this conversation' });
+      }
+      if (isBugReportsChat && !isAdmin) {
+        let ownsThread = verifiedParent.sender_id === userId;
+        if (!ownsThread && verifiedParent.reply_to_id) {
+          const rootMsg = await queryOne<any>('SELECT sender_id FROM messages WHERE id = ? AND conversation_id = ?', [verifiedParent.reply_to_id, convId]);
+          ownsThread = rootMsg?.sender_id === userId;
+        }
+        if (!ownsThread) {
+          return res.status(403).json({ error: 'You cannot reply to another user\'s bug report' });
+        }
+      }
+    }
+
     const resInsert = await execute(
       'INSERT INTO messages (conversation_id, sender_id, content, reply_to_id, is_system_notice) VALUES (?, ?, ?, ?, 0)',
       [convId, userId, cleanContent, replyId]
@@ -571,10 +579,11 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: Authen
 
     const sender = await queryOne<any>('SELECT username, display_name FROM users WHERE id = ?', [userId]);
     const snippet = cleanContent.length > 80 ? cleanContent.substring(0, 77) + '...' : cleanContent;
+    const safeSenderUsername = escapeHtml(sender?.username || 'user');
+    const safeSnippet = escapeHtml(snippet);
 
     if (isBugReportsChat) {
       if (!isAdmin) {
-        // Regular user posted a bug report: Notify all admins
         const admins = await query<any>('SELECT id, email, username, notify_email_messages FROM users WHERE role = "admin" AND is_disabled = 0');
         for (const a of admins) {
           if (a.id !== userId) {
@@ -590,40 +599,38 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: Authen
             if (a.email && a.notify_email_messages !== 0) {
               sendStyledEmail({
                 to: a.email,
-                subject: `New Bug Report from @${sender?.username} - WebNook`,
+                subject: `New Bug Report from @${sender?.username}`,
                 title: `New Bug Report from @${sender?.username}`,
-                bodyHtml: `<p>Hello @<strong>${a.username}</strong>,</p><p>A new bug report / feature request was submitted by @<strong>${sender?.username}</strong>:</p><blockquote style="background:rgba(255,255,255,0.05);padding:0.75rem;border-left:3px solid #ef4444;">${snippet}</blockquote>`,
+                bodyHtml: `<p>Hello @<strong>${escapeHtml(a.username)}</strong>,</p><p>A new bug report / feature request was submitted by @<strong>${safeSenderUsername}</strong>:</p><blockquote style="background:rgba(255,255,255,0.05);padding:0.75rem;border-left:3px solid #ef4444;">${safeSnippet}</blockquote>`,
                 actionUrl: `/messages?conv=${convId}`,
-                actionText: 'View Bug Reports'
+                actionText: 'View Bug Reports',
+                safetyUrl: `/messages?conv=${convId}`
               });
             }
           }
         }
-      } else if (replyId) {
-        // Admin replied to a user's bug report: Notify original author
-        const parentMsg = await queryOne<any>('SELECT sender_id FROM messages WHERE id = ?', [replyId]);
-        if (parentMsg && parentMsg.sender_id !== userId) {
-          const targetUser = await queryOne<any>('SELECT id, email, username, notify_email_messages FROM users WHERE id = ?', [parentMsg.sender_id]);
-          if (targetUser) {
-            await createNotification(
-              targetUser.id,
-              'system',
-              userId,
-              `Admin @${sender?.username} replied to your bug report`,
-              snippet,
-              `/messages?conv=${convId}`,
-              'Open Bug Channel'
-            );
-            if (targetUser.email && targetUser.notify_email_messages !== 0) {
-              sendStyledEmail({
-                to: targetUser.email,
-                subject: `Admin Response to your Bug Report - WebNook`,
-                title: `Admin @${sender?.username} replied to your bug report`,
-                bodyHtml: `<p>Hello @<strong>${targetUser.username}</strong>,</p><p>An administrator replied to your bug report / feature request:</p><blockquote style="background:rgba(255,255,255,0.05);padding:0.75rem;border-left:3px solid #6366f1;">${snippet}</blockquote>`,
-                actionUrl: `/messages?conv=${convId}`,
-                actionText: 'Open Bug Channel'
-              });
-            }
+      } else if (verifiedParent && verifiedParent.sender_id !== userId) {
+        const targetUser = await queryOne<any>('SELECT id, email, username, notify_email_messages FROM users WHERE id = ?', [verifiedParent.sender_id]);
+        if (targetUser) {
+          await createNotification(
+            targetUser.id,
+            'system',
+            userId,
+            `Admin @${sender?.username} replied to your bug report`,
+            snippet,
+            `/messages?conv=${convId}`,
+            'Open Bug Channel'
+          );
+          if (targetUser.email && targetUser.notify_email_messages !== 0) {
+            sendStyledEmail({
+              to: targetUser.email,
+              subject: `Admin Response to your Bug Report`,
+              title: `Admin @${sender?.username} replied to your bug report`,
+              bodyHtml: `<p>Hello @<strong>${escapeHtml(targetUser.username)}</strong>,</p><p>An administrator replied to your bug report / feature request:</p><blockquote style="background:rgba(255,255,255,0.05);padding:0.75rem;border-left:3px solid #6366f1;">${safeSnippet}</blockquote>`,
+              actionUrl: `/messages?conv=${convId}`,
+              actionText: 'Open Bug Channel',
+              safetyUrl: `/messages?conv=${convId}`
+            });
           }
         }
       }
@@ -652,11 +659,12 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: Authen
           if (m.email && m.notify_email_messages !== 0) {
             sendStyledEmail({
               to: m.email,
-              subject: `${notifTitle} - WebNook Messages`,
+              subject: `${notifTitle}`,
               title: notifTitle,
-              bodyHtml: `<p>Hello @<strong>${m.username}</strong>,</p><p>You have a new message in WebNook Messages:</p><blockquote style="background:rgba(255,255,255,0.05);padding:0.75rem;border-left:3px solid #6366f1;">${snippet}</blockquote>`,
+              bodyHtml: `<p>Hello @<strong>${escapeHtml(m.username)}</strong>,</p><p>You have a new message:</p><blockquote style="background:rgba(255,255,255,0.05);padding:0.75rem;border-left:3px solid #6366f1;">${safeSnippet}</blockquote>`,
               actionUrl: `/messages?conv=${convId}`,
-              actionText: 'Open Messages'
+              actionText: 'Open Messages',
+              safetyUrl: `/messages?conv=${convId}`
             });
           }
         }
@@ -674,22 +682,13 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: Authen
       WHERE m.id = ?
     `, [resInsert.lastID]);
 
-    let replyTo = null;
-    if (createdMsg.reply_to_id) {
-      const parentMsg = await queryOne<any>(`
-        SELECT m.id, m.content, u.username as sender_username
-        FROM messages m
-        JOIN users u ON m.sender_id = u.id
-        WHERE m.id = ?
-      `, [createdMsg.reply_to_id]);
-      if (parentMsg) {
-        replyTo = {
-          id: parentMsg.id,
-          sender_username: parentMsg.sender_username,
-          content: parentMsg.content
-        };
-      }
-    }
+    const replyTo = verifiedParent
+      ? {
+          id: verifiedParent.id,
+          sender_username: verifiedParent.sender_username || 'User',
+          content: verifiedParent.content
+        }
+      : null;
 
     return res.json({
       message: {
@@ -716,13 +715,16 @@ router.post('/conversations/:id/messages/:messageId/reactions', authenticateToke
       return res.status(400).json({ error: 'Emoji is required' });
     }
 
-    // Verify membership
     const memberCheck = await queryOne<any>('SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [convId, userId]);
     if (!memberCheck) {
       return res.status(403).json({ error: 'You are not a member of this conversation' });
     }
 
-    // Check if system announcement channel (reactions disabled for system announcements)
+    const msgCheck = await queryOne<any>('SELECT id FROM messages WHERE id = ? AND conversation_id = ?', [messageId, convId]);
+    if (!msgCheck) {
+      return res.status(404).json({ error: 'Message not found in this conversation' });
+    }
+
     const systemBot = await getSystemBotUser();
     const isSystemChat = systemBot && (await queryOne<any>(
       'SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?',
@@ -732,7 +734,6 @@ router.post('/conversations/:id/messages/:messageId/reactions', authenticateToke
       return res.status(403).json({ error: 'Reactions are not enabled on System Announcements.' });
     }
 
-    // Toggle reaction
     const existing = await queryOne<any>(
       'SELECT id FROM message_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?',
       [messageId, userId, emoji]
@@ -744,18 +745,30 @@ router.post('/conversations/:id/messages/:messageId/reactions', authenticateToke
       await execute('INSERT INTO message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)', [messageId, userId, emoji]);
     }
 
-    // Return updated reactions for message
-    const reactions = await query<any>(`
-      SELECT mr.emoji, COUNT(mr.id) as count,
-             MAX(CASE WHEN mr.user_id = ? THEN 1 ELSE 0 END) as user_reacted
+    const reactionRows = await query<any>(`
+      SELECT mr.emoji, mr.user_id, u.username
       FROM message_reactions mr
+      JOIN users u ON mr.user_id = u.id
       WHERE mr.message_id = ?
-      GROUP BY mr.emoji
-    `, [userId, messageId]);
+      ORDER BY mr.created_at ASC
+    `, [messageId]);
+
+    const reactionMap = new Map<string, { emoji: string; count: number; user_reacted: boolean; users: string[] }>();
+    for (const r of reactionRows) {
+      if (!reactionMap.has(r.emoji)) {
+        reactionMap.set(r.emoji, { emoji: r.emoji, count: 0, user_reacted: false, users: [] });
+      }
+      const entry = reactionMap.get(r.emoji)!;
+      entry.count += 1;
+      entry.users.push(r.username);
+      if (r.user_id === userId) {
+        entry.user_reacted = true;
+      }
+    }
 
     return res.json({
       message_id: Number(messageId),
-      reactions: reactions.map(r => ({ emoji: r.emoji, count: r.count, user_reacted: !!r.user_reacted }))
+      reactions: Array.from(reactionMap.values())
     });
   } catch (err) {
     console.error('Toggle reaction error:', err);
@@ -798,7 +811,7 @@ router.put('/conversations/:id/settings', authenticateToken, async (req: Authent
       return res.status(403).json({ error: 'You are not a member of this conversation' });
     }
 
-    const conv = await queryOne<any>('SELECT type, name FROM conversations WHERE id = ?', [convId]);
+    const conv = await queryOne<any>('SELECT type, name, avatar_url FROM conversations WHERE id = ?', [convId]);
     if (conv?.type !== 'group') {
       return res.status(400).json({ error: 'Settings can only be modified for group chats' });
     }
@@ -904,7 +917,6 @@ router.put('/conversations/:id/mute', authenticateToken, async (req: Authenticat
     const convId = req.params.id;
     const { is_muted } = req.body;
 
-    const isMutedVal = is_muted ? 1 : 0;
     await execute('UPDATE conversation_members SET is_muted = ? WHERE conversation_id = ? AND user_id = ?', [is_muted ? 1 : 0, convId, userId]);
 
     return res.json({ message: is_muted ? 'Conversation muted' : 'Conversation unmuted' });
@@ -933,7 +945,7 @@ router.post('/conversations/:id/pin', authenticateToken, async (req: Authenticat
   }
 });
 
-// 13. Admin DM Broadcast
+// 14. Admin DM Broadcast
 router.post('/admin/broadcast', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { target_type, target_user_id, content } = req.body;

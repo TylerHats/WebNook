@@ -1,6 +1,8 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
+import crypto from 'crypto';
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -10,26 +12,72 @@ import {
 import { execute, query, queryOne } from '../db/connection';
 import { authenticateToken, AuthenticatedRequest, JWT_SECRET } from '../middleware/authMiddleware';
 import jwt from 'jsonwebtoken';
+import { createRateLimiter, getEffectiveBaseUrl } from '../utils/security';
+import { getCurrentLegalVersion } from '../services/legalService';
 
 const router = Router();
 const RP_NAME = 'WebNook Platform';
 
-// Helper to calculate dynamic RP_ID and Origin respecting Reverse Proxies (Nginx, Caddy, Cloudflare)
-function getOrigin(req: any): string {
-  if (process.env.ORIGIN) return process.env.ORIGIN;
-  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http') as string;
-  const host = (req.headers['x-forwarded-host'] || req.headers.host || 'localhost') as string;
-  return `${proto}://${host}`;
+const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const challenges = new Map<string, { challenge: string; expiresAt: number }>();
+
+const challengeSweeper = setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of challenges.entries()) {
+    if (entry.expiresAt <= now) {
+      challenges.delete(key);
+    }
+  }
+}, 60 * 1000);
+challengeSweeper.unref();
+
+function setChallenge(key: string, challenge: string) {
+  challenges.set(key, { challenge, expiresAt: Date.now() + CHALLENGE_TTL_MS });
 }
 
-function getRpId(req: any): string {
+function consumeChallenge(key: string): string | null {
+  const entry = challenges.get(key);
+  if (!entry) return null;
+  challenges.delete(key);
+  if (entry.expiresAt <= Date.now()) return null;
+  return entry.challenge;
+}
+
+const mfaVerifyLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Too many authentication attempts. Please wait a few minutes.'
+});
+
+async function getExpectedOrigins(req: Request): Promise<string[]> {
+  const origins = new Set<string>();
+  try {
+    const effective = await getEffectiveBaseUrl(req);
+    origins.add(new URL(effective).origin);
+  } catch {}
+  if (process.env.ORIGIN) {
+    try {
+      origins.add(new URL(process.env.ORIGIN).origin);
+    } catch {}
+  }
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  if (host && /^[a-zA-Z0-9._:-]+$/.test(host)) {
+    origins.add(`${proto === 'https' ? 'https' : 'http'}://${host}`);
+  }
+  return Array.from(origins);
+}
+
+async function getRpId(req: Request): Promise<string> {
   if (process.env.RP_ID) return process.env.RP_ID;
-  const hostHeader = (req.headers['x-forwarded-host'] || req.headers.host || 'localhost') as string;
-  return hostHeader.split(':')[0];
+  try {
+    const effective = await getEffectiveBaseUrl(req);
+    return new URL(effective).hostname;
+  } catch {
+    const hostHeader = String(req.headers['x-forwarded-host'] || req.headers.host || 'localhost').split(',')[0].trim();
+    return hostHeader.split(':')[0];
+  }
 }
-
-// Store active webauthn challenges in memory temporarily
-const challenges: Record<string, string> = {};
 
 // ======================== TOTP ROUTING ========================
 
@@ -52,7 +100,7 @@ router.post('/totp/setup', authenticateToken, async (req: AuthenticatedRequest, 
 });
 
 // Verify & Enable TOTP
-router.post('/totp/verify', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/totp/verify', authenticateToken, mfaVerifyLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { token } = req.body;
     const user = await queryOne<any>('SELECT totp_secret FROM users WHERE id = ?', [req.user!.id]);
@@ -61,7 +109,7 @@ router.post('/totp/verify', authenticateToken, async (req: AuthenticatedRequest,
       return res.status(400).json({ error: 'TOTP setup not initialized' });
     }
 
-    const isValid = authenticator.check(token, user.totp_secret);
+    const isValid = authenticator.check(String(token || ''), user.totp_secret);
     if (!isValid) {
       return res.status(400).json({ error: 'Invalid verification token' });
     }
@@ -74,9 +122,31 @@ router.post('/totp/verify', authenticateToken, async (req: AuthenticatedRequest,
   }
 });
 
-// Disable TOTP
-router.post('/totp/disable', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+// Disable TOTP (requires current password or active TOTP code)
+router.post('/totp/disable', authenticateToken, mfaVerifyLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const { password, totp_code } = req.body;
+    if (!password && !totp_code) {
+      return res.status(400).json({ error: 'Current password or valid TOTP code is required to disable 2FA' });
+    }
+
+    const user = await queryOne<any>('SELECT password_hash, totp_secret, is_totp_enabled FROM users WHERE id = ?', [req.user!.id]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let verified = false;
+    if (password) {
+      verified = await bcrypt.compare(String(password), user.password_hash);
+    }
+    if (!verified && totp_code && user.is_totp_enabled && user.totp_secret) {
+      verified = authenticator.check(String(totp_code), user.totp_secret);
+    }
+
+    if (!verified) {
+      return res.status(401).json({ error: 'Invalid password or 2FA verification code' });
+    }
+
     await execute('UPDATE users SET is_totp_enabled = 0, totp_secret = NULL WHERE id = ?', [req.user!.id]);
     return res.json({ message: 'TOTP 2FA disabled successfully' });
   } catch (err) {
@@ -91,7 +161,7 @@ router.post('/passkey/register-options', authenticateToken, async (req: Authenti
   try {
     const user = req.user!;
     const userPasskeys = await query<any>('SELECT id, transports FROM passkey_credentials WHERE user_id = ?', [user.id]);
-    const rpID = getRpId(req);
+    const rpID = await getRpId(req);
 
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
@@ -111,7 +181,7 @@ router.post('/passkey/register-options', authenticateToken, async (req: Authenti
       }
     });
 
-    challenges[user.id] = options.challenge;
+    setChallenge(`reg_${user.id}`, options.challenge);
 
     return res.json(options);
   } catch (err) {
@@ -124,15 +194,14 @@ router.post('/passkey/register-options', authenticateToken, async (req: Authenti
 router.post('/passkey/register-verify', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user!;
-    const expectedChallenge = challenges[user.id];
+    const expectedChallenge = consumeChallenge(`reg_${user.id}`);
 
     if (!expectedChallenge) {
       return res.status(400).json({ error: 'Registration challenge expired' });
     }
 
-    const origin = getOrigin(req);
-    const rpID = getRpId(req);
-    const origins = Array.from(new Set([origin, req.headers.origin].filter(Boolean) as string[]));
+    const origins = await getExpectedOrigins(req);
+    const rpID = await getRpId(req);
 
     const verification = await verifyRegistrationResponse({
       response: req.body,
@@ -161,7 +230,6 @@ router.post('/passkey/register-verify', authenticateToken, async (req: Authentic
         ]
       );
 
-      delete challenges[user.id];
       return res.json({ verified: true, message: 'Passkey registered successfully' });
     }
 
@@ -173,20 +241,21 @@ router.post('/passkey/register-verify', authenticateToken, async (req: Authentic
 });
 
 // Passkey Login Options (Unauthenticated)
-router.post('/passkey/login-options', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/passkey/login-options', mfaVerifyLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { username } = req.body;
     let userPasskeys: any[] = [];
-    
+
     if (username) {
-      const user = await queryOne<any>('SELECT id FROM users WHERE username = ? OR email = ?', [username, username]);
-      if (user) {
+      const cleanInput = String(username).trim().toLowerCase();
+      const user = await queryOne<any>('SELECT id, is_disabled FROM users WHERE username = ? OR email = ?', [cleanInput, cleanInput]);
+      if (user && !user.is_disabled) {
         userPasskeys = await query('SELECT id, transports FROM passkey_credentials WHERE user_id = ?', [user.id]);
       }
     }
 
     const options = await generateAuthenticationOptions({
-      rpID: getRpId(req),
+      rpID: await getRpId(req),
       allowCredentials: userPasskeys.map(pk => ({
         id: pk.id,
         type: 'public-key' as const,
@@ -195,8 +264,8 @@ router.post('/passkey/login-options', async (req: AuthenticatedRequest, res: Res
       userVerification: 'preferred'
     });
 
-    const tempSessionId = req.body.session_id || 'anon_' + Math.random().toString(36).substring(2);
-    challenges[tempSessionId] = options.challenge;
+    const tempSessionId = 'pk_' + crypto.randomBytes(16).toString('hex');
+    setChallenge(tempSessionId, options.challenge);
 
     return res.json({ options, session_id: tempSessionId });
   } catch (err) {
@@ -205,16 +274,16 @@ router.post('/passkey/login-options', async (req: AuthenticatedRequest, res: Res
 });
 
 // Passkey Login Verify
-router.post('/passkey/login-verify', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/passkey/login-verify', mfaVerifyLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { session_id, response } = req.body;
-    const expectedChallenge = challenges[session_id];
+    const expectedChallenge = session_id ? consumeChallenge(String(session_id)) : null;
 
     if (!expectedChallenge) {
       return res.status(400).json({ error: 'Authentication challenge expired' });
     }
 
-    const passkey = await queryOne<any>('SELECT * FROM passkey_credentials WHERE id = ?', [response.id]);
+    const passkey = await queryOne<any>('SELECT * FROM passkey_credentials WHERE id = ?', [response?.id]);
     if (!passkey) {
       return res.status(400).json({ error: 'Passkey not recognized' });
     }
@@ -224,9 +293,13 @@ router.post('/passkey/login-verify', async (req: AuthenticatedRequest, res: Resp
       return res.status(400).json({ error: 'Associated user account not found' });
     }
 
-    const origin = getOrigin(req);
-    const rpID = getRpId(req);
-    const origins = Array.from(new Set([origin, req.headers.origin].filter(Boolean) as string[]));
+    if (user.is_disabled) {
+      const reasonMsg = user.disabled_reason ? `: ${user.disabled_reason}` : '.';
+      return res.status(403).json({ error: `Your account has been disabled${reasonMsg}` });
+    }
+
+    const origins = await getExpectedOrigins(req);
+    const rpID = await getRpId(req);
 
     const verification = await verifyAuthenticationResponse({
       response,
@@ -249,13 +322,23 @@ router.post('/passkey/login-verify', async (req: AuthenticatedRequest, res: Resp
         passkey.id
       ]);
 
-      delete challenges[session_id];
+      const currentLegalVersion = await getCurrentLegalVersion();
+      const acceptedVersion = (user.terms_accepted_version || '').trim();
+      const requiresTermsAcceptance = acceptedVersion !== currentLegalVersion;
 
       const token = jwt.sign(
         { id: user.id, username: user.username, email: user.email, role: user.role },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
+
+      const proto = String(req.headers['x-forwarded-proto'] || req.protocol || '').split(',')[0].trim().toLowerCase();
+      res.cookie('token', token, {
+        maxAge: 7 * 86400 * 1000,
+        sameSite: 'lax',
+        path: '/',
+        secure: req.secure || proto === 'https'
+      });
 
       return res.json({
         verified: true,
@@ -271,7 +354,12 @@ router.post('/passkey/login-verify', async (req: AuthenticatedRequest, res: Resp
           status_message: user.status_message,
           status_emoji: user.status_emoji,
           role: user.role,
-          is_totp_enabled: !!user.is_totp_enabled
+          is_totp_enabled: !!user.is_totp_enabled,
+          is_email_verified: !!user.is_email_verified,
+          onboarding_completed: !!user.onboarding_completed,
+          terms_accepted_version: acceptedVersion,
+          required_terms_version: currentLegalVersion,
+          requires_terms_acceptance: requiresTermsAcceptance
         }
       });
     }

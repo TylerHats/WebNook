@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { TopFriendsGrid } from '../components/nook/TopFriendsGrid';
@@ -16,6 +16,8 @@ import { useToast } from '../context/ToastContext';
 import { playThemeSound } from '../utils/themeSoundEngine';
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer';
 import { getThemeById } from '../themes/registry';
+import { sanitizeCss, sanitizeHtml } from '../utils/sanitize';
+import { buildNookRootProps, parseNookStyleOverrides } from '../utils/nookStyle';
 
 export const NookViewPage: React.FC = () => {
   const { username } = useParams<{ username?: string }>();
@@ -23,6 +25,7 @@ export const NookViewPage: React.FC = () => {
   const { showToast } = useToast();
 
   const targetUsername = username || user?.username || 'admin';
+  const nookContainerRef = useRef<HTMLDivElement>(null);
   const [profileData, setProfileData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dialupStatus, setDialupStatus] = useState({
@@ -326,18 +329,8 @@ export const NookViewPage: React.FC = () => {
     } catch (e) {}
   }
 
-  // Parse custom colors
-  let cardBgColor = 'rgba(0,0,0,0.3)';
-  let borderColor = 'rgba(255,255,255,0.12)';
-  if (nookSettings?.card_colors_json) {
-    try {
-      const parsedColors = typeof nookSettings.card_colors_json === 'string'
-        ? JSON.parse(nookSettings.card_colors_json)
-        : nookSettings.card_colors_json;
-      if (parsedColors.cardBg) cardBgColor = parsedColors.cardBg;
-      if (parsedColors.border) borderColor = parsedColors.border;
-    } catch (e) {}
-  }
+  // Parse custom colors & style pop overrides
+  const styleOverrides = parseNookStyleOverrides(nookSettings?.card_colors_json);
 
   let cardTitles: Record<string, string> = {};
   if (nookSettings?.card_titles_json) {
@@ -348,17 +341,13 @@ export const NookViewPage: React.FC = () => {
     } catch (e) {}
   }
 
-  const customStyle = {
-    minHeight: '100vh',
-    position: 'relative',
-    backgroundColor: nookSettings?.bg_color || undefined,
-    color: nookSettings?.text_color || undefined,
-    '--bg-primary': nookSettings?.bg_color || undefined,
-    '--bg-panel': cardBgColor,
-    '--accent-color': nookSettings?.accent_color || undefined,
-    '--text-main': nookSettings?.text_color || undefined,
-    '--border-color': borderColor
-  } as React.CSSProperties;
+  const rootProps = buildNookRootProps({
+    theme: nookSettings?.theme || 'glassmorphism',
+    bgColor: nookSettings?.bg_color,
+    textColor: nookSettings?.text_color,
+    accentColor: nookSettings?.accent_color,
+    overrides: styleOverrides
+  });
 
   const animationsEnabled = nookSettings?.theme_animations_enabled !== 0;
 
@@ -382,7 +371,7 @@ export const NookViewPage: React.FC = () => {
   }
 
   return (
-    <div className={themeClass} style={customStyle} onClick={handleGlobalClick}>
+    <div className={rootProps.className} style={rootProps.style} onClick={handleGlobalClick}>
       {/* Retro Win9X Dial-Up Connection Bar */}
       {isWin9xTheme && (
         <div style={{
@@ -408,18 +397,24 @@ export const NookViewPage: React.FC = () => {
 
       {/* Custom CSS Injection */}
       {nookSettings?.custom_css && (
-        <style dangerouslySetInnerHTML={{ __html: nookSettings.custom_css }} />
+        <style dangerouslySetInnerHTML={{ __html: sanitizeCss(nookSettings.custom_css) }} />
       )}
 
       {/* Theme Animated Micro-Overlays */}
       {animationsEnabled && <ThemeAnimationOverlay theme={nookSettings?.theme} />}
 
-      {/* Layer 1: Behind Cards Sticker Overlay */}
-      {stickers && <StickerCanvas stickers={stickers} targetLayer="behind_cards" />}
+      <div ref={nookContainerRef} className="nook-container" style={{ position: 'relative', zIndex: 10, isolation: 'isolate' }}>
+        {/* Layer 1: Behind Cards Sticker Overlay anchored to .nook-container */}
+        {stickers && (
+          <StickerCanvas
+            stickers={stickers}
+            targetLayer="behind_cards"
+            containerRef={nookContainerRef}
+          />
+        )}
 
-      <div className="nook-container" style={{ position: 'relative', zIndex: 10 }}>
         {/* Nook Header Banner & User Bio */}
-        <div className="nook-panel nook-header-panel">
+        <div data-sticker-anchor="header" className="nook-panel nook-header-panel" style={{ position: 'relative', zIndex: 15 }}>
           {owner.banner_url ? (
             <div className="nook-header-banner">
               <img
@@ -636,7 +631,7 @@ export const NookViewPage: React.FC = () => {
                         <span>{c.title}</span>
                       </div>
                     )}
-                    <div dangerouslySetInnerHTML={{ __html: c.content_html || '' }} />
+                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.content_html || '') }} />
                   </div>
                 );
 
@@ -646,29 +641,53 @@ export const NookViewPage: React.FC = () => {
           };
 
           return (
-            <div className="nook-grid">
+            <div className="nook-grid" style={{ position: 'relative', zIndex: 15 }}>
               {isMobileScreen ? (
                 /* Mobile View: Render ALL active cards in a single column in sequential top-to-bottom order */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', gridColumn: '1 / -1' }}>
-                  {gridCards.map(c => renderSingleCard(c))}
+                  {gridCards.map(c => {
+                    const cardEl = renderSingleCard(c);
+                    if (!cardEl) return null;
+                    return (
+                      <div key={c.id} data-sticker-anchor={c.id} style={{ position: 'relative' }}>
+                        {cardEl}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 /* Desktop View: Split into 2 columns */
                 <>
                   {/* Left Column Widgets */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    {leftCards.map(c => renderSingleCard(c))}
+                    {leftCards.map(c => {
+                      const cardEl = renderSingleCard(c);
+                      if (!cardEl) return null;
+                      return (
+                        <div key={c.id} data-sticker-anchor={c.id} style={{ position: 'relative' }}>
+                          {cardEl}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Right Column Widgets */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    {rightCards.map(c => renderSingleCard(c))}
+                    {rightCards.map(c => {
+                      const cardEl = renderSingleCard(c);
+                      if (!cardEl) return null;
+                      return (
+                        <div key={c.id} data-sticker-anchor={c.id} style={{ position: 'relative' }}>
+                          {cardEl}
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}
 
               {/* Always Render Guestbook Notes Section at the Bottom */}
-              <div className="nook-full-col" style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
+              <div data-sticker-anchor="guestbook" className="nook-full-col" style={{ gridColumn: '1 / -1', marginTop: '0.5rem', position: 'relative' }}>
                 <GuestbookWidget
                   nookUsername={owner.username}
                   nookTheme={nookSettings?.theme}
@@ -678,10 +697,16 @@ export const NookViewPage: React.FC = () => {
             </div>
           );
         })()}
-      </div>
 
-      {/* Layer 2: Above Cards Sticker Overlay */}
-      {stickers && <StickerCanvas stickers={stickers} targetLayer="above_cards" />}
+        {/* Layer 2: Above Cards Sticker Overlay anchored inside .nook-container */}
+        {stickers && (
+          <StickerCanvas
+            stickers={stickers}
+            targetLayer="above_cards"
+            containerRef={nookContainerRef}
+          />
+        )}
+      </div>
     </div>
   );
 };

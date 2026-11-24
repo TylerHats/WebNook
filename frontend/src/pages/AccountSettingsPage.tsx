@@ -96,6 +96,13 @@ export const AccountSettingsPage: React.FC = () => {
   const [totpQr, setTotpQr] = useState<string | null>(null);
   const [totpSecret, setTotpSecret] = useState<string | null>(null);
   const [totpCodeInput, setTotpCodeInput] = useState('');
+  const [isDisableTotpModalOpen, setIsDisableTotpModalOpen] = useState(false);
+  const [disableTotpPassword, setDisableTotpPassword] = useState('');
+  const [disableTotpCode, setDisableTotpCode] = useState('');
+  const [isDisablingTotp, setIsDisablingTotp] = useState(false);
+
+  const [brandAppName, setBrandAppName] = useState('WebNook');
+  const [brandLogoUrl, setBrandLogoUrl] = useState('/branding/logo.png');
 
   // Passkeys list
   const [passkeys, setPasskeys] = useState<any[]>([]);
@@ -118,6 +125,16 @@ export const AccountSettingsPage: React.FC = () => {
         setIsAboutLoading(false);
       });
   };
+
+  useEffect(() => {
+    fetch('/api/branding/public')
+      .then(res => res.json())
+      .then(data => {
+        if (data.app_name) setBrandAppName(data.app_name);
+        if (data.logo_url) setBrandLogoUrl(data.logo_url);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (token) {
@@ -268,6 +285,40 @@ export const AccountSettingsPage: React.FC = () => {
       }
     } catch (e) {
       showToast('Error verifying TOTP token', 'error');
+    }
+  };
+
+  const handleDisableTotp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    if (!disableTotpPassword && !disableTotpCode) {
+      showToast('Enter your password or current 6-digit TOTP code to disable 2FA.', 'error');
+      return;
+    }
+    setIsDisablingTotp(true);
+    try {
+      const res = await fetch('/api/mfa/totp/disable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          password: disableTotpPassword || undefined,
+          totp_code: disableTotpCode || undefined
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'TOTP 2FA disabled', 'info');
+        setIsDisableTotpModalOpen(false);
+        setDisableTotpPassword('');
+        setDisableTotpCode('');
+        await refreshUser();
+      } else {
+        showToast(data.error || 'Failed to disable TOTP 2FA', 'error');
+      }
+    } catch {
+      showToast('Error disabling TOTP 2FA', 'error');
+    } finally {
+      setIsDisablingTotp(false);
     }
   };
 
@@ -682,9 +733,19 @@ export const AccountSettingsPage: React.FC = () => {
           </div>
 
           {user?.is_totp_enabled ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#22c55e', background: 'rgba(34, 197, 94, 0.1)', padding: '0.75rem 1rem', borderRadius: '10px' }}>
-              <CheckCircle2 size={20} style={{ flexShrink: 0 }} />
-              <span>TOTP Authenticator is enabled on your account.</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', color: '#22c55e', background: 'rgba(34, 197, 94, 0.1)', padding: '0.75rem 1rem', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <CheckCircle2 size={20} style={{ flexShrink: 0 }} />
+                <span>TOTP Authenticator is enabled on your account.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDisableTotpModalOpen(true)}
+                className="btn-secondary"
+                style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.45)' }}
+              >
+                Disable TOTP 2FA
+              </button>
             </div>
           ) : (
             <div>
@@ -1016,21 +1077,65 @@ export const AccountSettingsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Disable TOTP 2FA Confirmation Modal */}
+      {isDisableTotpModalOpen && (
+        <div className="custom-modal-backdrop" onClick={() => setIsDisableTotpModalOpen(false)}>
+          <div className="custom-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#f87171' }}>Disable TOTP 2FA</h3>
+              <button type="button" onClick={() => setIsDisableTotpModalOpen(false)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.82, lineHeight: 1.5, marginBottom: '1rem' }}>
+              To confirm disabling Two-Factor Authentication, enter your account password or a valid 6-digit authenticator code.
+            </p>
+            <form onSubmit={handleDisableTotp} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.25rem' }}>Account Password</label>
+                <input
+                  type="password"
+                  value={disableTotpPassword}
+                  onChange={e => setDisableTotpPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+              <div style={{ textAlign: 'center', fontSize: '0.75rem', opacity: 0.6 }}>— OR —</div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.25rem' }}>Current 6-Digit Authenticator Code</label>
+                <input
+                  type="text"
+                  value={disableTotpCode}
+                  onChange={e => setDisableTotpCode(e.target.value)}
+                  placeholder="123456"
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)', color: 'var(--text-main)', textAlign: 'center' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.4rem' }}>
+                <button type="button" onClick={() => setIsDisableTotpModalOpen(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" disabled={isDisablingTotp} className="btn-primary" style={{ background: '#ef4444' }}>
+                  {isDisablingTotp ? 'Disabling...' : 'Disable 2FA'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* About WebNook Popup Modal */}
       {isAboutModalOpen && (
         <div className="custom-modal-backdrop" onClick={() => setIsAboutModalOpen(false)}>
           <div className="custom-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <img src="/branding/logo.png" alt="WebNook" style={{ height: '36px', width: 'auto', borderRadius: '6px' }} onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                <img src={brandLogoUrl} alt={brandAppName} style={{ height: '36px', width: 'auto', borderRadius: '6px' }} onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>WebNook</span>
+                    <span>{brandAppName}</span>
                     <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.55rem', borderRadius: '12px', background: 'var(--accent-color)', color: '#fff', fontWeight: 700 }}>
-                      {aboutInfo?.currentVersion || 'v3.3.2'}
+                      {aboutInfo?.currentVersion || 'v3.4.0'}
                     </span>
                   </h3>
-                  <div style={{ fontSize: '0.78rem', opacity: 0.7, marginTop: '2px' }}>Your Cozy Digital Corner of the Web</div>
+                  <div style={{ fontSize: '0.78rem', opacity: 0.7, marginTop: '2px' }}>Powered by WebNook • Cozy Social Spaces</div>
                 </div>
               </div>
               <button type="button" onClick={() => setIsAboutModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}>
@@ -1062,7 +1167,7 @@ export const AccountSettingsPage: React.FC = () => {
                       <span>Current Release</span>
                     </div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-color)' }}>
-                      {aboutInfo?.latestRelease?.tag || aboutInfo?.currentVersion || 'v3.3.2'}
+                      {aboutInfo?.latestRelease?.tag || aboutInfo?.currentVersion || 'v3.4.0'}
                     </div>
                   </div>
                 </div>
@@ -1074,7 +1179,7 @@ export const AccountSettingsPage: React.FC = () => {
                     <span>Latest Release Notes & Features:</span>
                   </div>
                   <p style={{ fontSize: '0.83rem', lineHeight: 1.5, opacity: 0.9, margin: 0, whiteSpace: 'pre-wrap' }}>
-                    {aboutInfo?.latestRelease?.notes || 'WebNook v3.3.2 fixes active state display for Nook profile privacy settings on Account Settings page load, introduces a themed locked profile screen for admin-disabled accounts, improves passkey button spacing, fixes music track delete button sizing, and enables full raw original image retention for crop adjustments.'}
+                    {aboutInfo?.latestRelease?.notes || 'WebNook v3.4.0 brings comprehensive security hardening, dynamic Terms & Conditions and Privacy Policy generation with mandatory login gating, password reset emails & pages, FFmpeg audio fixes, a 23-theme engine overhaul with custom Style & Pop overrides, and a dual-anchor Visual Sticker Studio.'}
                   </p>
                 </div>
 
